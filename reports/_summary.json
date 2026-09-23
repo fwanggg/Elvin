@@ -1,0 +1,74 @@
+[
+  {
+    "model": "openai/gpt-6-luna",
+    "slug": "openai-gpt-6-luna",
+    "hasReasoning": false,
+    "hasTools": true,
+    "reasoningField": null,
+    "error": null
+  },
+  {
+    "model": "openai/gpt-5.5",
+    "slug": "openai-gpt-5-5",
+    "hasReasoning": false,
+    "hasTools": true,
+    "reasoningField": null,
+    "error": null
+  },
+  {
+    "model": "anthropic/claude-sonnet-5",
+    "slug": "anthropic-claude-sonnet-5",
+    "hasReasoning": true,
+    "hasTools": true,
+    "reasoningField": "delta.reasoning",
+    "error": null
+  },
+  {
+    "model": "anthropic/claude-opus-5",
+    "slug": "anthropic-claude-opus-5",
+    "hasReasoning": false,
+    "hasTools": true,
+    "reasoningField": null,
+    "error": null
+  },
+  {
+    "model": "moonshotai/kimi-k3",
+    "slug": "moonshotai-kimi-k3",
+    "hasReasoning": true,
+    "hasTools": true,
+    "reasoningField": "delta.reasoning",
+    "error": null
+  },
+  {
+    "model": "deepseek/deepseek-v4-pro-0813",
+    "slug": "deepseek-deepseek-v4-pro-0813",
+    "hasReasoning": true,
+    "hasTools": true,
+    "reasoningField": "delta.reasoning",
+    "error": null
+  },
+  {
+    "model": "z-ai/glm-5.3",
+    "slug": "z-ai-glm-5-3",
+    "hasReasoning": true,
+    "hasTools": true,
+    "reasoningField": "delta.reasoning",
+    "error": null
+  },
+  {
+    "model": "meta-llama/llama-4-maverick",
+    "slug": "meta-llama-llama-4-maverick",
+    "hasReasoning": false,
+    "hasTools": false,
+    "reasoningField": null,
+    "error": null
+  },
+  {
+    "model": "google/gemini-3.8-flash",
+    "slug": "google-gemini-3-8-flash",
+    "hasReasoning": true,
+    "hasTools": true,
+    "reasoningField": "delta.reasoning",
+    "error": null
+  }
+]

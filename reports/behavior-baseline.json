@@ -1,0 +1,2118 @@
+{
+  "chat": {
+    "plain|shown|shown": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "plain|shown|hidden": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "plain|shown|off": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "plain|hidden|shown": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "plain|hidden|hidden": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "plain|hidden|off": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "plain|off|shown": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "plain|off|hidden": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "plain|off|off": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "tools|shown|shown": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "tools|shown|hidden": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "tools|shown|off": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "tools|hidden|shown": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "tools|hidden|hidden": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "tools|hidden|off": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "tools|off|shown": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "tools|off|hidden": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "tools|off|off": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "thought|shown|shown": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "thought|shown|hidden": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "thought|shown|off": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "thought|hidden|shown": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "thought|hidden|hidden": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "thought|hidden|off": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "thought|off|shown": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "thought|off|hidden": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "thought|off|off": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "both|shown|shown": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "reasoning",
+          "text": "Considering the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "reasoning",
+          "text": "Considering the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after thinking and the tool."
+        },
+        {
+          "type": "reasoning",
+          "text": "Considering the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after thinking and the tool."
+        },
+        {
+          "type": "reasoning",
+          "text": "Considering the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after thinking and the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "both|shown|hidden": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "reasoning",
+          "text": "Considering the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "reasoning",
+          "text": "Considering the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after thinking and the tool."
+        },
+        {
+          "type": "reasoning",
+          "text": "Considering the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after thinking and the tool."
+        },
+        {
+          "type": "reasoning",
+          "text": "Considering the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after thinking and the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "both|shown|off": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after thinking and the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after thinking and the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after thinking and the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "both|hidden|shown": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "reasoning",
+          "text": "Considering the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "reasoning",
+          "text": "Considering the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after thinking and the tool."
+        },
+        {
+          "type": "reasoning",
+          "text": "Considering the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after thinking and the tool."
+        },
+        {
+          "type": "reasoning",
+          "text": "Considering the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after thinking and the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "both|hidden|hidden": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "reasoning",
+          "text": "Considering the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "reasoning",
+          "text": "Considering the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after thinking and the tool."
+        },
+        {
+          "type": "reasoning",
+          "text": "Considering the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after thinking and the tool."
+        },
+        {
+          "type": "reasoning",
+          "text": "Considering the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after thinking and the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "both|hidden|off": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after thinking and the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after thinking and the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after thinking and the tool."
+        },
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "both|off|shown": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "both|off|hidden": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    },
+    "both|off|off": {
+      "status": 200,
+      "contentType": "text/event-stream; charset=utf-8",
+      "events": [
+        {
+          "type": "done",
+          "sessionId": "mock-session-fixed"
+        }
+      ]
+    }
+  },
+  "source": {
+    "pattern=thread&theme=dark&tools=shown&reasoning=shown&open=collapsed&stream=true&model=mock-model": {
+      "status": 200,
+      "digest": "f01cc9dacec3a80e",
+      "files": [
+        "package.json",
+        "tsconfig.json",
+        "next-env.d.ts",
+        ".env.example",
+        "elvin.config.ts",
+        "app/layout.tsx",
+        "app/globals.css",
+        "app/page.tsx",
+        "app/api/chat/route.ts",
+        "components/assistant/ElvinAssistant.tsx",
+        "components/assistant/reasoning-group.tsx",
+        "components/assistant/tool-card.tsx"
+      ]
+    },
+    "pattern=sidebar&theme=light&tools=hidden&reasoning=hidden&open=expanded&stream=false&model=mock-model&capability=x": {
+      "status": 200,
+      "digest": "537f28dd318cee85",
+      "files": [
+        "package.json",
+        "tsconfig.json",
+        "next-env.d.ts",
+        ".env.example",
+        "elvin.config.ts",
+        "app/layout.tsx",
+        "app/globals.css",
+        "app/page.tsx",
+        "app/api/chat/route.ts",
+        "components/assistant/ElvinAssistant.tsx",
+        "components/assistant/reasoning-group.tsx",
+        "components/assistant/tool-card.tsx"
+      ]
+    },
+    "pattern=modal&theme=dark&tools=off&reasoning=off&open=collapsed&stream=true&model=mock-model": {
+      "status": 200,
+      "digest": "1fadd0b40759d422",
+      "files": [
+        "package.json",
+        "tsconfig.json",
+        "next-env.d.ts",
+        ".env.example",
+        "elvin.config.ts",
+        "app/layout.tsx",
+        "app/globals.css",
+        "app/page.tsx",
+        "app/api/chat/route.ts",
+        "components/assistant/ElvinAssistant.tsx",
+        "components/assistant/reasoning-group.tsx",
+        "components/assistant/tool-card.tsx"
+      ]
+    }
+  },
+  "check": {
+    "status": 200,
+    "body": {
+      "ok": true,
+      "model": "mock-model",
+      "models": [
+        "mock-model"
+      ],
+      "capabilities": [
+        "chat_completions",
+        "tool_progress_events"
+      ]
+    }
+  }
+}

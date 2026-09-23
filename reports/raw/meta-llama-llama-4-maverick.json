@@ -1,0 +1,418 @@
+[
+  {
+    "combo": {
+      "reasoning": "on",
+      "tools": "on"
+    },
+    "request": {
+      "model": "meta-llama/llama-4-maverick",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Two things, please: (1) work out 17*23 step by step, and (2) call get_weather with city=\"Paris\" for the current weather there. Show your working for the arithmetic."
+        }
+      ],
+      "max_tokens": 2000,
+      "stream": true,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "get_weather",
+            "description": "Get the current weather for a city.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "description": "The city name, e.g. Paris"
+                }
+              },
+              "required": [
+                "city"
+              ]
+            }
+          }
+        }
+      ],
+      "tool_choice": "auto",
+      "reasoning": {
+        "enabled": true
+      }
+    },
+    "status": 200,
+    "ok": true,
+    "elapsedMs": 3268,
+    "contentType": "text/event-stream",
+    "error": null,
+    "rawSample": "{\"id\":\"gen-1790156391-36klK0r7dGKIgiIuzLmP\",\"object\":\"chat.completion.chunk\",\"created\":1790156391,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"To\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156391-36klK0r7dGKIgiIuzLmP\",\"object\":\"chat.completion.chunk\",\"created\":1790156391,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" solve\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156391-36klK0r7dGKIgiIuzLmP\",\"object\":\"chat.completion.chunk\",\"created\":1790156391,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" \",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156391-36klK0r7dGKIgiIuzLmP\",\"object\":\"chat.completion.chunk\",\"created\":1790156391,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"17\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156391-36klK0r7dGKIgiIuzLmP\",\"object\":\"chat.completion.chunk\",\"created\":1790156391,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"*\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156391-36klK0r7dGKIgiIuzLmP\",\"object\":\"chat.completion.chunk\",\"created\":1790156391,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"23\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}",
+    "rawChunkCount": 63,
+    "mode": "stream",
+    "content": "To solve 17*23 step by step:\n1. 17 * 20 = 340\n2. 17 * 3 = 51\n3. 340 + 51 = 391\n\nSo, 17 * 23 = 391.\n\n[get_weather(city=\"Paris\")]",
+    "reasoning": "",
+    "reasoningFields": [],
+    "reasoningTypes": [],
+    "toolCalls": [],
+    "finishReason": "stop",
+    "usage": {
+      "prompt_tokens": 684,
+      "completion_tokens": 61,
+      "total_tokens": 745,
+      "cost": 0.0001680525,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0001680525,
+        "upstream_inference_prompt_cost": 0.00012825,
+        "upstream_inference_completions_cost": 0.0000398025
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "chunkCount": 62,
+    "keys": [
+      "choices",
+      "choices[]",
+      "choices[].delta",
+      "choices[].delta.content",
+      "choices[].delta.role",
+      "choices[].finish_reason",
+      "choices[].index",
+      "choices[].native_finish_reason",
+      "created",
+      "id",
+      "model",
+      "object",
+      "provider",
+      "service_tier",
+      "usage",
+      "usage.completion_tokens",
+      "usage.completion_tokens_details",
+      "usage.completion_tokens_details.audio_tokens",
+      "usage.completion_tokens_details.image_tokens",
+      "usage.completion_tokens_details.reasoning_tokens",
+      "usage.cost",
+      "usage.cost_details",
+      "usage.cost_details.upstream_inference_completions_cost",
+      "usage.cost_details.upstream_inference_cost",
+      "usage.cost_details.upstream_inference_prompt_cost",
+      "usage.is_byok",
+      "usage.prompt_tokens",
+      "usage.prompt_tokens_details",
+      "usage.prompt_tokens_details.audio_tokens",
+      "usage.prompt_tokens_details.cache_write_tokens",
+      "usage.prompt_tokens_details.cached_tokens",
+      "usage.prompt_tokens_details.video_tokens",
+      "usage.total_tokens"
+    ]
+  },
+  {
+    "combo": {
+      "reasoning": "on",
+      "tools": "off"
+    },
+    "request": {
+      "model": "meta-llama/llama-4-maverick",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Two things, please: (1) work out 17*23 step by step, and (2) call get_weather with city=\"Paris\" for the current weather there. Show your working for the arithmetic."
+        }
+      ],
+      "max_tokens": 2000,
+      "stream": true,
+      "reasoning": {
+        "enabled": true
+      }
+    },
+    "status": 200,
+    "ok": true,
+    "elapsedMs": 28496,
+    "contentType": "text/event-stream",
+    "error": null,
+    "rawSample": "{\"id\":\"gen-1790156395-y2crlxfcxItduWkDCkCQ\",\"object\":\"chat.completion.chunk\",\"created\":1790156395,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"To\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156395-y2crlxfcxItduWkDCkCQ\",\"object\":\"chat.completion.chunk\",\"created\":1790156395,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" address\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156395-y2crlxfcxItduWkDCkCQ\",\"object\":\"chat.completion.chunk\",\"created\":1790156395,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" your\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156395-y2crlxfcxItduWkDCkCQ\",\"object\":\"chat.completion.chunk\",\"created\":1790156395,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" requests\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156395-y2crlxfcxItduWkDCkCQ\",\"object\":\"chat.completion.chunk\",\"created\":1790156395,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\":\\n\\n\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156395-y2crlxfcxItduWkDCkCQ\",\"object\":\"chat.completion.chunk\",\"created\":1790156395,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"1\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}",
+    "rawChunkCount": 495,
+    "mode": "stream",
+    "content": "To address your requests:\n\n1. **Calculating 17*23 step by step:**\n\nTo multiply 17 by 23, we can follow the standard multiplication procedure.\n\nFirst, we break down 23 into its tens and ones components: 20 + 3.\n\nThen, we multiply 17 by each of these components:\n\n- **17 * 20:**\n  - 17 * 2 = 34\n  - So, 17 * 20 = 34 * 10 = 340\n\n- **17 * 3:**\n  - 10 * 3 = 30\n  - 7 * 3 = 21\n  - So, 17 * 3 = 30 + 21 = 51\n\nNow, we add the results of these two multiplications together:\n\n- 340 + 51 = 391\n\nTherefore, 17 * 23 = 391.\n\n2. **Calling `get_weather` with city=\"Paris\":**\n\nI'm a text-based AI model and do not have the capability to directly call external APIs or execute code that requires internet connectivity or specific libraries. However, I can guide you on how you might do this using Python with a hypothetical `get_weather` function that could be implemented using a weather API like OpenWeatherMap.\n\nHere's a simple example of how you might call `get_weather(city=\"Paris\")` if you had such a function defined:\n\n```python\nimport requests\n\ndef get_weather(city, api_key):\n    base_url = f\"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}\"\n    response = requests.get(base_url)\n    weather_data = response.json()\n    # Process the weather data as needed\n    return weather_data\n\n# You need to replace 'your_api_key_here' with your actual OpenWeatherMap API key\napi_key = 'your_api_key_here'\ncity = \"Paris\"\nweather = get_weather(city, api_key)\nprint(weather)\n```\n\nTo actually get the current weather in Paris, you would need to:\n- Sign up for an API key on OpenWeatherMap (https://openweathermap.org/api).\n- Replace `'your_api_key_here'` with your actual API key.\n- Run the Python script.\n\nPlease note that the actual implementation of `get_weather` can vary based on the specific requirements and the structure of the weather API you're using.",
+    "reasoning": "",
+    "reasoningFields": [],
+    "reasoningTypes": [],
+    "toolCalls": [],
+    "finishReason": "stop",
+    "usage": {
+      "prompt_tokens": 53,
+      "completion_tokens": 493,
+      "total_tokens": 546,
+      "cost": 0.00033162,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.00033162,
+        "upstream_inference_prompt_cost": 0.0000099375,
+        "upstream_inference_completions_cost": 0.0003216825
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "chunkCount": 494,
+    "keys": [
+      "choices",
+      "choices[]",
+      "choices[].delta",
+      "choices[].delta.content",
+      "choices[].delta.role",
+      "choices[].finish_reason",
+      "choices[].index",
+      "choices[].native_finish_reason",
+      "created",
+      "id",
+      "model",
+      "object",
+      "provider",
+      "service_tier",
+      "usage",
+      "usage.completion_tokens",
+      "usage.completion_tokens_details",
+      "usage.completion_tokens_details.audio_tokens",
+      "usage.completion_tokens_details.image_tokens",
+      "usage.completion_tokens_details.reasoning_tokens",
+      "usage.cost",
+      "usage.cost_details",
+      "usage.cost_details.upstream_inference_completions_cost",
+      "usage.cost_details.upstream_inference_cost",
+      "usage.cost_details.upstream_inference_prompt_cost",
+      "usage.is_byok",
+      "usage.prompt_tokens",
+      "usage.prompt_tokens_details",
+      "usage.prompt_tokens_details.audio_tokens",
+      "usage.prompt_tokens_details.cache_write_tokens",
+      "usage.prompt_tokens_details.cached_tokens",
+      "usage.prompt_tokens_details.video_tokens",
+      "usage.total_tokens"
+    ]
+  },
+  {
+    "combo": {
+      "reasoning": "off",
+      "tools": "on"
+    },
+    "request": {
+      "model": "meta-llama/llama-4-maverick",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Two things, please: (1) work out 17*23 step by step, and (2) call get_weather with city=\"Paris\" for the current weather there. Show your working for the arithmetic."
+        }
+      ],
+      "max_tokens": 2000,
+      "stream": true,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "get_weather",
+            "description": "Get the current weather for a city.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "description": "The city name, e.g. Paris"
+                }
+              },
+              "required": [
+                "city"
+              ]
+            }
+          }
+        }
+      ],
+      "tool_choice": "auto",
+      "reasoning": {
+        "enabled": false
+      }
+    },
+    "status": 200,
+    "ok": true,
+    "elapsedMs": 7431,
+    "contentType": "text/event-stream",
+    "error": null,
+    "rawSample": "{\"id\":\"gen-1790156423-iVd83Hke9qdECtz9COyE\",\"object\":\"chat.completion.chunk\",\"created\":1790156423,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"To\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156423-iVd83Hke9qdECtz9COyE\",\"object\":\"chat.completion.chunk\",\"created\":1790156423,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" solve\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156423-iVd83Hke9qdECtz9COyE\",\"object\":\"chat.completion.chunk\",\"created\":1790156423,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" \",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156423-iVd83Hke9qdECtz9COyE\",\"object\":\"chat.completion.chunk\",\"created\":1790156423,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"17\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156423-iVd83Hke9qdECtz9COyE\",\"object\":\"chat.completion.chunk\",\"created\":1790156423,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"*\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156423-iVd83Hke9qdECtz9COyE\",\"object\":\"chat.completion.chunk\",\"created\":1790156423,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"23\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}",
+    "rawChunkCount": 88,
+    "mode": "stream",
+    "content": "To solve 17*23 step by step:\n1. Multiply 17 by 20: 17 * 20 = 340\n2. Multiply 17 by 3: 17 * 3 = 51\n3. Add the results of steps 1 and 2: 340 + 51 = 391\n\nThe result of 17*23 is 391.\n\n[get_weather(city=\"Paris\")]",
+    "reasoning": "",
+    "reasoningFields": [],
+    "reasoningTypes": [],
+    "toolCalls": [],
+    "finishReason": "stop",
+    "usage": {
+      "prompt_tokens": 684,
+      "completion_tokens": 86,
+      "total_tokens": 770,
+      "cost": 0.000184365,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.000184365,
+        "upstream_inference_prompt_cost": 0.00012825,
+        "upstream_inference_completions_cost": 0.000056115
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "chunkCount": 87,
+    "keys": [
+      "choices",
+      "choices[]",
+      "choices[].delta",
+      "choices[].delta.content",
+      "choices[].delta.role",
+      "choices[].finish_reason",
+      "choices[].index",
+      "choices[].native_finish_reason",
+      "created",
+      "id",
+      "model",
+      "object",
+      "provider",
+      "service_tier",
+      "usage",
+      "usage.completion_tokens",
+      "usage.completion_tokens_details",
+      "usage.completion_tokens_details.audio_tokens",
+      "usage.completion_tokens_details.image_tokens",
+      "usage.completion_tokens_details.reasoning_tokens",
+      "usage.cost",
+      "usage.cost_details",
+      "usage.cost_details.upstream_inference_completions_cost",
+      "usage.cost_details.upstream_inference_cost",
+      "usage.cost_details.upstream_inference_prompt_cost",
+      "usage.is_byok",
+      "usage.prompt_tokens",
+      "usage.prompt_tokens_details",
+      "usage.prompt_tokens_details.audio_tokens",
+      "usage.prompt_tokens_details.cache_write_tokens",
+      "usage.prompt_tokens_details.cached_tokens",
+      "usage.prompt_tokens_details.video_tokens",
+      "usage.total_tokens"
+    ]
+  },
+  {
+    "combo": {
+      "reasoning": "off",
+      "tools": "off"
+    },
+    "request": {
+      "model": "meta-llama/llama-4-maverick",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Two things, please: (1) work out 17*23 step by step, and (2) call get_weather with city=\"Paris\" for the current weather there. Show your working for the arithmetic."
+        }
+      ],
+      "max_tokens": 2000,
+      "stream": true,
+      "reasoning": {
+        "enabled": false
+      }
+    },
+    "status": 200,
+    "ok": true,
+    "elapsedMs": 29263,
+    "contentType": "text/event-stream",
+    "error": null,
+    "rawSample": "{\"id\":\"gen-1790156430-DHlYJ0dI8uWKjnAUTtNX\",\"object\":\"chat.completion.chunk\",\"created\":1790156430,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"##\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156430-DHlYJ0dI8uWKjnAUTtNX\",\"object\":\"chat.completion.chunk\",\"created\":1790156430,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" Step\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156430-DHlYJ0dI8uWKjnAUTtNX\",\"object\":\"chat.completion.chunk\",\"created\":1790156430,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"-by\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156430-DHlYJ0dI8uWKjnAUTtNX\",\"object\":\"chat.completion.chunk\",\"created\":1790156430,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"-Step\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156430-DHlYJ0dI8uWKjnAUTtNX\",\"object\":\"chat.completion.chunk\",\"created\":1790156430,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" Multiplication\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156430-DHlYJ0dI8uWKjnAUTtNX\",\"object\":\"chat.completion.chunk\",\"created\":1790156430,\"model\":\"meta-llama/llama-4-maverick\",\"provider\":\"DigitalOcean\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" of\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}",
+    "rawChunkCount": 462,
+    "mode": "stream",
+    "content": "## Step-by-Step Multiplication of 17 and 23\n\nTo multiply 17 by 23, we follow the standard multiplication procedure.\n\n1. **Multiply 17 by 20**: \n   - 17 * 20 = 17 * (2 * 10) = (17 * 2) * 10\n   - 17 * 2 = 34\n   - 34 * 10 = 340\n\n2. **Multiply 17 by 3**:\n   - 17 * 3 = 51\n\n3. **Add the results of step 1 and step 2**:\n   - 340 + 51 = 391\n\nTherefore, 17 * 23 = 391.\n\n## Retrieving Current Weather for Paris\n\nTo call `get_weather` with `city=\"Paris\"`, we would typically use a Python function that interacts with a weather API. However, since the specific implementation of `get_weather` is not provided, I'll demonstrate a hypothetical example using a generic weather API.\n\n### Hypothetical `get_weather` Function\n\n```python\nimport requests\n\ndef get_weather(city):\n    api_key = \"YOUR_OPENWEATHERMAP_API_KEY\"  # Replace with your actual API key\n    base_url = f\"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric\"\n    response = requests.get(base_url)\n    weather_data = response.json()\n    if response.status_code == 200:\n        print(f\"Weather in {city}: {weather_data['weather'][0]['description']}, Temperature: {weather_data['main']['temp']}°C\")\n    else:\n        print(f\"Failed to retrieve weather for {city}. Status code: {response.status_code}\")\n\n# Example usage\nget_weather(\"Paris\")\n```\n\n### Note\n- You need to replace `\"YOUR_OPENWEATHERMAP_API_KEY\"` with your actual OpenWeatherMap API key.\n- This example assumes you're using the OpenWeatherMap API. Other weather APIs might have different endpoints and parameters.\n\nSince I don't have real-time access or an actual API key, I can't execute `get_weather(\"Paris\")`. However, the above code snippet demonstrates how you might implement such a function.",
+    "reasoning": "",
+    "reasoningFields": [],
+    "reasoningTypes": [],
+    "toolCalls": [],
+    "finishReason": "stop",
+    "usage": {
+      "prompt_tokens": 53,
+      "completion_tokens": 460,
+      "total_tokens": 513,
+      "cost": 0.0003100875,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0003100875,
+        "upstream_inference_prompt_cost": 0.0000099375,
+        "upstream_inference_completions_cost": 0.00030015
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "chunkCount": 461,
+    "keys": [
+      "choices",
+      "choices[]",
+      "choices[].delta",
+      "choices[].delta.content",
+      "choices[].delta.role",
+      "choices[].finish_reason",
+      "choices[].index",
+      "choices[].native_finish_reason",
+      "created",
+      "id",
+      "model",
+      "object",
+      "provider",
+      "service_tier",
+      "usage",
+      "usage.completion_tokens",
+      "usage.completion_tokens_details",
+      "usage.completion_tokens_details.audio_tokens",
+      "usage.completion_tokens_details.image_tokens",
+      "usage.completion_tokens_details.reasoning_tokens",
+      "usage.cost",
+      "usage.cost_details",
+      "usage.cost_details.upstream_inference_completions_cost",
+      "usage.cost_details.upstream_inference_cost",
+      "usage.cost_details.upstream_inference_prompt_cost",
+      "usage.is_byok",
+      "usage.prompt_tokens",
+      "usage.prompt_tokens_details",
+      "usage.prompt_tokens_details.audio_tokens",
+      "usage.prompt_tokens_details.cache_write_tokens",
+      "usage.prompt_tokens_details.cached_tokens",
+      "usage.prompt_tokens_details.video_tokens",
+      "usage.total_tokens"
+    ]
+  }
+]

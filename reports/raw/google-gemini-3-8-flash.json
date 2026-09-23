@@ -1,0 +1,498 @@
+[
+  {
+    "combo": {
+      "reasoning": "on",
+      "tools": "on"
+    },
+    "request": {
+      "model": "google/gemini-3.8-flash",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Two things, please: (1) work out 17*23 step by step, and (2) call get_weather with city=\"Paris\" for the current weather there. Show your working for the arithmetic."
+        }
+      ],
+      "max_tokens": 2000,
+      "stream": true,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "get_weather",
+            "description": "Get the current weather for a city.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "description": "The city name, e.g. Paris"
+                }
+              },
+              "required": [
+                "city"
+              ]
+            }
+          }
+        }
+      ],
+      "tool_choice": "auto",
+      "reasoning": {
+        "enabled": true
+      }
+    },
+    "status": 200,
+    "ok": true,
+    "elapsedMs": 2482,
+    "contentType": "text/event-stream",
+    "error": null,
+    "rawSample": "{\"id\":\"gen-1790156460-Lw9JDM8IiyPgGDZ442M2\",\"object\":\"chat.completion.chunk\",\"created\":1790156460,\"model\":\"google/gemini-3.8-flash\",\"provider\":\"Google\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\"**Calculating Multiplication**\\n\\nI'm currently focused on resolving the multiplication 17 * 23. I've started by breaking it down into 17 * 20 and 17 * 3, then summing those results to arrive at 391. I'm now considering alternative methods to confirm this.\\n\\n\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\"**Calculating Multiplication**\\n\\nI'm currently focused on resolving the multiplication 17 * 23. I've started by breaking it down into 17 * 20 and 17 * 3, then summing those results to arrive at 391. I'm now considering alternative methods to confirm this.\\n\\n\",\"format\":\"google-gemini-v1\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156460-Lw9JDM8IiyPgGDZ442M2\",\"object\":\"chat.completion.chunk\",\"created\":1790156460,\"model\":\"google/gemini-3.8-flash\",\"provider\":\"Google\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":null,\"reasoning_details\":[{\"type\":\"reasoning.encrypted\",\"data\":\"AY89a18JeZYq5q1nsG2BLjrE0LJP+vl7Qxhv35OWv/UQ0KUlM3Kjg4bcl03bdrWMMGOLP3thnOl2mJ++5FDclpoxTZMGhjQPtKOmThj9Jhwxd+sP0uQjS8LmLC0Xb+IR6X1VPbFNUu3kQlfLwFrH8RSuSi+aVolmGyYA7Lc+bYBXjPUUNhbtpO0jrM23a1jw6AbM2osh9ffP1hGJowQt7Nke/2r0L6U8+NXABV4EIOQw+0M0/PVL0VZM26ADFbB+1C+nWNSCr11U8v2c9FCVbBw+JIsj/b5waQAjolTV2SYi4dWU51FWxXsGqcsLyPYSNoe2VZZ9TYPmtRf/Na7Elo1iahCd3Cvif7F6YLVWskVUBT1nnWrgV6jmfK9PyLs3xTPTXhPF7QFbukEHeyU6NUoCgEhbO4V4BVgAAmMXgU/jSp8IXEzBDnaS/YzQoAKVNN2mbfkYG1JCod08apUHQcLgbbRAQuGfO9Nwu6cB3ELt14Z++B4CO4QTKfSpoY8vi8Znnp4jGGPK7yHZX0Af0mnVX8kdBjnPTHBD/wADKeQIX5tSowYAG9ksaXobPBqINEXEuTO0k8/dSSklQdRrMvLhtP8TrIKLA/n6Uh7fWtcJX2pRM67MZCYAT/fGRCmknrcHudHKdnTr3jw/rS8z4pCU4Z/7RsgoFlxEvV9BOfsm1JOhKg0imKIYKsAzGu+ClY6dUYGYwtVDMBy9Y3U+LYUaDX/Xn8/UBPTGmrvXPlxJHpWIWo1xpkCKPVEF8AfA4z70daNhO2Vg8BEw9yB0DMhPbzG7zTTIB3TiV1i9jvsP2Di6YEqtebD4oDYp7Kt6aM2jVWLA09gTkM8hUzlHqqjRUesw93Vvj0F39wvc1PLWcBSYWux6LNwOxBGuz6Fxt3YDlT3dcfu2LEGakgr0uMsXtz3jxs5kAuOXcsAEMYFDyFWpXVOyKVtWe/6Wc0HmtgQv4JoeaAfqh1YKNo8YXkb47bK6HJiz55UPjtmit9x7TMKKcoKqaKvkC3LH0V7LV5M76pCPEgcqDh4Dfdu9JuisB3zb+qdsu9JxFOXVHMHCBVyNkRJgDTJ362BH1o5k0J+QrW5XwGL1PSaB9RVQaldU\",\"format\":\"google-gemini-v1\",\"id\":\"call_189734\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156460-Lw9JDM8IiyPgGDZ442M2\",\"object\":\"chat.completion.chunk\",\"created\":1790156460,\"model\":\"google/gemini-3.8-flash\",\"provider\":\"Google\",\"choices\":[{\"index\":0,\"delta\":{\"content\":null,\"role\":\"assistant\",\"tool_calls\":[{\"index\":0,\"id\":\"call_189734\",\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"arguments\":\"\"}}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156460-Lw9JDM8IiyPgGDZ442M2\",\"object\":\"chat.completion.chunk\",\"created\":1790156460,\"model\":\"google/gemini-3.8-flash\",\"provider\":\"Google\",\"choices\":[{\"index\":0,\"delta\":{\"content\":null,\"ro",
+    "rawChunkCount": 7,
+    "mode": "stream",
+    "content": "",
+    "reasoning": "**Calculating Multiplication**\n\nI'm currently focused on resolving the multiplication 17 * 23. I've started by breaking it down into 17 * 20 and 17 * 3, then summing those results to arrive at 391. I'm now considering alternative methods to confirm this.\n\n**Calculating Multiplication**\n\nI'm currently focused on resolving the multiplication 17 * 23. I've started by breaking it down into 17 * 20 and 17 * 3, then summing those results to arrive at 391. I'm now considering alternative methods to confirm this.\n\n",
+    "reasoningFields": [
+      "delta.reasoning",
+      "delta.reasoning_details[].type|text|format|index",
+      "delta.reasoning_details[].type|data|format|id|index"
+    ],
+    "reasoningTypes": [
+      "reasoning.text",
+      "reasoning.encrypted"
+    ],
+    "toolCalls": [
+      {
+        "id": "call_189734",
+        "name": "get_weather",
+        "arguments": "{\"city\":\"Paris\"}",
+        "argumentsType": "string(JSON)"
+      }
+    ],
+    "finishReason": "tool_calls",
+    "usage": {
+      "prompt_tokens": 81,
+      "completion_tokens": 230,
+      "total_tokens": 311,
+      "cost": 0.00092325,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.00092325,
+        "upstream_inference_prompt_cost": 0.00006075,
+        "upstream_inference_completions_cost": 0.0008625
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 214,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "chunkCount": 6,
+    "keys": [
+      "choices",
+      "choices[]",
+      "choices[].delta",
+      "choices[].delta.content",
+      "choices[].delta.reasoning",
+      "choices[].delta.reasoning_details",
+      "choices[].delta.reasoning_details[]",
+      "choices[].delta.reasoning_details[].data",
+      "choices[].delta.reasoning_details[].format",
+      "choices[].delta.reasoning_details[].id",
+      "choices[].delta.reasoning_details[].index",
+      "choices[].delta.reasoning_details[].text",
+      "choices[].delta.reasoning_details[].type",
+      "choices[].delta.role",
+      "choices[].delta.tool_calls",
+      "choices[].delta.tool_calls[]",
+      "choices[].delta.tool_calls[].function",
+      "choices[].delta.tool_calls[].function.arguments",
+      "choices[].delta.tool_calls[].function.name",
+      "choices[].delta.tool_calls[].id",
+      "choices[].delta.tool_calls[].index",
+      "choices[].delta.tool_calls[].type",
+      "choices[].finish_reason",
+      "choices[].index",
+      "choices[].native_finish_reason",
+      "created",
+      "id",
+      "model",
+      "object",
+      "provider",
+      "service_tier",
+      "usage",
+      "usage.completion_tokens",
+      "usage.completion_tokens_details",
+      "usage.completion_tokens_details.audio_tokens",
+      "usage.completion_tokens_details.image_tokens",
+      "usage.completion_tokens_details.reasoning_tokens",
+      "usage.cost",
+      "usage.cost_details",
+      "usage.cost_details.upstream_inference_completions_cost",
+      "usage.cost_details.upstream_inference_cost",
+      "usage.cost_details.upstream_inference_prompt_cost",
+      "usage.is_byok",
+      "usage.prompt_tokens",
+      "usage.prompt_tokens_details",
+      "usage.prompt_tokens_details.audio_tokens",
+      "usage.prompt_tokens_details.cache_write_tokens",
+      "usage.prompt_tokens_details.cached_tokens",
+      "usage.prompt_tokens_details.video_tokens",
+      "usage.total_tokens"
+    ]
+  },
+  {
+    "combo": {
+      "reasoning": "on",
+      "tools": "off"
+    },
+    "request": {
+      "model": "google/gemini-3.8-flash",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Two things, please: (1) work out 17*23 step by step, and (2) call get_weather with city=\"Paris\" for the current weather there. Show your working for the arithmetic."
+        }
+      ],
+      "max_tokens": 2000,
+      "stream": true,
+      "reasoning": {
+        "enabled": true
+      }
+    },
+    "status": 200,
+    "ok": true,
+    "elapsedMs": 6698,
+    "contentType": "text/event-stream",
+    "error": null,
+    "rawSample": "{\"id\":\"gen-1790156462-pfNKFAwQmoPHV2m27Few\",\"object\":\"chat.completion.chunk\",\"created\":1790156462,\"model\":\"google/gemini-3.8-flash\",\"provider\":\"Google\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\"**Analyzing Available Tools**\\n\\nI'm currently examining the provided tools to see what capabilities are at my disposal. My primary focus is on identifying any functions or utilities that can assist me in fulfilling your requests, specifically for performing calculations and interacting with external services.\\n\\n\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\"**Analyzing Available Tools**\\n\\nI'm currently examining the provided tools to see what capabilities are at my disposal. My primary focus is on identifying any functions or utilities that can assist me in fulfilling your requests, specifically for performing calculations and interacting with external services.\\n\\n\",\"format\":\"google-gemini-v1\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156462-pfNKFAwQmoPHV2m27Few\",\"object\":\"chat.completion.chunk\",\"created\":1790156462,\"model\":\"google/gemini-3.8-flash\",\"provider\":\"Google\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\"**Determining Tool Access**\\n\\nI've confirmed that no tools are currently defined or accessible within this environment. Therefore, I'll proceed with calculations directly and will explicitly state my inability to perform tasks requiring external tools, like fetching live weather data.\\n\\n\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\"**Determining Tool Access**\\n\\nI've confirmed that no tools are currently defined or accessible within this environment. Therefore, I'll proceed with calculations directly and will explicitly state my inability to perform tasks requiring external tools, like fetching live weather data.\\n\\n\",\"format\":\"google-gemini-v1\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156462-pfNKFAwQmoPHV2m27Few\",\"object\":\"chat.completion.chunk\",\"created\":1790156462,\"model\":\"google/gemini-3.8-flash\",\"provider\":\"Google\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"### 1. Arithmetic: $17 \\\\times 2\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156462-pfNKFAwQmoPHV2m27Few\",\"object\":\"chat.completion.chunk\",\"created\":1790156462,\"model\":\"google/gemini-3.8-flash\",\"provider\":\"Google\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"3$\\n\\nHere is the step-by-step calculation:\\n\\n**Method 1: Distributive Property**\\n1\",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156462-pfNKFAwQmoPHV2m27Few\",\"object\":\"chat.completion.chunk\",\"created\":1790156462,\"model\":\"google/gemini-3.8-flash\",\"provider\":\"Google\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\". Break $23$ into $20 + 3$:\\n   $$17 \\\\times 23 = \",\"role\":\"assistant\"},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156462-pfNKFAwQmoPHV2m27Few\",\"object\":\"chat.co",
+    "rawChunkCount": 17,
+    "mode": "stream",
+    "content": "### 1. Arithmetic: $17 \\times 23$\n\nHere is the step-by-step calculation:\n\n**Method 1: Distributive Property**\n1. Break $23$ into $20 + 3$:\n   $$17 \\times 23 = 17 \\times (20 + 3)$$\n2. Multiply $17$ by each part:\n   $$17 \\times 20 = 340$$\n   $$17 \\times 3 = 51$$\n3. Add the two results together:\n   $$340 + 51 = 391$$\n\n*(Shortcut check: using difference of squares, $(20 - 3)(20 + 3) = 20^2 - 3^2 = 400 - 9 = 391$)*\n\n---\n\n### 2. Weather Request\n\nI do not have access to external tools (such as `get_weather`) or real-time internet access in this session, so I cannot execute that function or retrieve the live weather for Paris. If you're running this in an environment with function calling enabled, you may need to attach the `get_weather` tool to your prompt or system configuration.",
+    "reasoning": "**Analyzing Available Tools**\n\nI'm currently examining the provided tools to see what capabilities are at my disposal. My primary focus is on identifying any functions or utilities that can assist me in fulfilling your requests, specifically for performing calculations and interacting with external services.\n\n**Analyzing Available Tools**\n\nI'm currently examining the provided tools to see what capabilities are at my disposal. My primary focus is on identifying any functions or utilities that can assist me in fulfilling your requests, specifically for performing calculations and interacting with external services.\n\n**Determining Tool Access**\n\nI've confirmed that no tools are currently defined or accessible within this environment. Therefore, I'll proceed with calculations directly and will explicitly state my inability to perform tasks requiring external tools, like fetching live weather data.\n\n**Determining Tool Access**\n\nI've confirmed that no tools are currently defined or accessible within this environment. Therefore, I'll proceed with calculations directly and will explicitly state my inability to perform tasks requiring external tools, like fetching live weather data.\n\n",
+    "reasoningFields": [
+      "delta.reasoning",
+      "delta.reasoning_details[].type|text|format|index"
+    ],
+    "reasoningTypes": [
+      "reasoning.text"
+    ],
+    "toolCalls": [],
+    "finishReason": "stop",
+    "usage": {
+      "prompt_tokens": 46,
+      "completion_tokens": 826,
+      "total_tokens": 872,
+      "cost": 0.003132,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.003132,
+        "upstream_inference_prompt_cost": 0.0000345,
+        "upstream_inference_completions_cost": 0.0030975
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 552,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "chunkCount": 16,
+    "keys": [
+      "choices",
+      "choices[]",
+      "choices[].delta",
+      "choices[].delta.content",
+      "choices[].delta.reasoning",
+      "choices[].delta.reasoning_details",
+      "choices[].delta.reasoning_details[]",
+      "choices[].delta.reasoning_details[].format",
+      "choices[].delta.reasoning_details[].index",
+      "choices[].delta.reasoning_details[].text",
+      "choices[].delta.reasoning_details[].type",
+      "choices[].delta.role",
+      "choices[].finish_reason",
+      "choices[].index",
+      "choices[].native_finish_reason",
+      "created",
+      "id",
+      "model",
+      "object",
+      "provider",
+      "service_tier",
+      "usage",
+      "usage.completion_tokens",
+      "usage.completion_tokens_details",
+      "usage.completion_tokens_details.audio_tokens",
+      "usage.completion_tokens_details.image_tokens",
+      "usage.completion_tokens_details.reasoning_tokens",
+      "usage.cost",
+      "usage.cost_details",
+      "usage.cost_details.upstream_inference_completions_cost",
+      "usage.cost_details.upstream_inference_cost",
+      "usage.cost_details.upstream_inference_prompt_cost",
+      "usage.is_byok",
+      "usage.prompt_tokens",
+      "usage.prompt_tokens_details",
+      "usage.prompt_tokens_details.audio_tokens",
+      "usage.prompt_tokens_details.cache_write_tokens",
+      "usage.prompt_tokens_details.cached_tokens",
+      "usage.prompt_tokens_details.video_tokens",
+      "usage.total_tokens"
+    ]
+  },
+  {
+    "combo": {
+      "reasoning": "off",
+      "tools": "on"
+    },
+    "request": {
+      "model": "google/gemini-3.8-flash",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Two things, please: (1) work out 17*23 step by step, and (2) call get_weather with city=\"Paris\" for the current weather there. Show your working for the arithmetic."
+        }
+      ],
+      "max_tokens": 2000,
+      "stream": true,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "get_weather",
+            "description": "Get the current weather for a city.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "description": "The city name, e.g. Paris"
+                }
+              },
+              "required": [
+                "city"
+              ]
+            }
+          }
+        }
+      ],
+      "tool_choice": "auto"
+    },
+    "status": 200,
+    "ok": true,
+    "elapsedMs": 4110,
+    "contentType": "text/event-stream",
+    "error": null,
+    "rawSample": "{\"id\":\"gen-1790156469-Bp1pFfH3vUUiTrbs4uk6\",\"object\":\"chat.completion.chunk\",\"created\":1790156469,\"model\":\"google/gemini-3.8-flash\",\"provider\":\"Google\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\"**Processing User Request**\\n\\nI am currently analyzing the user's multi-part request, prioritizing the calculation and the tool invocation. My immediate focus is on determining the most efficient way to present the step-by-step arithmetic and execute the `get_weather` function simultaneously for a comprehensive response.\\n\\n\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\"**Processing User Request**\\n\\nI am currently analyzing the user's multi-part request, prioritizing the calculation and the tool invocation. My immediate focus is on determining the most efficient way to present the step-by-step arithmetic and execute the `get_weather` function simultaneously for a comprehensive response.\\n\\n\",\"format\":\"google-gemini-v1\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156469-Bp1pFfH3vUUiTrbs4uk6\",\"object\":\"chat.completion.chunk\",\"created\":1790156469,\"model\":\"google/gemini-3.8-flash\",\"provider\":\"Google\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":null,\"reasoning_details\":[{\"type\":\"reasoning.encrypted\",\"data\":\"AY89a19ypzZ3pexbPOadtE6KzQ+zAoLpWkdvvdphlobqWArB7uDl1KIvWRskP9rdNRlpMi3I1ASZjyaLGBTQg1T3B4O52+bU5j66MHYJ+0neHHzEfOgF27r9ci61FWYnx6IrDqMN7/nHoMwKfeJxfBJhCMmkKCi0K8koJpuxfnq4Je1W7ES935e7JZc3X7LBnA7rqNj56VY7qxLaAR1xu6z2HB36GCz1g2sdcg4a/eANzKNx1/KD08UNcdwWeK4ZxD58ErSNaPYi6YkLyJ9qkNpswRIJ0D/n1FNP1h2AAn7DxFZPTwbmOr6Ujh5SKvjmjneWWf0qS9sUUoEVpga7bI2hYDBpizaZ+GVSwWWuB93+IQGdG7pvzBdaentLjinYJeFR1xQwvs3520Igl6/fGCbVopsRIEiPLAukxLeYBjBzSGtFfBhmLqbgdc7Z4YFpr2XoUdYxMYs12R/c+6gFVroQiiWRgpCE5zSIbLpuRF7v6vwDYhvSe3GZ8CLkB5Z07nsUT8RRgSAAWBc80VzW46ZbgUb1YGS/8sRV3Su7PZvP3Z8BRsl25D7ZRyhyMVOyLNDxWD5OkmFY7Jn6ZQ4+im0Tfqh8aFF6rkvW/qrgzQ8Cw0yU1TWC6Knbe9XFTaFGFx38DKcvllp2BUtLlgX4myzpKGBtnWj2JetuLnLLQM0STHaAPzZ9E1QOlL26+4hrOCYXBv+79Wxb/ATpTRkAWePp5oJBza56fxwa0OBVAGKOqW1NqPOdDTHkUQ4VPOCwu3DAX9KiIz/VNUT1X4EztxWNgpZPiDI9RE5CZTscB5xl3zSgQE+sB4eDWQ3LaW0oVd82fIn2N3U/J5x1DeTdvCqawOJrOWuuG04v9SMybocVLJRv/2GdgzQQvgRfvaHcwr6tPX3HR38/cjgp42WYWKGguvWtf4UHNw3R2WT5znPvXrhhwjggkk8OGMgy3vb1nOQcpkDguxffaVhypVpnk6ZgTJ1zuOvr0Yzib8aNtCuB8vVXf6HvBzkilqC1zFjpTZFbgAjllzSq/QU8JdYCLN6o1bYgsoLUgUICOoEfQN17GsDWVfsByi+DqUK+kg2vnce1DjT51CtzbV5h8Pc1gurk4REwUf2+oVDvfuf9P/W4HRt/iHQaQQhb9QUJrvi+3dI4iLhKBkmNgVInJeNTCoRooTjopFXyeJ8IqO7eAkbyH3YTTAL8r/XhaVHGYDuZuTRkHVDD+AVXArFJlzp3KiqeyiH8FflbYVaobV4nYtfWZ3FeikR/HXwC8NvhfwivPnlPd1za0vXXrPmSjPIR3+9OVviFshtKHO14LP/AR5Uyf3KMvOgsZqGR+/K08Fu2/Mz3SAxhknkl8swMuzeVX9FtX34gsDVf+u9EpJFf7tbm1s3sGS4HwfH7Keumv2l28GFYp12/L37M1S3Ub9NyZcPICT5riFRP7jinPfx9Jb18zSKQpe/kkFT+huSyyi4e1Nl9TfQaz8LQBKNdl3SGsJEj7kfYTFD1WzWmOwc6\",\"format\":\"google-gemini-v1\",\"id\":\"call_216749\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156469-Bp1pFfH3vUUiTrbs4uk6\",\"objec",
+    "rawChunkCount": 7,
+    "mode": "stream",
+    "content": "",
+    "reasoning": "**Processing User Request**\n\nI am currently analyzing the user's multi-part request, prioritizing the calculation and the tool invocation. My immediate focus is on determining the most efficient way to present the step-by-step arithmetic and execute the `get_weather` function simultaneously for a comprehensive response.\n\n**Processing User Request**\n\nI am currently analyzing the user's multi-part request, prioritizing the calculation and the tool invocation. My immediate focus is on determining the most efficient way to present the step-by-step arithmetic and execute the `get_weather` function simultaneously for a comprehensive response.\n\n",
+    "reasoningFields": [
+      "delta.reasoning",
+      "delta.reasoning_details[].type|text|format|index",
+      "delta.reasoning_details[].type|data|format|id|index"
+    ],
+    "reasoningTypes": [
+      "reasoning.text",
+      "reasoning.encrypted"
+    ],
+    "toolCalls": [
+      {
+        "id": "call_216749",
+        "name": "get_weather",
+        "arguments": "{\"city\":\"Paris\"}",
+        "argumentsType": "string(JSON)"
+      }
+    ],
+    "finishReason": "tool_calls",
+    "usage": {
+      "prompt_tokens": 81,
+      "completion_tokens": 294,
+      "total_tokens": 375,
+      "cost": 0.00116325,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.00116325,
+        "upstream_inference_prompt_cost": 0.00006075,
+        "upstream_inference_completions_cost": 0.0011025
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 278,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "chunkCount": 6,
+    "keys": [
+      "choices",
+      "choices[]",
+      "choices[].delta",
+      "choices[].delta.content",
+      "choices[].delta.reasoning",
+      "choices[].delta.reasoning_details",
+      "choices[].delta.reasoning_details[]",
+      "choices[].delta.reasoning_details[].data",
+      "choices[].delta.reasoning_details[].format",
+      "choices[].delta.reasoning_details[].id",
+      "choices[].delta.reasoning_details[].index",
+      "choices[].delta.reasoning_details[].text",
+      "choices[].delta.reasoning_details[].type",
+      "choices[].delta.role",
+      "choices[].delta.tool_calls",
+      "choices[].delta.tool_calls[]",
+      "choices[].delta.tool_calls[].function",
+      "choices[].delta.tool_calls[].function.arguments",
+      "choices[].delta.tool_calls[].function.name",
+      "choices[].delta.tool_calls[].id",
+      "choices[].delta.tool_calls[].index",
+      "choices[].delta.tool_calls[].type",
+      "choices[].finish_reason",
+      "choices[].index",
+      "choices[].native_finish_reason",
+      "created",
+      "id",
+      "model",
+      "object",
+      "provider",
+      "service_tier",
+      "usage",
+      "usage.completion_tokens",
+      "usage.completion_tokens_details",
+      "usage.completion_tokens_details.audio_tokens",
+      "usage.completion_tokens_details.image_tokens",
+      "usage.completion_tokens_details.reasoning_tokens",
+      "usage.cost",
+      "usage.cost_details",
+      "usage.cost_details.upstream_inference_completions_cost",
+      "usage.cost_details.upstream_inference_cost",
+      "usage.cost_details.upstream_inference_prompt_cost",
+      "usage.is_byok",
+      "usage.prompt_tokens",
+      "usage.prompt_tokens_details",
+      "usage.prompt_tokens_details.audio_tokens",
+      "usage.prompt_tokens_details.cache_write_tokens",
+      "usage.prompt_tokens_details.cached_tokens",
+      "usage.prompt_tokens_details.video_tokens",
+      "usage.total_tokens"
+    ]
+  },
+  {
+    "combo": {
+      "reasoning": "off",
+      "tools": "off"
+    },
+    "request": {
+      "model": "google/gemini-3.8-flash",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Two things, please: (1) work out 17*23 step by step, and (2) call get_weather with city=\"Paris\" for the current weather there. Show your working for the arithmetic."
+        }
+      ],
+      "max_tokens": 2000,
+      "stream": true
+    },
+    "status": 200,
+    "ok": true,
+    "elapsedMs": 4434,
+    "contentType": "text/event-stream",
+    "error": null,
+    "rawSample": "{\"id\":\"gen-1790156473-FEzvAJN1BTdwR8qHalCC\",\"object\":\"chat.completion.chunk\",\"created\":1790156473,\"model\":\"google/gemini-3.8-flash\",\"provider\":\"Google\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\"**Processing Multiple Requests**\\n\\nI'm currently reconciling the user's dual requests: a step-by-step calculation and a tool invocation. I've confirmed that the system architecture supports interleaving these actions, allowing me to address both the mathematical problem and the external query concurrently.\\n\\n\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\"**Processing Multiple Requests**\\n\\nI'm currently reconciling the user's dual requests: a step-by-step calculation and a tool invocation. I've confirmed that the system architecture supports interleaving these actions, allowing me to address both the mathematical problem and the external query concurrently.\\n\\n\",\"format\":\"google-gemini-v1\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156473-FEzvAJN1BTdwR8qHalCC\",\"object\":\"chat.completion.chunk\",\"created\":1790156473,\"model\":\"google/gemini-3.8-flash\",\"provider\":\"Google\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":null},\"finish_reason\":\"error\",\"native_finish_reason\":\"MALFORMED_FUNCTION_CALL\"}]}\n{\"id\":\"gen-1790156473-FEzvAJN1BTdwR8qHalCC\",\"object\":\"chat.completion.chunk\",\"created\":1790156473,\"model\":\"google/gemini-3.8-flash\",\"provider\":\"Google\",\"service_tier\":\"provisioned\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\"},\"finish_reason\":\"error\",\"native_finish_reason\":\"MALFORMED_FUNCTION_CALL\"}],\"usage\":{\"prompt_tokens\":0,\"completion_tokens\":0,\"total_tokens\":0,\"cost\":0,\"is_byok\":false,\"prompt_tokens_details\":{\"cached_tokens\":0,\"cache_write_tokens\":0,\"audio_tokens\":0,\"video_tokens\":0},\"cost_details\":{\"upstream_inference_cost\":0,\"upstream_inference_prompt_cost\":0,\"upstream_inference_completions_cost\":0},\"completion_tokens_details\":{\"reasoning_tokens\":0,\"image_tokens\":0,\"audio_tokens\":0}}}\n[DONE]",
+    "rawChunkCount": 4,
+    "mode": "stream",
+    "content": "",
+    "reasoning": "**Processing Multiple Requests**\n\nI'm currently reconciling the user's dual requests: a step-by-step calculation and a tool invocation. I've confirmed that the system architecture supports interleaving these actions, allowing me to address both the mathematical problem and the external query concurrently.\n\n**Processing Multiple Requests**\n\nI'm currently reconciling the user's dual requests: a step-by-step calculation and a tool invocation. I've confirmed that the system architecture supports interleaving these actions, allowing me to address both the mathematical problem and the external query concurrently.\n\n",
+    "reasoningFields": [
+      "delta.reasoning",
+      "delta.reasoning_details[].type|text|format|index"
+    ],
+    "reasoningTypes": [
+      "reasoning.text"
+    ],
+    "toolCalls": [],
+    "finishReason": "error",
+    "usage": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "cost": 0,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0,
+        "upstream_inference_prompt_cost": 0,
+        "upstream_inference_completions_cost": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "chunkCount": 3,
+    "keys": [
+      "choices",
+      "choices[]",
+      "choices[].delta",
+      "choices[].delta.content",
+      "choices[].delta.reasoning",
+      "choices[].delta.reasoning_details",
+      "choices[].delta.reasoning_details[]",
+      "choices[].delta.reasoning_details[].format",
+      "choices[].delta.reasoning_details[].index",
+      "choices[].delta.reasoning_details[].text",
+      "choices[].delta.reasoning_details[].type",
+      "choices[].delta.role",
+      "choices[].finish_reason",
+      "choices[].index",
+      "choices[].native_finish_reason",
+      "created",
+      "id",
+      "model",
+      "object",
+      "provider",
+      "service_tier",
+      "usage",
+      "usage.completion_tokens",
+      "usage.completion_tokens_details",
+      "usage.completion_tokens_details.audio_tokens",
+      "usage.completion_tokens_details.image_tokens",
+      "usage.completion_tokens_details.reasoning_tokens",
+      "usage.cost",
+      "usage.cost_details",
+      "usage.cost_details.upstream_inference_completions_cost",
+      "usage.cost_details.upstream_inference_cost",
+      "usage.cost_details.upstream_inference_prompt_cost",
+      "usage.is_byok",
+      "usage.prompt_tokens",
+      "usage.prompt_tokens_details",
+      "usage.prompt_tokens_details.audio_tokens",
+      "usage.prompt_tokens_details.cache_write_tokens",
+      "usage.prompt_tokens_details.cached_tokens",
+      "usage.prompt_tokens_details.video_tokens",
+      "usage.total_tokens"
+    ]
+  }
+]

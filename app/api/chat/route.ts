@@ -1,0 +1,816 @@
+import { NextResponse } from "next/server";
+
+type IncomingMessage = {
+  role: "user" | "assistant" | "system";
+  content: string;
+};
+
+type RequestBody = {
+  baseUrl?: string;
+  apiKey?: string;
+  model?: string;
+  toolsMode?: "shown" | "hidden" | "off";
+  reasoningMode?: "shown" | "hidden" | "off";
+  messages?: IncomingMessage[];
+  stream?: boolean;
+  capability?: string;
+  threadId?: string;
+};
+
+type OpenAIMessage = {
+  role: "system" | "user" | "assistant" | "tool";
+  content: string | null;
+  tool_calls?: Array<{ id: string; type: "function"; function: { name: string; arguments: string } }>;
+  tool_call_id?: string;
+};
+
+type ToolCallSummary = {
+  id: string;
+  name: string;
+  arguments: string;
+};
+
+type ProviderCall =
+  | { ok: true; response: Response }
+  | { ok: false; error: string; status: number };
+
+type ContinueAfterTools = (calls: ToolCallSummary[]) => Promise<ProviderCall>;
+type ProviderCaller = (turns: OpenAIMessage[]) => Promise<ProviderCall>;
+
+type ParsedRequestBody =
+  | { ok: true; body: RequestBody }
+  | { ok: false; response: NextResponse };
+
+type ChatRequest = {
+  body: RequestBody;
+  messages: IncomingMessage[];
+  latestUserMessage: string;
+  toolsMode: NonNullable<RequestBody["toolsMode"]>;
+  reasoningMode: NonNullable<RequestBody["reasoningMode"]>;
+  baseUrl: string;
+};
+
+type NormalizedToolCall = {
+  toolCallId: string;
+  name: string;
+  arguments: unknown;
+  result: { status: string };
+};
+type ProviderTool = {
+  type: "function";
+  function: {
+    name: string;
+    description: string;
+    parameters: {
+      type: "object";
+      properties: { order_id: { type: "string"; description: string } };
+      required: string[];
+      additionalProperties: boolean;
+    };
+  };
+};
+
+/**
+ * A tool call ends the model's turn, so the answer only arrives once the result
+ * is sent back. Bounded so a model that keeps calling tools cannot loop forever.
+ */
+const MAX_TOOL_ROUNDS = 3;
+
+type ToolCall = {
+  id?: string;
+  type?: string;
+  index?: number;
+  name?: string;
+  arguments?: unknown;
+  function?: {
+    name?: string;
+    arguments?: string;
+  };
+};
+
+type StreamEvent =
+  | { type: "text"; text: string }
+  | { type: "reasoning"; text: string }
+  | { type: "tool-call"; toolCallId: string; toolName: string; args: unknown; status: string }
+  | { type: "error"; error: string }
+  | { type: "done"; sessionId?: string };
+
+type ToolState = {
+  id: string;
+  name: string;
+  arguments: string;
+  /** Last arguments value that parsed, so partial JSON never renders. */
+  args: unknown;
+  label: string;
+  status: string;
+};
+
+type DeltaState = {
+  text: string;
+  reasoning: string;
+  /** Which channel supplied the reasoning, so a mirrored copy is not appended twice. */
+  reasoningSource: "details" | "field" | null;
+  toolCalls: Map<string, ToolState>;
+};
+
+/**
+ * Providers that keep conversation state server side name the header that
+ * pins it. Bare OpenAI has no sessions, so the header is simply ignored.
+ */
+const SESSION_HEADER = "X-Hermes-Session-Id";
+const SESSION_RESPONSE_HEADER = "x-hermes-session-id";
+
+/**
+ * Endpoints whose models reason mandatorily reject the reasoning parameter.
+ * Remembered per endpoint+model so only the first turn pays for the discovery.
+ */
+const reasoningRejected = new Set<string>();
+
+export const runtime = "nodejs";
+
+export async function POST(request: Request) {
+  const startedAt = Date.now();
+  const parsed = await parseRequestBody(request);
+  if (!parsed.ok) return parsed.response;
+
+  const chatRequest = normalizeChatRequest(parsed.body);
+  if (chatRequest.baseUrl.length === 0) {
+    return demoResponse(chatRequest, startedAt);
+  }
+
+  const endpoint = chatCompletionsEndpoint(chatRequest.baseUrl);
+  const model = chatRequest.body.model?.trim() || "gpt-4o-mini";
+  const tools: ProviderTool[] | null = chatRequest.toolsMode === "off" ? null : [sampleOrderTool()];
+  const conversation = buildConversation(chatRequest.messages, chatRequest.toolsMode, chatRequest.reasoningMode);
+  const callProvider = createProviderCaller({
+    body: chatRequest.body,
+    endpoint,
+    headers: providerHeaders(chatRequest.body),
+    model,
+    reasoningEnabled: chatRequest.reasoningMode !== "off",
+    signal: request.signal,
+    tools,
+  });
+  const continueAfterTools = createToolContinuation(conversation, callProvider);
+
+  let call: ProviderCall;
+  try {
+    call = await callProvider(conversation);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown provider failure.";
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
+
+  if (!call.ok) {
+    return NextResponse.json({ error: call.error }, { status: call.status });
+  }
+
+  const sessionId = sessionIdOf(call.response, chatRequest.body.threadId);
+  if (chatRequest.body.stream) {
+    return eventStream(call.response, chatRequest.reasoningMode, chatRequest.toolsMode, sessionId, tools ? continueAfterTools : null);
+  }
+
+  return nonStreamingResponse({
+    continueAfterTools,
+    initialResponse: call.response,
+    reasoningMode: chatRequest.reasoningMode,
+    sessionId,
+    startedAt,
+    tools,
+    toolsMode: chatRequest.toolsMode,
+  });
+}
+
+async function parseRequestBody(request: Request): Promise<ParsedRequestBody> {
+  try {
+    return { ok: true, body: (await request.json()) as RequestBody };
+  } catch {
+    return { ok: false, response: NextResponse.json({ error: "Request body must be JSON." }, { status: 400 }) };
+  }
+}
+
+function normalizeChatRequest(body: RequestBody): ChatRequest {
+  const messages = Array.isArray(body.messages) ? body.messages : [];
+  const latestUserMessage = [...messages].reverse().find((message) => message.role === "user")?.content ?? "";
+
+  return {
+    body,
+    messages,
+    latestUserMessage,
+    toolsMode: body.toolsMode ?? "shown",
+    reasoningMode: body.reasoningMode ?? "shown",
+    baseUrl: body.baseUrl?.trim() ?? "",
+  };
+}
+
+function demoResponse(chatRequest: ChatRequest, startedAt: number) {
+  return NextResponse.json({
+    content: demoAnswer(chatRequest.latestUserMessage, chatRequest.toolsMode),
+    reasoning: chatRequest.reasoningMode === "off" ? null : "Classify the request, check whether a tool can answer it, then respond with the shortest useful status update.",
+    toolCalls: chatRequest.toolsMode === "off" ? [] : [{
+      name: "get_order_status",
+      arguments: { order_id: chatRequest.latestUserMessage.match(/#?(\d{3,})/)?.[1] ?? "4821" },
+      result: { status: "in_transit", carrier: "UPS", eta: "2026-09-24" },
+      latencyMs: 212,
+    }],
+    latencyMs: Date.now() - startedAt,
+  });
+}
+
+function buildConversation(messages: IncomingMessage[], toolsMode: ChatRequest["toolsMode"], reasoningMode: ChatRequest["reasoningMode"]): OpenAIMessage[] {
+  return [
+    {
+      role: "system",
+      content: [
+        "You are being tested inside Elvin, an agent UX playground.",
+        toolsMode === "off" ? "Do not call tools; answer from the visible conversation only." : "Use tools when they materially improve the answer.",
+        reasoningMode === "off" ? "Do not include hidden reasoning fields." : "If your provider supports a reasoning field, keep it concise.",
+      ].join(" "),
+    },
+    ...messages.map((message) => ({
+      role: message.role === "system" ? "system" : message.role === "assistant" ? "assistant" : "user",
+      content: message.content,
+    }) satisfies OpenAIMessage),
+  ];
+}
+
+function providerHeaders(body: RequestBody): Record<string, string> {
+  return {
+    "Content-Type": "application/json",
+    ...(body.apiKey?.trim() ? { Authorization: `Bearer ${body.apiKey.trim()}` } : {}),
+    ...(body.threadId?.trim() ? { [SESSION_HEADER]: body.threadId.trim() } : {}),
+  };
+}
+
+function createProviderCaller(options: {
+  body: RequestBody;
+  endpoint: string;
+  headers: Record<string, string>;
+  model: string;
+  reasoningEnabled: boolean;
+  signal: AbortSignal;
+  tools: ProviderTool[] | null;
+}): ProviderCaller {
+  const cacheKey = `${options.endpoint}|${options.model}`;
+
+  return async function callProvider(turns: OpenAIMessage[]): Promise<ProviderCall> {
+    const payload: Record<string, unknown> = {
+      model: options.model,
+      messages: turns,
+      temperature: 0.2,
+      stream: Boolean(options.body.stream),
+      ...(options.body.capability ? { capability: options.body.capability } : {}),
+      ...(options.tools ? { tools: options.tools, tool_choice: "auto" } : {}),
+    };
+
+    const first = await fetchProvider(options, payload, !reasoningRejected.has(cacheKey));
+    if (first.ok) return { ok: true, response: first };
+
+    // Some models reason mandatorily and reject the parameter outright. Rather
+    // than carrying a model table, drop it and let the provider decide.
+    const failureText = await first.text();
+    if (/reason/i.test(failureText)) {
+      reasoningRejected.add(cacheKey);
+      const retry = await fetchProvider(options, payload, false);
+      if (retry.ok) return { ok: true, response: retry };
+      const retryText = await retry.text();
+      return { ok: false, error: providerError(safeJson(retryText), retry.status), status: retry.status };
+    }
+    return { ok: false, error: providerError(safeJson(failureText), first.status), status: first.status };
+  };
+}
+
+function fetchProvider(
+  options: {
+    endpoint: string;
+    headers: Record<string, string>;
+    reasoningEnabled: boolean;
+    signal: AbortSignal;
+  },
+  payload: Record<string, unknown>,
+  includeReasoning: boolean,
+) {
+  return fetch(options.endpoint, {
+    method: "POST",
+    headers: options.headers,
+    body: JSON.stringify(includeReasoning ? { ...payload, reasoning: { enabled: options.reasoningEnabled } } : payload),
+    signal: options.signal,
+  });
+}
+
+function createToolContinuation(conversation: OpenAIMessage[], callProvider: ProviderCaller): ContinueAfterTools {
+  return async function continueAfterTools(calls: ToolCallSummary[]): Promise<ProviderCall> {
+    appendAssistantToolCalls(conversation, calls);
+    appendToolResults(conversation, calls);
+    return callProvider(conversation);
+  };
+}
+
+function appendAssistantToolCalls(conversation: OpenAIMessage[], calls: ToolCallSummary[]) {
+  conversation.push({
+    role: "assistant",
+    content: null,
+    tool_calls: calls.map((call) => ({ id: call.id, type: "function", function: { name: call.name, arguments: call.arguments } })),
+  });
+}
+
+function appendToolResults(conversation: OpenAIMessage[], calls: ToolCallSummary[]) {
+  for (const call of calls) {
+    conversation.push({
+      role: "tool",
+      tool_call_id: call.id,
+      content: JSON.stringify(executeTool(call.name, call.arguments)),
+    });
+  }
+}
+
+async function nonStreamingResponse(options: {
+  continueAfterTools: ContinueAfterTools;
+  initialResponse: Response;
+  reasoningMode: ChatRequest["reasoningMode"];
+  sessionId: string | null;
+  startedAt: number;
+  tools: ProviderTool[] | null;
+  toolsMode: ChatRequest["toolsMode"];
+}) {
+  let response = options.initialResponse;
+
+  for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
+    const data = safeJson(await response.text());
+    const choice = firstChoiceMessage(data);
+    const pending = toToolCallSummaries(choice.tool_calls);
+    const content = textContent(choice);
+
+    if (pending.length === 0 || !options.tools) {
+      return NextResponse.json({
+        content: content || toolOnlyFallback(choice.tool_calls),
+        reasoning: options.reasoningMode !== "off" ? reasoningContent(choice, data) : null,
+        toolCalls: options.toolsMode !== "off" ? normalizeToolCalls(choice.tool_calls) : [],
+        sessionId: options.sessionId,
+        latencyMs: Date.now() - options.startedAt,
+      });
+    }
+
+    const again = await options.continueAfterTools(pending);
+    if (!again.ok) return NextResponse.json({ error: again.error }, { status: again.status });
+    response = again.response;
+  }
+
+  return NextResponse.json({ error: "The agent kept requesting tools.", sessionId: options.sessionId }, { status: 502 });
+}
+
+/** The session the provider actually used — its own when it ignores our header. */
+function sessionIdOf(response: Response, requested?: string) {
+  return response.headers.get(SESSION_RESPONSE_HEADER) ?? requested?.trim() ?? null;
+}
+
+/**
+ * Tool stubs: a real app calls its own systems here. The workspace has one tool,
+ * and the point of the testbed is the round trip rather than the payload.
+ */
+function executeTool(name: string, rawArguments: string) {
+  const args: unknown = safeJson(rawArguments.length > 0 ? rawArguments : "{}");
+  const orderId = args && typeof args === "object" && "order_id" in args && typeof args.order_id === "string" ? args.order_id : "4821";
+  if (name === "get_order_status") {
+    return {
+      order_id: orderId,
+      status: "in_transit",
+      carrier: "UPS",
+      eta: "2026-09-24",
+      note: "Stubbed by the Elvin testbed.",
+    };
+  }
+  return { error: `The testbed has no stub for "${name}".` };
+}
+
+function toToolCallSummaries(value: unknown): ToolCallSummary[] {
+  return normalizeToolCalls(value).map((call) => ({
+    id: call.toolCallId,
+    name: call.name,
+    arguments: JSON.stringify(call.arguments),
+  }));
+}
+
+/** Tool calls opened during one provider turn. */
+function roundToolCalls(state: DeltaState, round: number): ToolCallSummary[] {
+  const prefix = `round-${round}-`;
+  return [...state.toolCalls.entries()]
+    .filter(([key]) => key.startsWith(prefix))
+    .map(([, call]) => ({ id: call.id, name: call.name, arguments: call.arguments }));
+}
+
+function toolStateFromNormalizedCall(call: NormalizedToolCall, status: ToolState["status"]): ToolState {
+  return {
+    id: call.toolCallId,
+    name: call.name,
+    arguments: JSON.stringify(call.arguments),
+    args: call.arguments,
+    label: "",
+    status,
+  };
+}
+
+/**
+ * Consumes one provider turn into `state`, emitting snapshots as it goes, and
+ * returns the tool calls that turn asked for.
+ */
+async function consumeStream(upstream: Response, round: number, state: DeltaState, emit: () => void): Promise<ToolCallSummary[]> {
+  const isEventStream = (upstream.headers.get("content-type") ?? "").includes("text/event-stream");
+
+  if (!isEventStream) {
+    const data = safeJson(await upstream.text());
+    const choice = firstChoiceMessage(data);
+    const reasoning = reasoningContent(choice, data);
+    if (reasoning) {
+      state.reasoning += reasoning;
+      state.reasoningSource = "field";
+    }
+    for (const call of normalizeToolCalls(choice.tool_calls)) {
+      state.toolCalls.set(`round-${round}-${call.toolCallId}`, toolStateFromNormalizedCall(call, "completed"));
+    }
+    const content = textContent(choice);
+    if (content) state.text += content;
+    emit();
+    return roundToolCalls(state, round);
+  }
+
+  const reader = upstream.body?.getReader();
+  if (!reader) throw new Error("Provider returned no stream body.");
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let eventName = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split(/\r?\n/);
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      if (line.length === 0) {
+        eventName = "";
+        continue;
+      }
+      if (line.startsWith("event:")) {
+        eventName = line.slice(6).trim();
+        continue;
+      }
+      if (!line.startsWith("data:")) continue;
+      const chunk = line.slice(5).trim();
+      if (chunk.length === 0 || chunk === "[DONE]") continue;
+
+      const payload = safeJson(chunk);
+      if (applyProviderEvent(state, eventName, payload)) {
+        emit();
+        continue;
+      }
+
+      const delta = firstDelta(payload);
+      if (!delta) continue;
+      applyDelta(state, delta, round);
+      emit();
+    }
+  }
+
+  // The turn is over once the stream ends, so its tool calls are settled.
+  for (const [key, call] of state.toolCalls) {
+    if (key.startsWith(`round-${round}-`)) state.toolCalls.set(key, { ...call, status: "completed" });
+  }
+  emit();
+  return roundToolCalls(state, round);
+}
+
+/**
+ * Normalizes any provider response into one event per update, so the client
+ * adapter only has to accumulate snapshots instead of parsing provider deltas.
+ */
+function eventStream(upstream: Response, reasoningMode: RequestBody["reasoningMode"], toolsMode: RequestBody["toolsMode"], sessionId: string | null, continueAfterTools: ContinueAfterTools | null) {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (event: StreamEvent) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+      const state: DeltaState = { text: "", reasoning: "", reasoningSource: null, toolCalls: new Map() };
+      const emit = () => {
+        for (const event of snapshotEvents(state, reasoningMode, toolsMode)) send(event);
+      };
+
+      try {
+        let current = upstream;
+        for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
+          const produced = await consumeStream(current, round, state, emit);
+          if (produced.length === 0 || !continueAfterTools) break;
+
+          const next = await continueAfterTools(produced);
+          if (!next.ok) {
+            send({ type: "error", error: next.error });
+            break;
+          }
+          current = next.response;
+        }
+        send({ type: "done", sessionId: sessionId ?? undefined });
+      } catch (error) {
+        send({ type: "error", error: error instanceof Error ? error.message : "Stream failed." });
+      } finally {
+        controller.close();
+      }
+    },
+    cancel() {
+      void upstream.body?.cancel();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-store",
+      Connection: "keep-alive",
+    },
+  });
+}
+
+function applyDelta(state: DeltaState, delta: Record<string, unknown>, round: number) {
+  if (typeof delta.content === "string") state.text += delta.content;
+
+  // Providers deliver thinking as a plain field or as structured details, often
+  // both at once carrying the same text. Track the channel in use so the
+  // mirrored copy is not counted twice.
+  const detailText = reasoningFromDetails(delta.reasoning_details);
+  if (detailText.length > 0) {
+    state.reasoning += detailText;
+    state.reasoningSource = "details";
+  } else if (state.reasoningSource !== "details") {
+    const field = reasoningField(delta);
+    if (field.length > 0) {
+      state.reasoning += field;
+      state.reasoningSource = "field";
+    }
+  }
+
+  if (!Array.isArray(delta.tool_calls)) return;
+
+  for (const rawCall of delta.tool_calls as ToolCall[]) {
+    const index = rawCall.index ?? state.toolCalls.size;
+    const key = `round-${round}-${index}`;
+    const prior = state.toolCalls.get(key) ?? emptyToolState(rawCall, index);
+    state.toolCalls.set(key, applyToolCallDelta(prior, rawCall));
+  }
+}
+
+function reasoningField(delta: Record<string, unknown>): string {
+  if (typeof delta.reasoning === "string") {
+    return delta.reasoning;
+  }
+  if (typeof delta.reasoning_content === "string") {
+    return delta.reasoning_content;
+  }
+  return "";
+}
+
+function emptyToolState(rawCall: ToolCall, index: number): ToolState {
+  return {
+    id: rawCall.id ?? `tool-${index}`,
+    name: "",
+    arguments: "",
+    args: {},
+    label: "",
+    status: "running",
+  };
+}
+
+function applyToolCallDelta(prior: ToolState, rawCall: ToolCall): ToolState {
+  const fragment = rawCall.function?.arguments ?? (typeof rawCall.arguments === "string" ? rawCall.arguments : "");
+  const argsText = `${prior.arguments}${fragment}`;
+
+  // Hold the last value that parsed, so a half-streamed JSON fragment never
+  // becomes the tool's displayed arguments.
+  let args = prior.args;
+  try {
+    args = JSON.parse(argsText);
+  } catch {
+    /* mid-fragment */
+  }
+
+  return {
+    id: rawCall.id ?? prior.id,
+    name: `${prior.name}${rawCall.function?.name ?? rawCall.name ?? ""}`,
+    arguments: argsText,
+    args,
+    label: prior.label,
+    status: prior.status,
+  };
+}
+
+function firstString(...values: unknown[]) {
+  return values.find((value): value is string => typeof value === "string" && value.length > 0);
+}
+
+/**
+ * Providers that run tools and stream thinking server side announce it as named
+ * SSE events rather than OpenAI `delta.tool_calls` / `delta.reasoning_content`:
+ * a tool event carrying `tool`, and thinking as the same shape with
+ * `tool: "_thinking"`.
+ */
+function applyProviderEvent(state: DeltaState, eventName: string, payload: unknown) {
+  if (!payload || typeof payload !== "object") return false;
+  const record = payload as Record<string, unknown>;
+  const tool = firstString(record.tool, record.tool_name, record.toolName);
+
+  if (tool === "_thinking") {
+    const thinking = firstString(record.delta, record.preview, record.label, record.text);
+    if (!thinking) return false;
+    state.reasoning += thinking;
+    return true;
+  }
+
+  if (tool) {
+    const id = firstString(record.toolCallId, record.call_id, record.id) ?? `tool-${state.toolCalls.size}`;
+    const key = `event-${id}`;
+    const prior = state.toolCalls.get(key);
+    const hinted = firstString(record.status, record.state);
+    state.toolCalls.set(key, {
+      id,
+      name: tool,
+      arguments: prior?.arguments ?? "",
+      args: prior?.args ?? {},
+      label: firstString(record.label, record.preview, record.detail) ?? prior?.label ?? "",
+      status: providerToolStatus(eventName, hinted),
+    });
+    return true;
+  }
+
+  if (eventName === "assistant.delta") {
+    const text = firstString(record.delta, record.text);
+    if (!text) return false;
+    state.text += text;
+    return true;
+  }
+
+  if (eventName === "assistant.completed") {
+    const text = firstString(record.content, record.text);
+    if (!text) return false;
+    state.text = text;
+    return true;
+  }
+
+  if (eventName === "error") {
+    state.text = firstString(record.message, record.error) ?? "The agent reported an error.";
+    return true;
+  }
+
+  return false;
+}
+
+function providerToolStatus(eventName: string, hinted?: string): ToolState["status"] {
+  if (eventName === "tool.failed") return "failed";
+  if (eventName === "tool.completed" || hinted === "completed" || hinted === "done") return "completed";
+  return "running";
+}
+
+function visibleToolArgs(call: ToolState): unknown {
+  if (call.label.length > 0) {
+    return { label: call.label };
+  }
+  return call.args;
+}
+
+function toolCallEvent(call: ToolState): StreamEvent {
+  return { type: "tool-call", toolCallId: call.id, toolName: call.name, args: visibleToolArgs(call), status: call.status };
+}
+
+function snapshotEvents(state: DeltaState, reasoningMode: RequestBody["reasoningMode"], toolsMode: RequestBody["toolsMode"]): StreamEvent[] {
+  const events: StreamEvent[] = [];
+  if (reasoningMode !== "off" && state.reasoning.length > 0) {
+    events.push({ type: "reasoning", text: state.reasoning });
+  }
+  if (toolsMode !== "off") {
+    for (const call of state.toolCalls.values()) {
+      if (call.name.length === 0) continue;
+      events.push(toolCallEvent(call));
+    }
+  }
+  if (state.text.length > 0) {
+    events.push({ type: "text", text: state.text });
+  }
+  return events;
+}
+
+function firstDelta(data: unknown) {
+  const record = data as { choices?: Array<{ delta?: Record<string, unknown> }> } | null;
+  return record?.choices?.[0]?.delta ?? null;
+}
+
+function safeJson(text: string): unknown {
+  if (text.length === 0) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { raw: text };
+  }
+}
+
+function parseArguments(value: string) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value.length > 0 ? { raw: value } : {};
+  }
+}
+
+function chatCompletionsEndpoint(baseUrl: string) {
+  const trimmed = baseUrl.replace(/\/+$/, "");
+  if (trimmed.endsWith("/chat/completions")) return trimmed;
+  return `${trimmed}/chat/completions`;
+}
+
+function sampleOrderTool(): ProviderTool {
+  return {
+    type: "function",
+    function: {
+      name: "get_order_status",
+      description: "Look up shipment status for a customer order.",
+      parameters: {
+        type: "object",
+        properties: { order_id: { type: "string", description: "Order number without the # prefix." } },
+        required: ["order_id"],
+        additionalProperties: false,
+      },
+    },
+  };
+}
+
+function firstChoiceMessage(data: unknown) {
+  const record = data as { choices?: Array<{ message?: Record<string, unknown> }>; output?: Array<Record<string, unknown>> } | null;
+  const message = record?.choices?.[0]?.message;
+  if (message) return message;
+  return record?.output?.[0] ?? {};
+}
+
+function textContent(message: Record<string, unknown>) {
+  const content = message.content;
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+
+  return content.map((part) => {
+    const value = part as { text?: string; type?: string; content?: string };
+    return value.text ?? value.content ?? "";
+  }).join("").trim();
+}
+
+/** Thinking arrives either as a plain field or as structured details; join the latter. */
+function reasoningFromDetails(value: unknown) {
+  if (!Array.isArray(value)) return "";
+  let text = "";
+  for (const detail of value) {
+    if (typeof detail === "string") {
+      text += detail;
+      continue;
+    }
+    if (detail && typeof detail === "object" && "text" in detail && typeof detail.text === "string") {
+      text += detail.text;
+    }
+  }
+  return text;
+}
+
+function reasoningContent(message: Record<string, unknown>, data: unknown) {
+  const details = reasoningFromDetails(message.reasoning_details);
+  if (details.length > 0) return details;
+  const response = data as Record<string, unknown> | null;
+  const direct = message.reasoning_content ?? message.reasoning ?? response?.reasoning;
+  if (typeof direct === "string") return direct;
+  return null;
+}
+
+function normalizeToolCalls(value: unknown): NormalizedToolCall[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((toolCall: ToolCall, index) => {
+    const raw = toolCall.function?.arguments ?? toolCall.arguments ?? {};
+    const args = typeof raw === "string" ? parseArguments(raw) : raw;
+    return {
+      toolCallId: toolCall.id ?? `tool-${index}`,
+      name: toolCall.function?.name ?? toolCall.name ?? "tool_call",
+      arguments: args,
+      result: { status: "requested_by_agent" },
+    };
+  });
+}
+
+function toolOnlyFallback(value: unknown) {
+  const calls = normalizeToolCalls(value);
+  if (calls.length === 0) return "The agent returned an empty response.";
+  return `The agent requested ${calls.length} tool call${calls.length === 1 ? "" : "s"}.`;
+}
+
+function providerError(data: unknown, status: number) {
+  const record = data as { error?: { message?: string }; message?: string; raw?: string } | null;
+  return record?.error?.message ?? record?.message ?? record?.raw ?? `Provider returned HTTP ${status}.`;
+}
+
+function demoAnswer(prompt: string, toolsMode: string) {
+  const orderId = prompt.match(/#?(\d{3,})/)?.[1] ?? "4821";
+  if (toolsMode === "off") {
+    return `I can answer from the conversation, but tool calls are disabled. For order #${orderId}, open your Orders page or use the tracking link in the confirmation email.`;
+  }
+  return `Order #${orderId} is in transit with UPS. It was held at the Memphis hub, so the new delivery estimate is Thursday, September 24. Want me to send you the tracking link?`;
+}

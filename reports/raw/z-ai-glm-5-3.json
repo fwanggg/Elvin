@@ -1,0 +1,494 @@
+[
+  {
+    "combo": {
+      "reasoning": "on",
+      "tools": "on"
+    },
+    "request": {
+      "model": "z-ai/glm-5.3",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Two things, please: (1) work out 17*23 step by step, and (2) call get_weather with city=\"Paris\" for the current weather there. Show your working for the arithmetic."
+        }
+      ],
+      "max_tokens": 2000,
+      "stream": true,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "get_weather",
+            "description": "Get the current weather for a city.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "description": "The city name, e.g. Paris"
+                }
+              },
+              "required": [
+                "city"
+              ]
+            }
+          }
+        }
+      ],
+      "tool_choice": "auto",
+      "reasoning": {
+        "enabled": true
+      }
+    },
+    "status": 200,
+    "ok": true,
+    "elapsedMs": 1096,
+    "contentType": "text/event-stream",
+    "error": null,
+    "rawSample": "{\"id\":\"gen-1790156383-PjhnyKmVWBLvNHV9nPPU\",\"object\":\"chat.completion.chunk\",\"created\":1790156383,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\"The\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\"The\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156383-PjhnyKmVWBLvNHV9nPPU\",\"object\":\"chat.completion.chunk\",\"created\":1790156383,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\" user wants two things:\\n1\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\" user wants two things:\\n1\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156383-PjhnyKmVWBLvNHV9nPPU\",\"object\":\"chat.completion.chunk\",\"created\":1790156383,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\". Work\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\". Work\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156383-PjhnyKmVWBLvNHV9nPPU\",\"object\":\"chat.completion.chunk\",\"created\":1790156383,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\" out 17*23 step\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\" out 17*23 step\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156383-PjhnyKmVWBLvNHV9nPPU\",\"object\":\"chat.completion.chunk\",\"created\":1790156383,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\" by step\\n2. Call\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\" by step\\n2. Call\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156383-PjhnyKmVWBLvNHV9nPPU\",\"object\":\"chat.completion.chunk\",\"created\":1790156383,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\" get_weather with city=\\\"Paris\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\" get_weather with city=\\\"Paris\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}",
+    "rawChunkCount": 70,
+    "mode": "stream",
+    "content": "I'll handle both requests. Let me start the weather lookup and work through the arithmetic at the same time.",
+    "reasoning": "TheThe user wants two things:\n1 user wants two things:\n1. Work. Work out 17*23 step out 17*23 step by step\n2. Call by step\n2. Call get_weather with city=\"Paris get_weather with city=\"Paris\"\n\nThese are independent tasks\"\n\nThese are independent tasks, so I can call, so I can call the tool the tool while doing the arithmetic. Let while doing the arithmetic. Let me do both me do both.. The arithmetic doesn The arithmetic doesn't require any't require any tool calls tool calls, so I'll show, so I'll show my working and call my working and call the weather tool the weather tool.\n\n.\n\n1717 * * 23:\n- 23:\n- Break Break it it down: 17 * down: 17 * 23 = 17 23 = 17 * (20 + 3 * (20 + 3) = 17*) = 17*20 + 17*320 + 17*3 = 340 = 340 + 51 + 51 = 39 = 391\n\n1\n\nLet me verify: 17Let me verify: 17 * 20 * 20 = 340, = 340, 17 * 3 = 17 * 3 = 51, 51, 340 + 51 = 340 + 51 = 391. Correct 391. Correct.\n\nI should.\n\nI should call the get call the get_weather tool_weather tool.. Since the arithmetic Since the arithmetic doesn doesn't depend't depend on the tool, I can on the tool, I can do both in the do both in the same response — same response — show show the working and make the working and makethe tool call.the tool call.",
+    "reasoningFields": [
+      "delta.reasoning",
+      "delta.reasoning_details[].type|text|format|index"
+    ],
+    "reasoningTypes": [
+      "reasoning.text"
+    ],
+    "toolCalls": [
+      {
+        "id": "call_01a0cda2aa7d7f4091701145",
+        "name": "get_weather",
+        "arguments": "{\"city\":\"Paris\"}",
+        "argumentsType": "string(JSON)"
+      }
+    ],
+    "finishReason": "tool_calls",
+    "usage": {
+      "prompt_tokens": 212,
+      "completion_tokens": 220,
+      "total_tokens": 432,
+      "cost": 0.00104592,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 192,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.00104592,
+        "upstream_inference_prompt_cost": 0.00007792,
+        "upstream_inference_completions_cost": 0.000968
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 186,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "chunkCount": 69,
+    "keys": [
+      "choices",
+      "choices[]",
+      "choices[].delta",
+      "choices[].delta.content",
+      "choices[].delta.reasoning",
+      "choices[].delta.reasoning_details",
+      "choices[].delta.reasoning_details[]",
+      "choices[].delta.reasoning_details[].format",
+      "choices[].delta.reasoning_details[].index",
+      "choices[].delta.reasoning_details[].text",
+      "choices[].delta.reasoning_details[].type",
+      "choices[].delta.role",
+      "choices[].delta.tool_calls",
+      "choices[].delta.tool_calls[]",
+      "choices[].delta.tool_calls[].function",
+      "choices[].delta.tool_calls[].function.arguments",
+      "choices[].delta.tool_calls[].function.name",
+      "choices[].delta.tool_calls[].id",
+      "choices[].delta.tool_calls[].index",
+      "choices[].delta.tool_calls[].type",
+      "choices[].finish_reason",
+      "choices[].index",
+      "choices[].native_finish_reason",
+      "created",
+      "id",
+      "model",
+      "object",
+      "provider",
+      "service_tier",
+      "system_fingerprint",
+      "usage",
+      "usage.completion_tokens",
+      "usage.completion_tokens_details",
+      "usage.completion_tokens_details.audio_tokens",
+      "usage.completion_tokens_details.image_tokens",
+      "usage.completion_tokens_details.reasoning_tokens",
+      "usage.cost",
+      "usage.cost_details",
+      "usage.cost_details.upstream_inference_completions_cost",
+      "usage.cost_details.upstream_inference_cost",
+      "usage.cost_details.upstream_inference_prompt_cost",
+      "usage.is_byok",
+      "usage.prompt_tokens",
+      "usage.prompt_tokens_details",
+      "usage.prompt_tokens_details.audio_tokens",
+      "usage.prompt_tokens_details.cache_write_tokens",
+      "usage.prompt_tokens_details.cached_tokens",
+      "usage.prompt_tokens_details.video_tokens",
+      "usage.total_tokens"
+    ]
+  },
+  {
+    "combo": {
+      "reasoning": "on",
+      "tools": "off"
+    },
+    "request": {
+      "model": "z-ai/glm-5.3",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Two things, please: (1) work out 17*23 step by step, and (2) call get_weather with city=\"Paris\" for the current weather there. Show your working for the arithmetic."
+        }
+      ],
+      "max_tokens": 2000,
+      "stream": true,
+      "reasoning": {
+        "enabled": true
+      }
+    },
+    "status": 200,
+    "ok": true,
+    "elapsedMs": 3215,
+    "contentType": "text/event-stream",
+    "error": null,
+    "rawSample": "{\"id\":\"gen-1790156384-AZ2JRrEozS6OE1EhRmX0\",\"object\":\"chat.completion.chunk\",\"created\":1790156384,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\"The\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\"The\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156384-AZ2JRrEozS6OE1EhRmX0\",\"object\":\"chat.completion.chunk\",\"created\":1790156384,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\" user wants two things:\\n1\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\" user wants two things:\\n1\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156384-AZ2JRrEozS6OE1EhRmX0\",\"object\":\"chat.completion.chunk\",\"created\":1790156384,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\". Work out 17*\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\". Work out 17*\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156384-AZ2JRrEozS6OE1EhRmX0\",\"object\":\"chat.completion.chunk\",\"created\":1790156384,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\"23 step by step,\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\"23 step by step,\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156384-AZ2JRrEozS6OE1EhRmX0\",\"object\":\"chat.completion.chunk\",\"created\":1790156384,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\" showing the\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\" showing the\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156384-AZ2JRrEozS6OE1EhRmX0\",\"object\":\"chat.completion.chunk\",\"created\":1790156384,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\" arithmetic\\n2. Call get\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\" arithmetic\\n2. Call get\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}",
+    "rawChunkCount": 248,
+    "mode": "stream",
+    "content": "## 1. Working out 17 × 23\n\n**Method: split 23 into 20 + 3**\n\n- 17 × 20 = 340\n- 17 × 3 = 51\n- 340 + 51 = **391**\n\nOr as long multiplication:\n\n```\n    17\n  × 23\n  ----\n    51   (17 × 3)\n   340   (17 × 20, shifted one place)\n  ----\n   391\n```\n\n**Answer: 17 × 23 = 391**\n\nQuick check: 391 ÷ 17 = 23 ✓\n\n## 2. Weather in Paris\n\nI'm afraid I can't do this one — I don't have access to a `get_weather` tool (or any tools) in this conversation, so there's no function for me to call. I also don't have real-time data, so I couldn't tell you the current weather in Paris from memory.\n\nIf you're working in an environment where a `get_weather` function should be available (e.g., a coding agent or API setup), you may need to enable or connect that tool first — and in that case, the call would look something like `get_weather(city=\"Paris\")` once it's wired up. Alternatively, a quick search or a weather service like Meteo-France will give you the current conditions.",
+    "reasoning": "TheThe user wants two things:\n1 user wants two things:\n1. Work out 17*. Work out 17*23 step by step,23 step by step, showing the showing the arithmetic\n2. Call get arithmetic\n2. Call get_weather with city=\"Paris\"_weather with city=\"Paris\" for the current weather\n\nFor for the current weather\n\nFor the first the first part, I can part, I can easily easily show show the arithmetic step by step. the arithmetic step by step. Let me work Let me work through through 17*23:\n\n 17*23:\n\nMethodMethod 1: Break 1: Break it it down\n17 down\n17 * * 23 = 17 * 23 = 17 * (20 + 3) (20 + 3) = 17* = 17*20 + 1720 + 17*3 = 340*3 = 340 + 51 + 51 = 39 = 391\n\nOr1\n\nOr long long multiplication:\n  multiplication:\n  17\n 17\n× 23\n----\n× 23\n----\n  51  51 (17 × 3 (17 × 3)\n 340)\n 340 (17 × 20 (17 × 20, shifted)\n----\n, shifted)\n----\n  391\n\nLet me verify391\n\nLet me verify: 17 × 3: 17 × 3 = 51 = 51.. 17 × 2 17 × 2 = 34 = 34, so 17 × , so 17 × 20 = 340. 20 = 340. 340340 + 51 = 39 + 51 = 391. ✓\n\nAlso1. ✓\n\nAlso check: 17* check: 17*23 = 391.23 = 391. Another Another way: 17 way: 17*23 = *23 = 17*24 -17*24 - 17 = 40 17 = 408 - 17 = 8 - 17 = 391. ✓ Or391. ✓ Or ( (20-20-3)*233)*23 = 4 = 460 - 6960 - 69 = 391. ✓ = 391. ✓\n\nFor the second part:\n\nFor the second part: I don I don't have access't have access to a get to a get_weather tool_weather tool. There. There's no tool/function's no tool/function available to available to me in this conversation. I me in this conversation. I need need to be honest about that to be honest about that. I cannot. I cannot call a call a weather function. I should tell weather function. I should tell the user I don't have the user I don't have the ability to call get_weather the ability to call get_weather — I have — I have no tools no tools available in this environment, available in this environment, and and I don I don't have real-time weather data't have real-time weather data either either.\n\nSo.\n\nSo my response should:\n1. my response should:\n1. Show the step Show the step-by-step multiplication-by-step multiplication\n\n2. Explain2. Explain I I can't call get_weather because can't call get_weather because no no such tool is available to such tool is available to me here me here, and suggest how, and suggest how they could they could get that get that ( (e.g., ae.g., a weather service weather service, or if, or if their their system system has has such such a tool, they'd a tool, they'd need to enable need to enable it / it / use use the the proper proper API).\n\nFormat: The API).\n\nFormat: The user asked for step-by-step user asked for step-by-step working shown working shown.. I'll I'll use a clear layout use a clear layout with with the decomposition the decomposition method method and possibly and possibly long long multiplication. Keep it clean multiplication. Keep it clean and and readable readable. Headers might be nice. Headers might be nice for the two parts for the two parts, or, or just clear just clear separation separation. Since. Since it's a short it's a short response, I'll use a response, I'll use a numbered numbered structure structure matching their matching their two requests. Markdown two requests. Markdown is appropriate here ( is appropriate here (chatchat interface presumably interface presumably).\n\nLength).\n\nLength: Should: Should be fairly be fairly concise. The concise. The arithmetic needs arithmetic needs a few a few lines lines;; the weather part the weather part needs a brief needs a brief honest explanation honest explanation..",
+    "reasoningFields": [
+      "delta.reasoning",
+      "delta.reasoning_details[].type|text|format|index"
+    ],
+    "reasoningTypes": [
+      "reasoning.text"
+    ],
+    "toolCalls": [],
+    "finishReason": "stop",
+    "usage": {
+      "prompt_tokens": 55,
+      "completion_tokens": 787,
+      "total_tokens": 842,
+      "cost": 0.0035398,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0035398,
+        "upstream_inference_prompt_cost": 0.000077,
+        "upstream_inference_completions_cost": 0.0034628
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 491,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "chunkCount": 247,
+    "keys": [
+      "choices",
+      "choices[]",
+      "choices[].delta",
+      "choices[].delta.content",
+      "choices[].delta.reasoning",
+      "choices[].delta.reasoning_details",
+      "choices[].delta.reasoning_details[]",
+      "choices[].delta.reasoning_details[].format",
+      "choices[].delta.reasoning_details[].index",
+      "choices[].delta.reasoning_details[].text",
+      "choices[].delta.reasoning_details[].type",
+      "choices[].delta.role",
+      "choices[].finish_reason",
+      "choices[].index",
+      "choices[].native_finish_reason",
+      "created",
+      "id",
+      "model",
+      "object",
+      "provider",
+      "service_tier",
+      "system_fingerprint",
+      "usage",
+      "usage.completion_tokens",
+      "usage.completion_tokens_details",
+      "usage.completion_tokens_details.audio_tokens",
+      "usage.completion_tokens_details.image_tokens",
+      "usage.completion_tokens_details.reasoning_tokens",
+      "usage.cost",
+      "usage.cost_details",
+      "usage.cost_details.upstream_inference_completions_cost",
+      "usage.cost_details.upstream_inference_cost",
+      "usage.cost_details.upstream_inference_prompt_cost",
+      "usage.is_byok",
+      "usage.prompt_tokens",
+      "usage.prompt_tokens_details",
+      "usage.prompt_tokens_details.audio_tokens",
+      "usage.prompt_tokens_details.cache_write_tokens",
+      "usage.prompt_tokens_details.cached_tokens",
+      "usage.prompt_tokens_details.video_tokens",
+      "usage.total_tokens"
+    ]
+  },
+  {
+    "combo": {
+      "reasoning": "off",
+      "tools": "on"
+    },
+    "request": {
+      "model": "z-ai/glm-5.3",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Two things, please: (1) work out 17*23 step by step, and (2) call get_weather with city=\"Paris\" for the current weather there. Show your working for the arithmetic."
+        }
+      ],
+      "max_tokens": 2000,
+      "stream": true,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "get_weather",
+            "description": "Get the current weather for a city.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "description": "The city name, e.g. Paris"
+                }
+              },
+              "required": [
+                "city"
+              ]
+            }
+          }
+        }
+      ],
+      "tool_choice": "auto"
+    },
+    "status": 200,
+    "ok": true,
+    "elapsedMs": 1302,
+    "contentType": "text/event-stream",
+    "error": null,
+    "rawSample": "{\"id\":\"gen-1790156388-cEzVBRxFBfOR2FIIgDaY\",\"object\":\"chat.completion.chunk\",\"created\":1790156388,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\"The\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\"The\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156388-cEzVBRxFBfOR2FIIgDaY\",\"object\":\"chat.completion.chunk\",\"created\":1790156388,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\" user wants two things:\\n1\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\" user wants two things:\\n1\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156388-cEzVBRxFBfOR2FIIgDaY\",\"object\":\"chat.completion.chunk\",\"created\":1790156388,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\". Work\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\". Work\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156388-cEzVBRxFBfOR2FIIgDaY\",\"object\":\"chat.completion.chunk\",\"created\":1790156388,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\" out 17*23 step\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\" out 17*23 step\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156388-cEzVBRxFBfOR2FIIgDaY\",\"object\":\"chat.completion.chunk\",\"created\":1790156388,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\" by step\\n2. Call\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\" by step\\n2. Call\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156388-cEzVBRxFBfOR2FIIgDaY\",\"object\":\"chat.completion.chunk\",\"created\":1790156388,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\" get_weather with city=\\\"Paris\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\" get_weather with city=\\\"Paris\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}",
+    "rawChunkCount": 89,
+    "mode": "stream",
+    "content": "I'll handle both requests. Let me work through the arithmetic and fetch the weather for Paris at the same time.\n\n**Arithmetic: 17 × 23 (step by step)**\n\nUsing the distributive property, split 23 into 20 + 3:\n\n1. **17 × 20** = 17 × 2 × 10 = 34 × 10 = **340**\n2. **17 × 3** = 10 × 3 + 7 × 3 = 30 + 21 = **51**\n3. **Add the partial products:** 340 + 51 = **391**\n\nSo **17 × 23 = 391**.\n\n*Quick check via another method (long multiplication):*\n- 17 × 3 = 51 (units digit)\n- 17 × 20 = 340 (tens digit)\n- 51 + 340 = 391 ✓\n\nNow for the weather:",
+    "reasoning": "TheThe user wants two things:\n1 user wants two things:\n1. Work. Work out 17*23 step out 17*23 step by step\n2. Call by step\n2. Call get_weather with city=\"Paris get_weather with city=\"Paris\"\n\nThese are independent,\"\n\nThese are independent, so I can do so I can do the arithmetic and call the arithmetic and call the tool the tool.. The The tool call should tool call should be made. be made. Let me show Let me show the working for the arithmetic and the working for the arithmetic and call the weather tool call the weather tool in the same response in the same response.\n\n17.\n\n17 * * 23 = 23 = 17 * 17 *  20 + 1720 + 17 * 3 = 340 * 3 = 340 + 51 + 51 = 391 = 391..",
+    "reasoningFields": [
+      "delta.reasoning",
+      "delta.reasoning_details[].type|text|format|index"
+    ],
+    "reasoningTypes": [
+      "reasoning.text"
+    ],
+    "toolCalls": [
+      {
+        "id": "call_01a0cda2bc2177808893ec63",
+        "name": "get_weather",
+        "arguments": "{\"city\":\"Paris\"}",
+        "argumentsType": "string(JSON)"
+      }
+    ],
+    "finishReason": "tool_calls",
+    "usage": {
+      "prompt_tokens": 212,
+      "completion_tokens": 302,
+      "total_tokens": 514,
+      "cost": 0.00140672,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 192,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.00140672,
+        "upstream_inference_prompt_cost": 0.00007792,
+        "upstream_inference_completions_cost": 0.0013288
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 95,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "chunkCount": 88,
+    "keys": [
+      "choices",
+      "choices[]",
+      "choices[].delta",
+      "choices[].delta.content",
+      "choices[].delta.reasoning",
+      "choices[].delta.reasoning_details",
+      "choices[].delta.reasoning_details[]",
+      "choices[].delta.reasoning_details[].format",
+      "choices[].delta.reasoning_details[].index",
+      "choices[].delta.reasoning_details[].text",
+      "choices[].delta.reasoning_details[].type",
+      "choices[].delta.role",
+      "choices[].delta.tool_calls",
+      "choices[].delta.tool_calls[]",
+      "choices[].delta.tool_calls[].function",
+      "choices[].delta.tool_calls[].function.arguments",
+      "choices[].delta.tool_calls[].function.name",
+      "choices[].delta.tool_calls[].id",
+      "choices[].delta.tool_calls[].index",
+      "choices[].delta.tool_calls[].type",
+      "choices[].finish_reason",
+      "choices[].index",
+      "choices[].native_finish_reason",
+      "created",
+      "id",
+      "model",
+      "object",
+      "provider",
+      "service_tier",
+      "system_fingerprint",
+      "usage",
+      "usage.completion_tokens",
+      "usage.completion_tokens_details",
+      "usage.completion_tokens_details.audio_tokens",
+      "usage.completion_tokens_details.image_tokens",
+      "usage.completion_tokens_details.reasoning_tokens",
+      "usage.cost",
+      "usage.cost_details",
+      "usage.cost_details.upstream_inference_completions_cost",
+      "usage.cost_details.upstream_inference_cost",
+      "usage.cost_details.upstream_inference_prompt_cost",
+      "usage.is_byok",
+      "usage.prompt_tokens",
+      "usage.prompt_tokens_details",
+      "usage.prompt_tokens_details.audio_tokens",
+      "usage.prompt_tokens_details.cache_write_tokens",
+      "usage.prompt_tokens_details.cached_tokens",
+      "usage.prompt_tokens_details.video_tokens",
+      "usage.total_tokens"
+    ]
+  },
+  {
+    "combo": {
+      "reasoning": "off",
+      "tools": "off"
+    },
+    "request": {
+      "model": "z-ai/glm-5.3",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Two things, please: (1) work out 17*23 step by step, and (2) call get_weather with city=\"Paris\" for the current weather there. Show your working for the arithmetic."
+        }
+      ],
+      "max_tokens": 2000,
+      "stream": true
+    },
+    "status": 200,
+    "ok": true,
+    "elapsedMs": 2265,
+    "contentType": "text/event-stream",
+    "error": null,
+    "rawSample": "{\"id\":\"gen-1790156389-BoI42XnBmKkY6ICrMWFQ\",\"object\":\"chat.completion.chunk\",\"created\":1790156389,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\"The\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\"The\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156389-BoI42XnBmKkY6ICrMWFQ\",\"object\":\"chat.completion.chunk\",\"created\":1790156389,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\" user is\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\" user is\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156389-BoI42XnBmKkY6ICrMWFQ\",\"object\":\"chat.completion.chunk\",\"created\":1790156389,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\" asking for\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\" asking for\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156389-BoI42XnBmKkY6ICrMWFQ\",\"object\":\"chat.completion.chunk\",\"created\":1790156389,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\" two things:\\n1. Work\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\" two things:\\n1. Work\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156389-BoI42XnBmKkY6ICrMWFQ\",\"object\":\"chat.completion.chunk\",\"created\":1790156389,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\" out 17*23 step\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\" out 17*23 step\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}\n{\"id\":\"gen-1790156389-BoI42XnBmKkY6ICrMWFQ\",\"object\":\"chat.completion.chunk\",\"created\":1790156389,\"model\":\"z-ai/glm-5.3\",\"provider\":\"Together\",\"system_fingerprint\":\"default\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning\":\" by step\\n2. Call\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\" by step\\n2. Call\",\"format\":\"unknown\",\"index\":0}]},\"finish_reason\":null,\"native_finish_reason\":null}]}",
+    "rawChunkCount": 178,
+    "mode": "stream",
+    "content": "## 1) Working out 17 × 23\n\n**Method: break it into easier products**\n\n17 × 23 = 17 × (20 + 3)\n\nStep 1: 17 × 20 = 340\n\nStep 2: 17 × 3 = 51\n\nStep 3: 340 + 51 = **391**\n\n**Verification:** (20 − 3)(20 + 3) = 400 − 9 = 391 ✓\n\nSo 17 × 23 = **391**\n\n## 2) Weather in Paris\n\nI can't do this one, I'm afraid — I don't have access to a `get_weather` function (or any external tools/APIs) in this conversation, and I also have no real-time data. Any weather figures I gave you would be made up, which wouldn't help.\n\nTo get current Paris weather, you could check a weather service like Meteo-France, weather.com, or simply search \"Paris weather.\"",
+    "reasoning": "TheThe user is user is asking for asking for two things:\n1. Work two things:\n1. Work out 17*23 step out 17*23 step by step\n2. Call by step\n2. Call get_weather with city=\"Paris get_weather with city=\"Paris\" for current\" for current weather\n\nFor weather\n\nFor the first part, I can the first part, I can do the arithmetic do the arithmetic and and show my show my working. This working. This is straightforward.\n\nFor the second is straightforward.\n\nFor the second part, I don part, I don't have access't have access to a get to a get_weather tool_weather tool or function. I or function. I don't have any tools don't have any tools available in this conversation. I available in this conversation. I should be honest about should be honest about this — this — I cannot I cannot call call external external functions or functions or APIs APIs. I should not pretend to. I should not pretend to call a call a function or fabric function or fabricate weatherate weather data.\n\nLet me work data.\n\nLet me work out  out 17*23:\n\nMethod17*23:\n\nMethod 1: Distrib 1: Distributive propertyutive property\n17 *\n17 * 23 = 17 23 = 17 * (20 + 3 * (20 + 3) = 17*) = 17*20 + 17*320 + 17*3 = 340 = 340 + 51 + 51 = 391 = 391\n\nMethod 2: Column\n\nMethod 2: Column multiplication multiplication\n17 ×\n17 × 23\n- 23\n- 17 17 × 3 = 51 × 3 = 51\n- 17\n- 17 × 20 = 340 × 20 = 340\n- 51\n- 51 + 340 = 39 + 340 = 391\n\nLet me verify1\n\nLet me verify: 17 × 23: 17 × 23 = 391\n = 391\nCheck: 39Check: 391 /1 / 17 = 23 17 = 23 ✓ ( ✓ (17 × 23:17 × 23: 17 × 20 17 × 20 = 340 = 340, 17 × 3, 17 × 3 = 51 = 51, 340 + 51, 340 + 51 = 391) = 391) ✓\n ✓\nAlternativeAlternative check: 17 check: 17 × 23 = ( × 23 = (20 -20 - 3)( 3)(20 + 3) =20 + 3) = 400 400 - 9 - 9 = 391 ✓\n\n = 391 ✓\n\nSo theSo the answer is 391.\n\n answer is 391.\n\nFor the weather:For the weather: I need I need to clearly to clearly explain I don't have tool explain I don't have tool-c-calling capabilities in this conversation,alling capabilities in this conversation, and and I don I don't have real-time data't have real-time data anyway anyway. I can. I can suggest suggest they they check a check a weather service. weather service. I shouldn't fabricate weather I shouldn't fabricate weather.\n\nFormat: The.\n\nFormat: The person person asked asked for step for step-by-step working, so showing-by-step working, so showing the arithmetic clearly the arithmetic clearly is appropriate. A is appropriate. A numbered numbered or or structured layout structured layout for the two for the two parts makes parts makes sense. Keep sense. Keep it concise it concise. Maybe use headers. Maybe use headers or just numbered or just numbered sections sections. Markdown. Markdown is fine since this is likely is fine since this is likelya chat interface.a chat interface.",
+    "reasoningFields": [
+      "delta.reasoning",
+      "delta.reasoning_details[].type|text|format|index"
+    ],
+    "reasoningTypes": [
+      "reasoning.text"
+    ],
+    "toolCalls": [],
+    "finishReason": "stop",
+    "usage": {
+      "prompt_tokens": 55,
+      "completion_tokens": 619,
+      "total_tokens": 674,
+      "cost": 0.0028006,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0028006,
+        "upstream_inference_prompt_cost": 0.000077,
+        "upstream_inference_completions_cost": 0.0027236
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 409,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "chunkCount": 177,
+    "keys": [
+      "choices",
+      "choices[]",
+      "choices[].delta",
+      "choices[].delta.content",
+      "choices[].delta.reasoning",
+      "choices[].delta.reasoning_details",
+      "choices[].delta.reasoning_details[]",
+      "choices[].delta.reasoning_details[].format",
+      "choices[].delta.reasoning_details[].index",
+      "choices[].delta.reasoning_details[].text",
+      "choices[].delta.reasoning_details[].type",
+      "choices[].delta.role",
+      "choices[].finish_reason",
+      "choices[].index",
+      "choices[].native_finish_reason",
+      "created",
+      "id",
+      "model",
+      "object",
+      "provider",
+      "service_tier",
+      "system_fingerprint",
+      "usage",
+      "usage.completion_tokens",
+      "usage.completion_tokens_details",
+      "usage.completion_tokens_details.audio_tokens",
+      "usage.completion_tokens_details.image_tokens",
+      "usage.completion_tokens_details.reasoning_tokens",
+      "usage.cost",
+      "usage.cost_details",
+      "usage.cost_details.upstream_inference_completions_cost",
+      "usage.cost_details.upstream_inference_cost",
+      "usage.cost_details.upstream_inference_prompt_cost",
+      "usage.is_byok",
+      "usage.prompt_tokens",
+      "usage.prompt_tokens_details",
+      "usage.prompt_tokens_details.audio_tokens",
+      "usage.prompt_tokens_details.cache_write_tokens",
+      "usage.prompt_tokens_details.cached_tokens",
+      "usage.prompt_tokens_details.video_tokens",
+      "usage.total_tokens"
+    ]
+  }
+]
