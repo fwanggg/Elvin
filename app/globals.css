@@ -1004,18 +1004,19 @@ h6 {
 .send-dot { margin-left: auto; width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--a-accent); color: var(--a-accent-fg); cursor: pointer; }
 .send-dot.running { background: var(--color-accent); color: var(--a-bg); animation: send-pulse 1.1s ease-in-out infinite; }
 .error-note { margin: 0 0 8px; color: var(--color-accent-700); font-size: 13px; }
-/* Thinking indicator (assistant-ui element). It names the work in flight above
-   the parts, so it takes the sandbox palette rather than the chrome's. Height is
-   held for the whole turn, so the label appearing between rounds cannot shift
-   the conversation under the composer. The element's own shimmer is left alone:
+/* Thinking indicator (assistant-ui element). It names the phase that comes first in a
+   turn, so it opens the message and stays there: it takes the sandbox palette
+   rather than the chrome's, and its slot holds its height for as long as the turn
+   runs, so the parts streaming in below it never move and the label changing
+   state inside it cannot shift the conversation either. The element's own shimmer is left alone:
    an `animation` here outranks its `.shimmer` on specificity and replaces the
    sweep with a single fade, which is what made the line read as static. */
-.thinking-slot { display: flex; align-items: center; min-height: 26px; margin-top: 10px; }
+.thinking-slot { display: flex; align-items: center; min-height: 26px; margin-bottom: 10px; }
 .thinking-indicator { color: var(--a-muted); font-size: 13px; letter-spacing: .01em; }
 .thinking-indicator .thinking-elapsed { opacity: .7; }
 .thinking-indicator .thinking-label { display: inline-block; }
-/* The same slot once the turn is over, in raw mode: the reading the live line was
-   counting is left under the answer instead of being thrown away with the turn.
+/* The same slot once the clock stops, in raw mode: the reading the live line was
+   counting is left in the place the line took instead of being thrown away with the turn.
    No dot and no shimmer — nothing is in flight any more. */
 .thinking-settled { margin: 0; color: var(--a-muted); font-size: 13px; letter-spacing: .01em; }
 /* Streaming text (assistant-ui element). The element bounds itself for a demo

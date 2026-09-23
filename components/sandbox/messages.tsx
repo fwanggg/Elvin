@@ -114,17 +114,16 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, e
   });
   const clockRunning = running && !answering;
   const thinkingSeconds = useThinkingSeconds(clockRunning);
-  const thinkingLabel = useThinkingLabel(stepsShown, reasoningMode === "shown");
+  const thinkingLabel = useThinkingLabel(stepsShown);
   const elapsed = clockRunning && thinkingSeconds !== undefined && thinkingSeconds >= 1 ? `${thinkingSeconds}s` : undefined;
-  // The line never blinks out mid-turn: it names the work while the turn runs,
-  // standing down only while a rendered trace shimmers, which is its own live
-  // indicator. Once its clock has stopped it reports the reading instead of going
-  // away — under the answer, where the number was taken. Humanized mode has its
-  // own step summary, so it shows nothing extra.
-  const thinking = thinkingLabel !== undefined
-    ? <ThinkingIndicator className="thinking-indicator" label={thinkingLabel} elapsed={elapsed} />
-    : !humanized && !clockRunning && thinkingSeconds !== undefined && thinkingSeconds >= 1
-      ? <p className="thinking-settled">Thought for {thinkingSeconds}s</p>
+  // The reading the clock took, put in the place the live line took: once the
+  // clock stops, the two swap in place rather than one leaving and the other
+  // arriving somewhere else. Humanized mode shows its own step summary instead.
+  const reading = !humanized && !clockRunning && thinkingSeconds !== undefined && thinkingSeconds >= 1;
+  const thinking = reading
+    ? <p className="thinking-settled">Thought for {thinkingSeconds}s</p>
+    : clockRunning && thinkingLabel !== undefined
+      ? <ThinkingIndicator className="thinking-indicator" label={thinkingLabel} elapsed={elapsed} />
       : null;
   // Humanized mode puts reasoning and tool calls in one group, so the middle of
   // the turn collapses into a single block of plain-language steps.
@@ -140,6 +139,13 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, e
         <MessagePrimitive.Error>
           <p className="error-note"><ErrorPrimitive.Message /></p>
         </MessagePrimitive.Error>
+        {/* The line names the phase that comes first in a turn, so it opens the
+            message and stays there: the trace, the tool cards and the answer all
+            stream in below it, nothing is ever inserted over it, and the reading
+            it settles into takes the place the live line took. The slot holds its
+            height for as long as the turn runs, so the label changing state in it
+            cannot move the conversation either. */}
+        {(thinking !== null || (running && !humanized)) && <div className="thinking-slot">{thinking}</div>}
         <MessagePrimitive.GroupedParts groupBy={groupBy}>
           {({ part, children }) => {
             switch (part.type) {
@@ -178,10 +184,6 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, e
             }
           }}
         </MessagePrimitive.GroupedParts>
-        {/* A reserved slot: the line changes state between rounds, and the space it
-            needs must not be taken from the layout each time. It trails the
-            parts, so a growing chain cannot push it away from the composer. */}
-        {thinking !== null && <div className="thinking-slot">{thinking}</div>}
         {/* The action bar unmounts itself while the message is not hovered, so
             its height is reserved here — the same reason the thinking label has
             a slot. Without it, hovering a message shifts everything below it. */}
@@ -247,20 +249,17 @@ function useStepsSummary(): string {
 }
 
 /**
- * Names what the turn is doing whenever nothing else on screen is moving. A
- * rendered trace carries a shimmering trigger while it streams — so a hidden or
- * off trace, which shimmers nowhere, must not silence the line with it — and the
- * answer text carries itself, so the line's real job is the wait between rounds.
+ * Names what the turn is doing from the moment it starts, and keeps naming it:
+ * the line is not a gap filler, so a running trace does not silence it and the
+ * callers decide when it hands over to the reading it leaves behind.
  */
-function useThinkingLabel(stepListShows: boolean, traceRendered: boolean): string | undefined {
+function useThinkingLabel(stepListShows: boolean): string | undefined {
   return useAuiState((state) => {
     if (stepListShows) return undefined;
     if (state.message.status?.type !== "running") return undefined;
     const parts = state.message.parts;
     const pending = parts.find((part) => part.type === "tool-call" && part.result === undefined);
     if (pending?.type === "tool-call") return `Running ${pending.toolName}`;
-    if (traceRendered && parts.some((part) => part.type === "reasoning" && part.status?.type === "running")) return undefined;
-    if (parts.some((part) => part.type === "text" && part.text.trim().length > 0)) return undefined;
     return "Thinking";
   });
 }
