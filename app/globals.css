@@ -70,6 +70,17 @@
   --sidebar-ring: var(--color-accent);
 }
 
+/* The vendored elements name Tailwind's blue for their live state — the streaming
+   tint and its caret, and the live label in surfaces.tsx — because the element
+   takes no colour prop. Naming that token on the sandbox root makes the state
+   follow the active design language instead of staying blue, with no edit to the
+   element. Declared here rather than at :root: there the value is substituted
+   against the house accent, and the tint stays red in every language. */
+.app-shell {
+  --color-blue-500: var(--color-accent);
+  --color-blue-400: var(--color-accent);
+}
+
 /* ─────────────────────────────────────────────────────────────────────────────
    Design languages
    Semantic tokens swapped per language. "Swiss Grid" is the :root default —
@@ -1020,11 +1031,10 @@ h6 {
    No dot and no shimmer — nothing is in flight any more. */
 .thinking-settled { margin: 0; color: var(--a-muted); font-size: 13px; letter-spacing: .01em; }
 /* Streaming text (assistant-ui element). The element bounds itself for a demo
-   column; here it takes the message's own measure, and the tint and caret use
-   the accent so they follow the active design language. */
+   column; here it takes the message's own measure. The tint, the caret and
+   the fade the words arrive on are the element's own — its blue tokens are named
+   in the palette above, which is what makes them follow the design language. */
 .streaming-text { max-width: none; min-height: 0; }
-.streaming-text .streaming-word { animation: streaming-word-in .35s cubic-bezier(.23, 1, .32, 1) both; }
-@keyframes streaming-word-in { from { opacity: 0; } }
 /* Message actions (assistant-ui action bar + timing). On the sandbox palette,
    with the popovers in the playground's flat register. */
 /* The bar is unmounted while the message is not hovered, so the slot holds its
