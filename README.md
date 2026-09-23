@@ -35,7 +35,7 @@ Every control changes the sandbox live. There is no build step between a decisio
 | **Stream** | `true` · `false` — streamed deltas versus one final response |
 | **Tool calls** | `Shown` · `Hidden` · `Off` — rendered card, carried in the data but not drawn, or never sent |
 | **Reasoning group** | `Shown` · `Hidden` · `Off` — same three states for the reasoning trace |
-| **Middle steps** | `Raw` (the provider's own trace) · `Humanized` (plain-language steps) |
+| **Middle steps** | `Raw` (the provider's own trace; the turn's thinking time is left under the answer) · `Humanized` (plain-language steps) |
 | **Default state** | `Collapsed` · `Expanded` — how the trace and tool cards rest |
 | **Emoji** | `On` · `Off` — turn markers beside each message |
 | **Soft stream** | `On` · `Off` — newest words tinted as they land |
