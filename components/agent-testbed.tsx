@@ -5,7 +5,7 @@ import { Dropdown } from "@/components/dropdown";
 import { ModelPicker } from "@/components/model-picker";
 import { type Segment } from "@/components/assistant-ui/elements/streaming-text";
 import type { Design } from "@/lib/design-tokens";
-import { type AppTheme, type OpenMode, type PartMode, type Pattern, type StepsMode, type StreamMode, type Toggle } from "@/components/sandbox/knobs";
+import { type AppTheme, type OpenMode, type PartMode, type Pattern, type StepsMode, type StreamMode, type Toggle, type Viewport } from "@/components/sandbox/knobs";
 import { AssistantRuntimeMessage, UserRuntimeMessage } from "@/components/sandbox/messages";
 import {
   AssistantRuntimeProvider,
@@ -99,7 +99,7 @@ type FileTreeRow = { label: string; depth: number; dir: boolean; path: string };
 type ControlSidebarProps = Readonly<{
   pattern: Pattern;
   streamMode: StreamMode;
-  appTheme: AppTheme;
+  viewport: Viewport;
   design: Design;
   toolsMode: PartMode;
   reasoningMode: PartMode;
@@ -110,7 +110,7 @@ type ControlSidebarProps = Readonly<{
   responseStatus: Toggle;
   onPatternChange: (value: Pattern) => void;
   onStreamModeChange: (value: StreamMode) => void;
-  onAppThemeChange: (value: AppTheme) => void;
+  onViewportChange: (value: Viewport) => void;
   onDesignChange: (value: Design) => void;
   onToolsModeChange: (value: PartMode) => void;
   onReasoningModeChange: (value: PartMode) => void;
@@ -128,6 +128,7 @@ type PreviewStageProps = Readonly<{
   statusState: string;
   isConnected: boolean;
   appTheme: AppTheme;
+  viewport: Viewport;
   design: Design;
   stepsMode: StepsMode;
   emoji: Toggle;
@@ -148,6 +149,7 @@ type PreviewStageProps = Readonly<{
   error: string;
   onDisconnect: () => void;
   onStartThread: () => void;
+  onAppThemeChange: (value: AppTheme) => void;
   onExport: () => void;
   exportOpen: boolean;
   onBaseUrlChange: (value: string) => void;
@@ -220,6 +222,7 @@ const PATTERN_SEGMENT_LABELS: Record<Pattern, string> = {
   modal: "Floating",
 };
 const APP_THEME_LABELS: Record<AppTheme, string> = { dark: "Dark", light: "Light" };
+const VIEWPORT_LABELS: Record<Viewport, string> = { desktop: "Desktop", mobile: "Mobile" };
 /** The house register first: it is the language the app was drawn in. Keyed by
     the generated union, so a language added to the stylesheet fails the build
     until it is named here. */
@@ -256,6 +259,7 @@ export function AgentTestbed(): ReactNode {
   const [openMode, setOpenMode] = useState<OpenMode>("collapsed");
   const [softStream, setSoftStream] = useState<Toggle>("on");
   const [responseStatus, setResponseStatus] = useState<Toggle>("on");
+  const [viewport, setViewport] = useState<Viewport>("desktop");
   const [baseUrl, setBaseUrl] = useState("");
   const [model, setModel] = useState("");
   const [models, setModels] = useState<string[]>([]);
@@ -463,7 +467,7 @@ export function AgentTestbed(): ReactNode {
           <ControlSidebar
             pattern={pattern}
             streamMode={streamMode}
-            appTheme={appTheme}
+            viewport={viewport}
             design={design}
             toolsMode={toolsMode}
             reasoningMode={reasoningMode}
@@ -474,7 +478,7 @@ export function AgentTestbed(): ReactNode {
             responseStatus={responseStatus}
             onPatternChange={setPattern}
             onStreamModeChange={setStreamMode}
-            onAppThemeChange={setAppTheme}
+            onViewportChange={setViewport}
             onDesignChange={setDesign}
             onToolsModeChange={setToolsMode}
             onReasoningModeChange={setReasoningMode}
@@ -491,6 +495,7 @@ export function AgentTestbed(): ReactNode {
             statusState={statusState}
             isConnected={isConnected}
             appTheme={appTheme}
+            viewport={viewport}
             design={design}
             pattern={pattern}
             runtime={runtime}
@@ -508,6 +513,7 @@ export function AgentTestbed(): ReactNode {
             apiKey={apiKey}
             connecting={connection === "connecting"}
             error={connection === "error" ? connectionError : ""}
+            onAppThemeChange={setAppTheme}
             onDisconnect={disconnect}
             onStartThread={startThread}
             onModelChange={setModel}
@@ -528,7 +534,7 @@ export function AgentTestbed(): ReactNode {
 function ControlSidebar({
   pattern,
   streamMode,
-  appTheme,
+  viewport,
   design,
   toolsMode,
   reasoningMode,
@@ -539,7 +545,7 @@ function ControlSidebar({
   responseStatus,
   onPatternChange,
   onStreamModeChange,
-  onAppThemeChange,
+  onViewportChange,
   onDesignChange,
   onToolsModeChange,
   onReasoningModeChange,
@@ -578,13 +584,15 @@ function ControlSidebar({
       />
       <div className="section-rule" />
       <SegmentedPanel
-        title="App theme"
-        name="app-theme"
-        value={appTheme}
-        options={["dark", "light"]}
-        labels={APP_THEME_LABELS}
-        onChange={onAppThemeChange}
-      />
+        title="Viewport"
+        name="viewport"
+        value={viewport}
+        options={["desktop", "mobile"]}
+        labels={VIEWPORT_LABELS}
+        onChange={onViewportChange}
+      >
+        <p className="hint">Frames the sandbox as a phone. The agent and its runtime are untouched.</p>
+      </SegmentedPanel>
       <div className="section-rule" />
       <PanelSection title="Message parts">
         <SegmentedControlBlock
@@ -666,6 +674,7 @@ function PreviewStage({
   statusState,
   isConnected,
   appTheme,
+  viewport,
   design,
   stepsMode,
   emoji,
@@ -683,6 +692,7 @@ function PreviewStage({
   apiKey,
   connecting,
   error,
+  onAppThemeChange,
   onDisconnect,
   onStartThread,
   onModelChange,
@@ -728,7 +738,12 @@ function PreviewStage({
           <span className="metric-value">Export Code</span>
         </button>
       </div>
-      <div className="canvas">
+      <div className="canvas" data-viewport={viewport}>
+        {/* The app theme control rides the renderer's own top-right corner: it
+            belongs to the thing being previewed, not to the control column. */}
+        <div className="canvas-theme">
+          <Segment name="app-theme" value={appTheme} options={["dark", "light"]} labels={APP_THEME_LABELS} onChange={onAppThemeChange} />
+        </div>
         <div className="app-shell" data-theme={appTheme} data-design={design}>
           {isConnected ? (
             <>

@@ -106,6 +106,10 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, e
   const stepsShown = humanized && toolsMode === "shown";
   const running = useAuiState((state) => state.message.status?.type === "running");
   const answering = useAuiState((state) => state.message.parts.some((part) => part.type === "text" && part.text.trim().length > 0));
+  const thinkingSeconds = useThinkingSeconds(running && !answering);
+  // Raw mode keeps the clock's last reading under the answer, so the time the
+  // model spent before it answered outlives the turn that spent it.
+  const settled = !humanized && thinkingSeconds !== undefined && thinkingSeconds >= 1;
   // Humanized mode puts reasoning and tool calls in one group, so the middle of
   // the turn collapses into a single block of plain-language steps.
   const groupBy = useMemo(() => groupPartByType({
@@ -161,9 +165,11 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, e
         {/* A reserved slot: the label comes and goes between rounds, and the space
             it needs must not be taken from the layout each time. It trails the
             parts, so a growing chain cannot push it away from the composer. */}
-        {running && (
+        {(running || settled) && (
           <div className="thinking-slot">
-            <AssistantThinking humanized={stepsShown} />
+            {running
+              ? <AssistantThinking humanized={stepsShown} seconds={thinkingSeconds} />
+              : <p className="thinking-settled">Thought for {thinkingSeconds}s</p>}
           </div>
         )}
         {/* The action bar unmounts itself while the message is not hovered, so
@@ -230,12 +236,11 @@ function useStepsSummary(): string {
   });
 }
 
-function AssistantThinking({ humanized }: Readonly<{ humanized: boolean }>): ReactNode {
+function AssistantThinking({ humanized, seconds }: Readonly<{ humanized: boolean; seconds?: number }>): ReactNode {
   const label = useThinkingLabel(humanized);
-  const elapsed = useElapsedLabel(label !== undefined);
 
   if (label === undefined) return null;
-  return <ThinkingIndicator className="thinking-indicator" label={label} elapsed={elapsed} />;
+  return <ThinkingIndicator className="thinking-indicator" label={label} elapsed={seconds === undefined || seconds < 1 ? undefined : `${seconds}s`} />;
 }
 
 /**
@@ -257,20 +262,27 @@ function useThinkingLabel(stepListShows: boolean): string | undefined {
   });
 }
 
-function useElapsedLabel(active: boolean): string | undefined {
-  const [label, setLabel] = useState<string | undefined>(undefined);
+/**
+ * One clock per turn, not one per silence. A turn that reasons, calls a tool,
+ * thinks again and then answers spends its whole time thinking, so the count
+ * keeps climbing across the gaps and through the trace instead of restarting at
+ * every one of them — the number on screen while the turn runs is the same one
+ * left behind when it ends. The clock stops at the first answer word, or at the
+ * end of a turn that never answers, and keeps that reading rather than
+ * resetting to nothing.
+ */
+function useThinkingSeconds(active: boolean): number | undefined {
+  const [seconds, setSeconds] = useState<number | undefined>(undefined);
 
   useEffect(() => {
-    if (!active) {
-      setLabel(undefined);
-      return;
-    }
+    if (!active) return;
     const start = Date.now();
-    const id = window.setInterval(() => setLabel(`${Math.round((Date.now() - start) / 1000)}s`), 1000);
+    setSeconds(0);
+    const id = window.setInterval(() => setSeconds(Math.round((Date.now() - start) / 1000)), 250);
     return () => window.clearInterval(id);
   }, [active]);
 
-  return label;
+  return seconds;
 }
 
 /**

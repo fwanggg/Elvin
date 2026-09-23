@@ -795,6 +795,7 @@ h6 {
 .canvas {
   flex: 1;
   min-height: 0;
+  position: relative;
   display: flex;
   padding: var(--ds-space-canvas);
   background-color: var(--color-neutral-200);
@@ -812,6 +813,27 @@ h6 {
   font-family: var(--font-body);
   letter-spacing: 0;
   font-size: var(--ds-body-size);
+  /* A query container, so the sandbox's own rules can answer the frame it is
+     given rather than the browser window. */
+  container-type: inline-size;
+}
+/* The app theme control rides the renderer's top-right corner. It keeps the
+   sidebar's segmented styling, but carries its own surface: it sits on top of
+   the app, not on the chrome's flat background. */
+.canvas-theme { position: absolute; z-index: 1; top: calc(var(--ds-space-canvas) + 10px); right: calc(var(--ds-space-canvas) + 10px); display: flex; }
+.canvas-theme .seg { background: var(--color-bg); }
+.canvas-theme .seg-opt { flex: none; padding: 6px 12px; }
+
+/* Mobile: the same shell, framed as a phone. Only this frame is a named
+   container, so only the phone answers the narrow rules at the foot of this
+   file. */
+.canvas[data-viewport="mobile"] { align-items: center; justify-content: center; }
+.canvas[data-viewport="mobile"] .app-shell {
+  flex: 0 0 auto;
+  width: 390px;
+  height: min(844px, 100%);
+  container-name: phone;
+  box-shadow: var(--ds-shadow);
 }
 .mock-app { flex: 1; display: grid; grid-template-columns: 180px minmax(0, 1fr); grid-template-rows: 52px 1fr; }
 .mock-top { grid-column: 1 / -1; display: flex; align-items: center; gap: 20px; padding: 0 20px; border-bottom: 1px solid var(--a-border); }
@@ -992,6 +1014,10 @@ h6 {
 .thinking-indicator { color: var(--a-muted); font-size: 13px; letter-spacing: .01em; }
 .thinking-indicator .thinking-elapsed { opacity: .7; }
 .thinking-indicator .thinking-label { display: inline-block; }
+/* The same slot once the turn is over, in raw mode: the reading the live line was
+   counting is left under the answer instead of being thrown away with the turn.
+   No dot and no shimmer — nothing is in flight any more. */
+.thinking-settled { margin: 0; color: var(--a-muted); font-size: 13px; letter-spacing: .01em; }
 /* Streaming text (assistant-ui element). The element bounds itself for a demo
    column; here it takes the message's own measure, and the tint and caret use
    the accent so they follow the active design language. */
@@ -1071,6 +1097,23 @@ button.file-row[aria-current="true"] { font-weight: 800; }
   .export-modal-body { grid-template-columns: 1fr; grid-template-rows: minmax(0, 180px) minmax(0, 1fr); }
   .file-list { border-right: 0; border-bottom: var(--ds-border) solid var(--ds-edge-soft); }
   .export-cta { flex-wrap: wrap; }
+}
+/* Phone frame: the sandbox inside answers the 390px it was given, not the
+   window. Kept last so these rules can override the base ones above. */
+@container phone (max-width: 460px) {
+  .message-col { gap: 14px; padding: 18px 14px; }
+  /* The copilot and floating shells are drawn at desktop width; in a phone they
+     take the whole frame instead of leaving a sliver of mock app beside them. */
+  .assistant-frame.sidebar { width: 100%; margin-left: 0; border-left: 0; }
+  .assistant-frame.modal { left: 10px; right: 10px; bottom: 78px; width: auto; height: 60%; }
+  .modal-launcher { right: 14px; bottom: 14px; }
+  .mock-app { grid-template-columns: minmax(0, 1fr); }
+  .mock-side { display: none; }
+  .mock-content { padding: 16px; }
+  .composer { padding: 10px 12px; }
+  .assistant-frame.sidebar .composer-wrap, .assistant-frame.modal .composer-wrap { padding: 10px 12px; }
+  .connect-empty { padding: 24px; }
+  .connect-empty h2, .thread-empty h3 { font-size: 26px; }
 }
 
 @theme inline {
