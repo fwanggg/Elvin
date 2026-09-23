@@ -849,6 +849,17 @@ function ExportDialog({ files, selectedFile, onSelectFile, sourceUrl, onClose }:
 }
 
 function ConnectEmptyState({ baseUrl, apiKey, connecting, error, onBaseUrlChange, onApiKeyChange, onConnect }: ConnectEmptyStateProps): ReactNode {
+  const urlField = useRef<HTMLInputElement>(null);
+
+  // The state exists to be filled in and starts with the field that matters, so
+  // that field takes focus the moment the state appears — pasting a URL connects
+  // on its own, which makes the whole flow paste-and-watch. It is done from an
+  // effect rather than with `autoFocus`, which React skips for an element that
+  // arrives in the server-rendered HTML: that is the first load, the one case
+  // where nobody has clicked anything yet. The ring is requested explicitly:
+  // focus nobody can see does not tell anyone where to type.
+  useEffect(() => { urlField.current?.focus({ focusVisible: true }); }, []);
+
   return (
     <div className="connect-empty">
       <span className="connect-kicker">No agent connected</span>
@@ -859,6 +870,7 @@ function ConnectEmptyState({ baseUrl, apiKey, connecting, error, onBaseUrlChange
           <span className="connect-field-label">OpenAI compatible URL</span>
           <input
             className="connect-input"
+            ref={urlField}
             value={baseUrl}
             onChange={(event) => onBaseUrlChange(event.target.value)}
             onKeyDown={(event) => { if (event.key === "Enter") onConnect(); }}
