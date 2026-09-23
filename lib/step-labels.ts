@@ -57,10 +57,10 @@ export const STEP_VERBS: Readonly<Record<string, VerbForms>> = {
 };
 
 /** Subjects that want an article: "searching the web", not "searching web". */
-const DEFINITE = new Set(["web", "internet", "online", "database", "db", "file", "files", "disk", "cloud", "api", "network", "repo", "calendar", "inbox", "docs", "account", "order", "orders", "system", "weather", "news", "stock", "prices"]);
+export const DEFINITE = new Set(["web", "internet", "online", "database", "db", "file", "files", "disk", "cloud", "api", "network", "repo", "calendar", "inbox", "docs", "account", "order", "orders", "system", "weather", "news", "stock", "prices"]);
 
 /** Argument keys tried first when choosing the step's object. */
-const OBJECT_KEYS = ["query", "q", "search", "term", "prompt", "text", "message", "input", "url", "uri", "link", "path", "file", "filename", "name", "title", "id", "order_id", "location", "city", "symbol", "ticker", "email", "to", "sku", "code"];
+export const OBJECT_KEYS = ["query", "q", "search", "term", "prompt", "text", "message", "input", "url", "uri", "link", "path", "file", "filename", "name", "title", "id", "order_id", "location", "city", "symbol", "ticker", "email", "to", "sku", "code"];
 
 /** Longest object we will quote; beyond this it is data, not a label. */
 const OBJECT_LIMIT = 48;

@@ -378,8 +378,8 @@ export function AgentTestbed(): ReactNode {
   const statusColor = STATUS_COLORS[connection];
   const isConnected = connection === "live";
   const sourceParams = useMemo(() => {
-    return buildSourceParams({ pattern, appTheme, design, toolsMode, reasoningMode, openMode, streamMode, model, capability });
-  }, [appTheme, capability, design, model, openMode, pattern, reasoningMode, streamMode, toolsMode]);
+    return buildSourceParams({ pattern, appTheme, design, emoji, stepsMode, toolsMode, reasoningMode, openMode, streamMode, model, capability });
+  }, [appTheme, capability, design, emoji, model, openMode, pattern, reasoningMode, stepsMode, streamMode, toolsMode]);
   const sourceUrl = `/api/source?${sourceParams}`;
 
   // The pane reads the bytes the download carries rather than re-rendering them,
@@ -1107,8 +1107,8 @@ function getResponseStatusHint(responseStatus: Toggle): string {
     : "No actions or timing are rendered.";
 }
 
-function buildSourceParams({ pattern, appTheme, design, toolsMode, reasoningMode, openMode, streamMode, model, capability }: Readonly<{ pattern: Pattern; appTheme: AppTheme; design: Design; toolsMode: PartMode; reasoningMode: PartMode; openMode: OpenMode; streamMode: StreamMode; model: string; capability: string }>): string {
-  const params = new URLSearchParams({ pattern, theme: appTheme, design, tools: toolsMode, reasoning: reasoningMode, open: openMode, stream: streamMode });
+function buildSourceParams({ pattern, appTheme, design, emoji, stepsMode, toolsMode, reasoningMode, openMode, streamMode, model, capability }: Readonly<{ pattern: Pattern; appTheme: AppTheme; design: Design; emoji: Toggle; stepsMode: StepsMode; toolsMode: PartMode; reasoningMode: PartMode; openMode: OpenMode; streamMode: StreamMode; model: string; capability: string }>): string {
+  const params = new URLSearchParams({ pattern, theme: appTheme, design, emoji, steps: stepsMode, tools: toolsMode, reasoning: reasoningMode, open: openMode, stream: streamMode });
   if (model.trim()) params.set("model", model.trim());
   if (capability) params.set("capability", capability);
   return params.toString();

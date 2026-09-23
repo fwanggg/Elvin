@@ -1,5 +1,6 @@
 import { DESIGN_FONTS, DESIGN_PALETTE, DESIGN_TOKENS, DESIGNS, type Design, type Theme } from "@/lib/design-tokens";
 import { assistantComponentSource, reasoningGroupSource, toolCardSource } from "@/lib/scaffold/assistant";
+import { stepLabelSource } from "@/lib/scaffold/step-label";
 import { chatRouteSource } from "@/lib/scaffold/chat-route";
 import { configSource } from "@/lib/scaffold/config";
 import { globalsSource } from "@/lib/scaffold/globals-css";
@@ -15,6 +16,8 @@ export async function GET(request: Request): Promise<Response> {
     pattern: safeParam(url, "pattern", ["thread", "sidebar", "modal"], "thread"),
     theme: safeParam(url, "theme", ["dark", "light"], "dark"),
     design: safeParam(url, "design", DESIGNS, "swiss"),
+    emoji: safeParam(url, "emoji", ["on", "off"], "off"),
+    steps: safeParam(url, "steps", ["raw", "humanized"], "raw"),
     tools: safeParam(url, "tools", ["shown", "hidden", "off"], "shown"),
     reasoning: safeParam(url, "reasoning", ["shown", "hidden", "off"], "shown"),
     open: safeParam(url, "open", ["collapsed", "expanded"], "collapsed"),
@@ -74,6 +77,7 @@ function generatedFiles(config: SourceConfig): SourceFile[] {
     { name: "components/assistant/ElvinAssistant.tsx", content: assistantComponentSource() },
     { name: "components/assistant/reasoning-group.tsx", content: reasoningGroupSource() },
     { name: "components/assistant/tool-card.tsx", content: toolCardSource() },
+    { name: "components/assistant/step-label.ts", content: stepLabelSource() },
   ];
 }
 

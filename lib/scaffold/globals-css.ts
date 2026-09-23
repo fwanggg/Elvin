@@ -40,6 +40,35 @@ const REASONING_RULES = [
   "",
 ].join("\n");
 
+/** Humanized middle steps: one quiet line opening onto plain-language steps. */
+const STEPS_RULES = [
+  ".steps{display:flex;flex-direction:column;margin:8px 0}",
+  ".steps-head{display:flex;align-items:center;gap:8px;width:100%;padding:0;border:0;background:transparent;color:var(--a-muted);cursor:pointer;font-size:13px;text-align:left}",
+  ".steps-head:hover{color:var(--a-fg)}",
+  ".steps-body{display:flex;flex-direction:column;gap:8px;margin-top:10px;padding-left:12px;border-left:var(--border-width) solid var(--a-border)}",
+  ".steps-list{display:flex;flex-direction:column;gap:6px}",
+  ".steps-reasoning{font-size:13px;line-height:1.5;opacity:.75}",
+  ".step{display:flex;align-items:baseline;gap:8px;margin:0;color:var(--a-muted);font-size:13px;line-height:1.4}",
+  ".step-mark{flex:none;width:6px;height:6px;border-radius:var(--radius);background:var(--a-border)}",
+  ".step[data-phase=running]{color:var(--a-fg)}",
+  ".step[data-phase=running] .step-mark{background:var(--a-accent);animation:step-pulse 1.1s ease-in-out infinite}",
+  "@keyframes step-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.35)}}",
+  ".step[data-phase=failed]{color:var(--danger)}",
+  ".step[data-phase=failed] .step-mark{background:var(--danger)}",
+  "@media (prefers-reduced-motion:reduce){.step[data-phase=running] .step-mark{animation:none}}",
+  "",
+].join("\n");
+
+/** Turn markers: a small animated emoji in a gutter beside the message. */
+const EMOJI_RULES = [
+  ".message-emoji{position:absolute;top:1px;width:22px;height:22px;font-size:18px;line-height:22px;object-fit:contain;user-select:none}",
+  ".assistant-message.emoji-row{position:relative;padding-left:30px}",
+  ".assistant-message.emoji-row>.message-emoji{left:0}",
+  ".user-bubble.emoji{position:relative;margin-right:30px}",
+  ".user-bubble.emoji>.message-emoji{left:100%;margin-left:8px}",
+  "",
+].join("\n");
+
 const TOOL_RULES = [
   ".tool-card{margin:8px 0;border:var(--border-width) solid var(--a-border);border-radius:var(--radius-card);background:var(--a-bg);box-shadow:var(--shadow);overflow:hidden}",
   ".tool-card-trigger{display:flex;width:100%;gap:8px;align-items:center;justify-content:space-between;padding:8px 12px;border:0;background:transparent;color:inherit;cursor:pointer}",
@@ -65,5 +94,7 @@ export function globalsSource(config: SourceConfig): string {
     SCAFFOLD_RULES,
     config.reasoning === "shown" && REASONING_RULES,
     config.tools === "shown" && TOOL_RULES,
+    config.steps === "humanized" && STEPS_RULES,
+    config.emoji === "on" && EMOJI_RULES,
   ], "");
 }

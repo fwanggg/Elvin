@@ -16,6 +16,8 @@ export type SourceConfig = {
   pattern: string;
   theme: string;
   design: Design;
+  emoji: string;
+  steps: string;
   tools: string;
   reasoning: string;
   open: string;

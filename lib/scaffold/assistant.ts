@@ -16,9 +16,10 @@ import {
   type ChatModelRunResult,
   type ThreadMessage,
 } from "@assistant-ui/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { elvinConfig } from "../../elvin.config";
 import { ReasoningGroup, ReasoningText } from "./reasoning-group";
+import { describeStep } from "./step-label";
 import { ToolCard } from "./tool-card";
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { readonly [key: string]: JsonValue };
@@ -40,6 +41,12 @@ type StreamEvent =
   | { type: "done" };
 
 const THREAD_STORAGE_KEY = "elvin.threadId";
+
+/** Turn markers, drawn with Google's animated Noto Emoji. */
+const EMOJI_MARKS = {
+  assistant: { char: "🫧", codePoint: "1fae7" },
+  user: { char: "👋", codePoint: "1f44b" },
+} as const;
 
 /**
  * The provider keeps the conversation but cannot list sessions, so the client
@@ -154,32 +161,105 @@ export function ElvinAssistant() {
 }
 
 function UserMessage() {
-  return <MessagePrimitive.Root className="user-bubble" style={{ alignSelf: "flex-end", maxWidth: "80%" }}><MessagePrimitive.Parts /></MessagePrimitive.Root>;
+  return (
+    <MessagePrimitive.Root className={elvinConfig.emoji ? "user-bubble emoji" : "user-bubble"} style={{ alignSelf: "flex-end", maxWidth: "80%" }}>
+      <EmojiMark role="user" />
+      <MessagePrimitive.Parts />
+    </MessagePrimitive.Root>
+  );
+}
+
+/** Turn marker: an animated Noto emoji, falling back to the plain glyph. */
+function EmojiMark({ role }: { role: keyof typeof EMOJI_MARKS }) {
+  const [plain, setPlain] = useState(false);
+  const mark = EMOJI_MARKS[role];
+  if (!elvinConfig.emoji) return null;
+  if (plain) return <span className="message-emoji" aria-hidden="true">{mark.char}</span>;
+  return (
+    <img
+      className="message-emoji"
+      src={\`https://fonts.gstatic.com/s/e/notoemoji/latest/\${mark.codePoint}/512.webp\`}
+      alt=""
+      aria-hidden="true"
+      width={22}
+      height={22}
+      onError={() => setPlain(true)}
+    />
+  );
+}
+
+/** One tool call in plain language: no arguments, no payload. */
+function StepLine({ name, args, result }: { name: string; args: unknown; result: unknown }) {
+  const running = useAuiState((state) => state.message.status?.type === "running");
+  const failed = result !== null && typeof result === "object" && "error" in (result as Record<string, unknown>);
+  const phase = failed ? "failed" : running && result === undefined ? "running" : "complete";
+
+  return (
+    <p className="step" data-phase={phase}>
+      <span className="step-mark" aria-hidden="true" />
+      <span>{describeStep(name, args, phase)}</span>
+    </p>
+  );
+}
+
+/** The work in flight, or a count of it once the turn settles. */
+function StepList({ defaultOpen, children }: { defaultOpen: boolean; children: ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const summary = useAuiState((state) => {
+    const calls = state.message.parts.filter((part) => part.type === "tool-call");
+    if (state.message.status?.type === "running") {
+      const pending = calls.find((part) => part.result === undefined);
+      return pending?.type === "tool-call" ? describeStep(pending.toolName, pending.args, "running") : "Thinking";
+    }
+    if (calls.length === 0) return "Thought";
+    return calls.length === 1 ? "1 step" : \`\${calls.length} steps\`;
+  });
+
+  return (
+    <div className="steps">
+      <button className="steps-head" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+        <span>{summary}</span>
+        <span aria-hidden="true">{open ? "⌄" : "›"}</span>
+      </button>
+      {open && <div className="steps-body">{children}</div>}
+    </div>
+  );
 }
 
 function AssistantMessage() {
-  const groupBy = useMemo(() => groupPartByType({ reasoning: ["group-reasoning"] }), []);
+  // Humanized steps put reasoning and tool calls in one group, so the middle of
+  // the turn reads as plain language instead of a stack of disclosures.
+  const humanized = elvinConfig.steps === "humanized" && elvinConfig.toolCalls.render;
+  const groupBy = useMemo(() => groupPartByType(humanized
+    ? { reasoning: ["group-steps", "group-reasoning"], "tool-call": ["group-steps", "group-tool"] }
+    : { reasoning: ["group-reasoning"] }), [humanized]);
   const running = useAuiState((state) => state.message.status?.type === "running");
   const answering = useAuiState((state) => state.message.parts.some((part) => part.type === "text" && part.text.trim().length > 0));
 
   return (
-    <MessagePrimitive.Root className="assistant-message" style={{ alignSelf: "flex-start", maxWidth: "80%" }}>
+    <MessagePrimitive.Root className={elvinConfig.emoji ? "assistant-message emoji-row" : "assistant-message"} style={{ alignSelf: "flex-start", maxWidth: "80%" }}>
+      <EmojiMark role="assistant" />
       <MessagePrimitive.Error>
         <p className="assistant-error"><ErrorPrimitive.Message /></p>
       </MessagePrimitive.Error>
       <MessagePrimitive.GroupedParts groupBy={groupBy}>
         {({ part, children }) => {
           switch (part.type) {
+            case "group-steps":
+              return <StepList defaultOpen={elvinConfig.reasoning.defaultOpen}>{children}</StepList>;
             case "group-reasoning":
+              if (humanized) return <div className="steps-reasoning">{children}</div>;
               return elvinConfig.reasoning.render
                 ? <ReasoningGroup defaultOpen={elvinConfig.reasoning.defaultOpen} streaming={part.status.type === "running" || (running && !answering)}>{children}</ReasoningGroup>
                 : <></>;
+            case "group-tool":
+              return <div className="steps-list">{children}</div>;
             case "reasoning":
               return elvinConfig.reasoning.render ? <ReasoningText text={part.text} /> : <></>;
             case "tool-call":
-              return elvinConfig.toolCalls.render
-                ? part.toolUI ?? <ToolCard name={part.toolName} args={part.args} result={part.result} defaultOpen={elvinConfig.toolCalls.defaultOpen} />
-                : <></>;
+              if (!elvinConfig.toolCalls.render) return <></>;
+              if (humanized) return <StepLine name={part.toolName} args={part.args} result={part.result} />;
+              return part.toolUI ?? <ToolCard name={part.toolName} args={part.args} result={part.result} defaultOpen={elvinConfig.toolCalls.defaultOpen} />;
             case "text":
               return <p className="assistant-text">{part.text}</p>;
             default:
