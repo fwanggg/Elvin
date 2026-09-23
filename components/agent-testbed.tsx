@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { CheckIcon, CopyIcon, DownloadIcon, EllipsisIcon, RefreshCwIcon, ThumbsDownIcon, ThumbsUpIcon, Volume2Icon } from "lucide-react";
 import { Dropdown } from "@/components/dropdown";
+import { describeStep, type StepPhase } from "@/lib/step-labels";
 import { ModelPicker } from "@/components/model-picker";
 import { MessageTiming } from "@/components/assistant-ui/elements/message-timing.aui";
 import { StreamingText, type Segment } from "@/components/assistant-ui/elements/streaming-text";
@@ -36,6 +37,7 @@ import {
 type Pattern = "thread" | "sidebar" | "modal";
 type AppTheme = "dark" | "light";
 type PartMode = "shown" | "hidden" | "off";
+type StepsMode = "raw" | "humanized";
 type OpenMode = "collapsed" | "expanded";
 type StreamMode = "true" | "false";
 type Toggle = "on" | "off";
@@ -112,6 +114,7 @@ type ControlSidebarProps = Readonly<{
   design: Design;
   toolsMode: PartMode;
   reasoningMode: PartMode;
+  stepsMode: StepsMode;
   openMode: OpenMode;
   softStream: Toggle;
   responseStatus: Toggle;
@@ -121,6 +124,7 @@ type ControlSidebarProps = Readonly<{
   onDesignChange: (value: Design) => void;
   onToolsModeChange: (value: PartMode) => void;
   onReasoningModeChange: (value: PartMode) => void;
+  onStepsModeChange: (value: StepsMode) => void;
   onOpenModeChange: (value: OpenMode) => void;
   onSoftStreamChange: (value: Toggle) => void;
   onResponseStatusChange: (value: Toggle) => void;
@@ -134,6 +138,7 @@ type PreviewStageProps = Readonly<{
   isConnected: boolean;
   appTheme: AppTheme;
   design: Design;
+  stepsMode: StepsMode;
   pattern: Pattern;
   runtime: AssistantRuntime;
   modelName: string;
@@ -171,6 +176,7 @@ type ConnectEmptyStateProps = Readonly<{
 type AssistantSandboxProps = Readonly<{
   pattern: Pattern;
   modelName: string;
+  stepsMode: StepsMode;
   toolsMode: PartMode;
   reasoningMode: PartMode;
   defaultOpen: boolean;
@@ -181,6 +187,7 @@ type AssistantSandboxProps = Readonly<{
 type AssistantRuntimeMessageProps = Readonly<{
   toolsMode: PartMode;
   reasoningMode: PartMode;
+  stepsMode: StepsMode;
   defaultOpen: boolean;
   softStream: Toggle;
   responseStatus: Toggle;
@@ -196,6 +203,13 @@ type ToolCardProps = Readonly<{
   args: unknown;
   result: unknown;
   defaultOpen: boolean;
+}>;
+
+type StepLineProps = Readonly<{
+  name: string;
+  args: unknown;
+  result: unknown;
+  isError?: boolean;
 }>;
 
 type ExportDialogProps = Readonly<{
@@ -254,6 +268,7 @@ const DESIGN_LABELS: Record<Design, string> = {
 };
 const DESIGN_LANGUAGES: ReadonlyArray<{ value: Design; label: string }> = (Object.keys(DESIGN_LABELS) as Design[]).map((value) => ({ value, label: DESIGN_LABELS[value] }));
 const PART_MODE_LABELS: Record<PartMode, string> = { shown: "Shown", hidden: "Hidden", off: "Off" };
+const STEPS_MODE_LABELS: Record<StepsMode, string> = { raw: "Raw", humanized: "Humanized" };
 const OPEN_MODE_LABELS: Record<OpenMode, string> = { collapsed: "Collapsed", expanded: "Expanded" };
 const STREAM_MODE_LABELS: Record<StreamMode, string> = { true: "True", false: "False" };
 const TOGGLE_LABELS: Record<Toggle, string> = { on: "On", off: "Off" };
@@ -270,6 +285,7 @@ export function AgentTestbed(): ReactNode {
   const [design, setDesign] = useState<Design>("swiss");
   const [toolsMode, setToolsMode] = useState<PartMode>("shown");
   const [reasoningMode, setReasoningMode] = useState<PartMode>("shown");
+  const [stepsMode, setStepsMode] = useState<StepsMode>("raw");
   const [openMode, setOpenMode] = useState<OpenMode>("collapsed");
   const [softStream, setSoftStream] = useState<Toggle>("on");
   const [responseStatus, setResponseStatus] = useState<Toggle>("on");
@@ -460,6 +476,7 @@ export function AgentTestbed(): ReactNode {
             design={design}
             toolsMode={toolsMode}
             reasoningMode={reasoningMode}
+            stepsMode={stepsMode}
             openMode={openMode}
             softStream={softStream}
             responseStatus={responseStatus}
@@ -469,6 +486,7 @@ export function AgentTestbed(): ReactNode {
             onDesignChange={setDesign}
             onToolsModeChange={setToolsMode}
             onReasoningModeChange={setReasoningMode}
+            onStepsModeChange={setStepsMode}
             onOpenModeChange={setOpenMode}
             onSoftStreamChange={setSoftStream}
             onResponseStatusChange={setResponseStatus}
@@ -488,6 +506,7 @@ export function AgentTestbed(): ReactNode {
             models={models}
             toolsMode={toolsMode}
             reasoningMode={reasoningMode}
+            stepsMode={stepsMode}
             defaultOpen={openMode === "expanded"}
             softStream={softStream}
             responseStatus={responseStatus}
@@ -519,6 +538,7 @@ function ControlSidebar({
   design,
   toolsMode,
   reasoningMode,
+  stepsMode,
   openMode,
   softStream,
   responseStatus,
@@ -528,6 +548,7 @@ function ControlSidebar({
   onDesignChange,
   onToolsModeChange,
   onReasoningModeChange,
+  onStepsModeChange,
   onOpenModeChange,
   onSoftStreamChange,
   onResponseStatusChange,
@@ -589,6 +610,15 @@ function ControlSidebar({
           hint={getReasoningModeHint(reasoningMode)}
         />
         <SegmentedControlBlock
+          label="Middle steps"
+          name="steps"
+          value={stepsMode}
+          options={["raw", "humanized"]}
+          labels={STEPS_MODE_LABELS}
+          onChange={onStepsModeChange}
+          hint={getStepsModeHint(stepsMode)}
+        />
+        <SegmentedControlBlock
           label="Default state"
           name="open"
           value={openMode}
@@ -632,6 +662,7 @@ function PreviewStage({
   isConnected,
   appTheme,
   design,
+  stepsMode,
   pattern,
   runtime,
   modelName,
@@ -698,7 +729,7 @@ function PreviewStage({
               {pattern !== "thread" && <MockApplication />}
               {pattern === "modal" && <div className="modal-launcher">⌄</div>}
               <AssistantRuntimeProvider runtime={runtime}>
-                <AssistantSandbox pattern={pattern} modelName={modelName} toolsMode={toolsMode} reasoningMode={reasoningMode} defaultOpen={defaultOpen} softStream={softStream} responseStatus={responseStatus} />
+                <AssistantSandbox pattern={pattern} modelName={modelName} toolsMode={toolsMode} reasoningMode={reasoningMode} stepsMode={stepsMode} defaultOpen={defaultOpen} softStream={softStream} responseStatus={responseStatus} />
               </AssistantRuntimeProvider>
             </>
           ) : (
@@ -827,7 +858,6 @@ function ConnectEmptyState({ baseUrl, apiKey, connecting, error, onBaseUrlChange
           />
         </label>
         <div className="connect-run">
-          <span className="connect-step">3</span>
           <button className="btn btn-primary" type="button" disabled={connecting} onClick={onConnect}>{connecting ? "Checking…" : "Run ↵"}</button>
         </div>
       </div>
@@ -836,7 +866,7 @@ function ConnectEmptyState({ baseUrl, apiKey, connecting, error, onBaseUrlChange
   );
 }
 
-function AssistantSandbox({ pattern, modelName, toolsMode, reasoningMode, defaultOpen, softStream, responseStatus }: AssistantSandboxProps): ReactNode {
+function AssistantSandbox({ pattern, modelName, toolsMode, reasoningMode, stepsMode, defaultOpen, softStream, responseStatus }: AssistantSandboxProps): ReactNode {
   const aui = useAui();
   const config = AuiConfig({
     suggestions: Suggestions([
@@ -878,7 +908,7 @@ function AssistantSandbox({ pattern, modelName, toolsMode, reasoningMode, defaul
             <ThreadPrimitive.Messages>
               {({ message }) => message.role === "user"
                 ? <UserRuntimeMessage />
-                : <AssistantRuntimeMessage toolsMode={toolsMode} reasoningMode={reasoningMode} defaultOpen={defaultOpen} softStream={softStream} responseStatus={responseStatus} />}
+                : <AssistantRuntimeMessage toolsMode={toolsMode} reasoningMode={reasoningMode} stepsMode={stepsMode} defaultOpen={defaultOpen} softStream={softStream} responseStatus={responseStatus} />}
             </ThreadPrimitive.Messages>
             <ThreadPrimitive.ViewportFooter className="composer-wrap">
               <ComposerPrimitive.Root className="composer">
@@ -912,25 +942,41 @@ function UserRuntimeMessage(): ReactNode {
   );
 }
 
-function AssistantRuntimeMessage({ toolsMode, reasoningMode, defaultOpen, softStream, responseStatus }: AssistantRuntimeMessageProps): ReactNode {
-  const groupBy = useMemo(() => groupPartByType(reasoningMode === "shown" ? { reasoning: ["group-reasoning"] } : {}), [reasoningMode]);
+function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, defaultOpen, softStream, responseStatus }: AssistantRuntimeMessageProps): ReactNode {
+  const humanized = stepsMode === "humanized";
+  const stepsShown = humanized && toolsMode === "shown";
+  // Humanized mode puts reasoning and tool calls in one group, so the middle of
+  // the turn collapses into a single block of plain-language steps.
+  const groupBy = useMemo(() => groupPartByType({
+    ...(reasoningMode === "shown" ? { reasoning: humanized ? ["group-steps", "group-reasoning"] : ["group-reasoning"] } : {}),
+    ...(stepsShown ? { "tool-call": ["group-steps", "group-tool"] } : {}),
+  }), [humanized, reasoningMode, stepsShown]);
 
   return (
     <MessagePrimitive.Root asChild>
       <div>
-        <AssistantThinking />
+        <AssistantThinking humanized={stepsShown} />
         <MessagePrimitive.Error>
           <p className="error-note"><ErrorPrimitive.Message /></p>
         </MessagePrimitive.Error>
         <MessagePrimitive.GroupedParts groupBy={groupBy}>
           {({ part, children }) => {
             switch (part.type) {
+              case "group-steps":
+                return <StepList key={`steps-${part.indices[0]}-${defaultOpen}`} defaultOpen={defaultOpen}>{children}</StepList>;
               case "group-reasoning":
-                return <ReasoningGroup key={`${part.indices[0]}-${defaultOpen}`} defaultOpen={defaultOpen}>{children}</ReasoningGroup>;
+                return humanized
+                  ? <div className="steps-reasoning" key={`reasoning-${part.indices[0]}`}>{children}</div>
+                  : <ReasoningGroup key={`${part.indices[0]}-${defaultOpen}`} defaultOpen={defaultOpen}>{children}</ReasoningGroup>;
+              case "group-tool":
+                return <div className="steps-list" key={`tools-${part.indices[0]}`}>{children}</div>;
               case "reasoning":
                 return reasoningMode === "shown" ? <p className="reasoning-line">{part.text}</p> : <></>;
               case "tool-call":
-                return toolsMode === "shown" ? <ToolCard key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} result={part.result} defaultOpen={defaultOpen} /> : <></>;
+                if (toolsMode !== "shown") return <></>;
+                return humanized
+                  ? <StepLine key={part.toolCallId} name={part.toolName} args={part.args} result={part.result} isError={part.isError} />
+                  : <ToolCard key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} result={part.result} defaultOpen={defaultOpen} />;
               case "text":
                 return softStream === "on"
                   ? <StreamingTextPart type="text" text={part.text} status={part.status} />
@@ -947,22 +993,75 @@ function AssistantRuntimeMessage({ toolsMode, reasoningMode, defaultOpen, softSt
 }
 
 /**
- * Names the work in flight from the message itself: a pending tool call by name,
- * plain "Thinking" until the first part lands, and nothing once content streams.
+ * The disciplined middle of a turn: one quiet line naming the work in flight,
+ * opening onto the steps themselves when asked for.
  */
-function AssistantThinking(): ReactNode {
-  const label = useThinkingLabel();
+function StepList({ defaultOpen, children }: DisclosureProps): ReactNode {
+  const [open, setOpen] = useState(defaultOpen);
+  const summary = useStepsSummary();
+
+  return (
+    <div className="steps">
+      <button className="steps-head" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+        <span>{summary}</span>
+        <span aria-hidden="true" style={{ marginLeft: "auto" }}>{open ? "⌄" : "›"}</span>
+      </button>
+      {open && <div className="steps-body">{children}</div>}
+    </div>
+  );
+}
+
+/** Our adapter does not set `isError`, so an error-shaped result counts too. */
+function resultFailed(result: unknown): boolean {
+  return result !== null && typeof result === "object" && "error" in (result as Record<string, unknown>);
+}
+
+/** One tool call in plain language: no arguments, no payload. */
+function StepLine({ name, args, result, isError }: StepLineProps): ReactNode {
+  const running = useAuiState((state) => state.message.status?.type === "running");
+  const failed = isError === true || resultFailed(result);
+  const phase: StepPhase = failed ? "failed" : running && result === undefined ? "running" : "complete";
+
+  return (
+    <p className="step" data-phase={phase}>
+      <span className="step-mark" aria-hidden="true" />
+      <span>{describeStep(name, args, phase)}</span>
+    </p>
+  );
+}
+
+/** The work in flight, or a count of it once the turn settles. */
+function useStepsSummary(): string {
+  return useAuiState((state) => {
+    const calls = state.message.parts.filter((part) => part.type === "tool-call");
+
+    if (state.message.status?.type === "running") {
+      const pending = calls.find((part) => part.result === undefined);
+      return pending?.type === "tool-call" ? describeStep(pending.toolName, pending.args, "running") : "Thinking";
+    }
+    if (calls.length === 0) return "Thought";
+    return calls.length === 1 ? "1 step" : `${calls.length} steps`;
+  });
+}
+
+function AssistantThinking({ humanized }: Readonly<{ humanized: boolean }>): ReactNode {
+  const label = useThinkingLabel(humanized);
   const elapsed = useElapsedLabel(label !== undefined);
 
   if (label === undefined) return null;
   return <ThinkingIndicator className="thinking-indicator" label={label} elapsed={elapsed} />;
 }
 
-function useThinkingLabel(): string | undefined {
+/**
+ * Names the work in flight from the message itself: a pending tool call by name,
+ * plain "Thinking" until the first part lands, and nothing once content streams.
+ * While the step list is showing it already says which call is running.
+ */
+function useThinkingLabel(suppressPendingCall: boolean): string | undefined {
   return useAuiState((state) => {
     if (state.message.status?.type !== "running") return undefined;
     const pending = state.message.parts.find((part) => part.type === "tool-call" && part.result === undefined);
-    if (pending?.type === "tool-call") return `Running ${pending.toolName}`;
+    if (pending?.type === "tool-call") return suppressPendingCall ? undefined : `Running ${pending.toolName}`;
     return state.message.parts.length === 0 ? "Thinking" : undefined;
   });
 }
@@ -1182,6 +1281,15 @@ function getReasoningModeHint(reasoningMode: PartMode): string {
       return "Reasoning can exist, but the UI suppresses it.";
     case "shown":
       return "Reasoning renders in a collapsible group.";
+  }
+}
+
+function getStepsModeHint(stepsMode: StepsMode): string {
+  switch (stepsMode) {
+    case "raw":
+      return "Tool calls and reasoning arrive as they are, arguments included.";
+    case "humanized":
+      return "Tool calls become plain language: “Searching the web for …”.";
   }
 }
 
