@@ -110,10 +110,14 @@ app/                    # the testbed: shell, controls, sandbox, export dialog
   api/chat/             #   provider proxy, normalised into one event stream
   api/source/           #   the exported scaffold, as JSON or a zip
 components/
-  agent-testbed.tsx     #   the testbed itself: controls, sandbox, adapter
+  agent-testbed.tsx     #   the testbed itself: shell, controls, adapter
+  sandbox/              #   the sandboxed app's renderers and knobs
   assistant-ui/         #   vendored assistant-ui elements, kept unmodified
   ui/                   #   vendored shadcn/ui primitives
-lib/                    # design tokens, step labels, utilities
+lib/
+  scaffold/             #   the source the export emits, one module per file
+  design-tokens.ts      #   generated from the design-language CSS
+  step-labels.ts        #   tool calls as plain-language steps
 scripts/                # gateway, behaviour baseline, provider probe
 reports/                # baselines and screenshots
 ```
