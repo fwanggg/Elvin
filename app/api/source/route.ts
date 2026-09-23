@@ -130,7 +130,7 @@ const SCAFFOLD_RULES = [
   "button,input,textarea{font:inherit;color:inherit}",
   "*{box-sizing:border-box}",
   ":focus-visible{outline:2px solid var(--a-accent);outline-offset:2px}",
-  ".app{min-height:100vh;padding:var(--pad-canvas);background:var(--a-bg);color:var(--a-fg)}",
+  ".app{height:100vh;display:flex;flex-direction:column;overflow:hidden;padding:var(--pad-canvas);background:var(--a-bg);color:var(--a-fg)}",
   ".app-header{font-family:var(--font-heading);font-size:13px;font-weight:var(--label-weight);letter-spacing:var(--label-tracking);text-transform:var(--label-transform)}",
   ".app-header span{font-weight:400;color:var(--a-muted)}",
   ".composer{display:flex;gap:8px;align-items:flex-end;padding:var(--pad-bar);border:var(--border-width) solid var(--a-border);border-radius:var(--radius);background:var(--a-bg);box-shadow:var(--shadow)}",
@@ -143,12 +143,21 @@ const SCAFFOLD_RULES = [
   "",
 ].join("\n");
 
+// The trace mirrors what the sandbox shows: a label that shimmers while the
+// model is still writing, a panel that animates open, and reasoning text whose
+// newest words land one at a time instead of appearing in whole paragraphs.
 const REASONING_RULES = [
   ".reasoning{margin:8px 0;border:var(--border-width) solid var(--a-border);border-radius:var(--radius-card);background:var(--a-bg);box-shadow:var(--shadow);overflow:hidden}",
   ".reasoning-trigger{display:flex;width:100%;gap:8px;align-items:center;justify-content:space-between;padding:8px 12px;border:0;background:transparent;color:inherit;cursor:pointer}",
   ".reasoning-trigger-label{font-size:13px;font-weight:var(--label-weight);letter-spacing:var(--label-tracking)}",
-  ".reasoning-content{padding:0 12px 12px;font-size:14px;line-height:1.6;opacity:.75}",
+  ".reasoning-trigger-label[data-active]{background-image:linear-gradient(90deg,color-mix(in oklab,currentColor 35%,transparent) 40%,currentColor 50%,color-mix(in oklab,currentColor 35%,transparent) 60%);background-size:250% 100%;background-repeat:no-repeat;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:reasoning-shimmer 1.8s linear infinite}",
+  "@keyframes reasoning-shimmer{from{background-position:100% 0}to{background-position:0 0}}",
+  ".reasoning-content{padding:0 12px 12px;font-size:14px;line-height:1.6;opacity:.75;animation:reasoning-open .24s cubic-bezier(.23,1,.32,1) both}",
+  "@keyframes reasoning-open{from{opacity:0;translate:0 -4px}}",
   ".reasoning-line{margin:0;white-space:pre-wrap}",
+  ".reasoning-word{animation:reasoning-word-in .35s cubic-bezier(.23,1,.32,1) both}",
+  "@keyframes reasoning-word-in{from{opacity:0}}",
+  "@media (prefers-reduced-motion:reduce){.reasoning-trigger-label[data-active]{animation:none;-webkit-text-fill-color:currentColor;background-image:none}.reasoning-content,.reasoning-word{animation:none}}",
   "",
 ].join("\n");
 
@@ -183,15 +192,21 @@ function globalsSource(config: SourceConfig): string {
 function reasoningGroupSource(): string {
   return `"use client";
 
-import { useState, type PropsWithChildren } from "react";
+import { useMemo, useState, type PropsWithChildren } from "react";
 
-export function ReasoningGroup({ defaultOpen, children }: PropsWithChildren<{ defaultOpen: boolean }>) {
-  const [open, setOpen] = useState(defaultOpen);
+/**
+ * Open while the model is still working, then settle to the configured default.
+ * A manual toggle sticks, so reading the trace never fights the stream.
+ */
+export function ReasoningGroup({ defaultOpen, streaming, children }: PropsWithChildren<{ defaultOpen: boolean; streaming: boolean }>) {
+  const [initialOpen] = useState(defaultOpen);
+  const [userOpen, setUserOpen] = useState<boolean | null>(null);
+  const open = userOpen ?? (streaming || initialOpen);
 
   return (
     <div className="reasoning">
-      <button className="reasoning-trigger" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
-        <span className="reasoning-trigger-label">Reasoning</span>
+      <button className="reasoning-trigger" type="button" aria-expanded={open} onClick={() => setUserOpen(!open)}>
+        <span className="reasoning-trigger-label" data-active={streaming || undefined}>Reasoning</span>
         <span aria-hidden>{open ? "⌄" : "›"}</span>
       </button>
       {open && <div className="reasoning-content">{children}</div>}
@@ -199,8 +214,21 @@ export function ReasoningGroup({ defaultOpen, children }: PropsWithChildren<{ de
   );
 }
 
+/**
+ * The trace arrives as one growing string, so the newest words are the only
+ * thing that moves. Splitting on whitespace re-emits the provider's own line
+ * breaks, which is what lets a long trace read as steps rather than a wall.
+ */
 export function ReasoningText({ text }: { text: string }) {
-  return <p className="reasoning-line">{text}</p>;
+  const tokens = useMemo(() => text.split(/(\\s+)/), [text]);
+
+  return (
+    <p className="reasoning-line">
+      {tokens.map((token, index) => (
+        token.trim().length === 0 ? token : <span className="reasoning-word" key={index}>{token}</span>
+      ))}
+    </p>
+  );
 }
 `;
 }
@@ -794,6 +822,7 @@ import {
   MessagePrimitive,
   ThreadPrimitive,
   groupPartByType,
+  useAuiState,
   useLocalRuntime,
   type ChatModelAdapter,
   type ChatModelRunResult,
@@ -908,25 +937,27 @@ export function ElvinAssistant() {
   return (
     <main className="app" data-pattern={elvinConfig.pattern} data-theme={elvinConfig.theme}>
       <AssistantRuntimeProvider runtime={runtime}>
-        <section style={{ maxWidth: elvinConfig.pattern === "thread" ? 760 : 420, margin: "0 auto", display: "flex", minHeight: "80vh", flexDirection: "column", gap: 16 }}>
+        <section style={{ width: "100%", maxWidth: elvinConfig.pattern === "thread" ? 760 : 420, margin: "0 auto", flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 16 }}>
           <header className="app-header"><strong>Assistant</strong><span> · {elvinConfig.model}</span></header>
-          <ThreadPrimitive.Root style={{ flex: 1, minHeight: 0 }}>
-            <ThreadPrimitive.Viewport style={{ height: "70vh", overflow: "auto", display: "flex", flexDirection: "column", gap: 12 }}>
+          <ThreadPrimitive.Root style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+            <ThreadPrimitive.Viewport style={{ flex: 1, minHeight: 0, overflow: "auto", display: "flex", flexDirection: "column", gap: 12 }}>
               <ThreadPrimitive.Messages>
                 {({ message }) => message.role === "user" ? <UserMessage /> : <AssistantMessage />}
               </ThreadPrimitive.Messages>
-              <ThreadPrimitive.ViewportFooter style={{ position: "sticky", bottom: 0, paddingTop: 12 }}>
-                <ComposerPrimitive.Root className="composer">
-                  <ComposerPrimitive.Input className="composer-input" placeholder="Send a message…" rows={1} />
-                  <AuiIf condition={(state) => !state.thread.isRunning}>
-                    <ComposerPrimitive.Send>Send</ComposerPrimitive.Send>
-                  </AuiIf>
-                  <AuiIf condition={(state) => state.thread.isRunning}>
-                    <ComposerPrimitive.Cancel>Stop</ComposerPrimitive.Cancel>
-                  </AuiIf>
-                </ComposerPrimitive.Root>
-              </ThreadPrimitive.ViewportFooter>
             </ThreadPrimitive.Viewport>
+            {/* Its own row, outside the scroller: the thread scrolls above the
+                composer rather than passing behind it. */}
+            <ThreadPrimitive.ViewportFooter style={{ flex: "none", paddingTop: 12, background: "var(--a-bg)" }}>
+              <ComposerPrimitive.Root className="composer">
+                <ComposerPrimitive.Input className="composer-input" placeholder="Send a message…" rows={1} />
+                <AuiIf condition={(state) => !state.thread.isRunning}>
+                  <ComposerPrimitive.Send>Send</ComposerPrimitive.Send>
+                </AuiIf>
+                <AuiIf condition={(state) => state.thread.isRunning}>
+                  <ComposerPrimitive.Cancel>Stop</ComposerPrimitive.Cancel>
+                </AuiIf>
+              </ComposerPrimitive.Root>
+            </ThreadPrimitive.ViewportFooter>
           </ThreadPrimitive.Root>
         </section>
       </AssistantRuntimeProvider>
@@ -940,6 +971,8 @@ function UserMessage() {
 
 function AssistantMessage() {
   const groupBy = useMemo(() => groupPartByType({ reasoning: ["group-reasoning"] }), []);
+  const running = useAuiState((state) => state.message.status?.type === "running");
+  const answering = useAuiState((state) => state.message.parts.some((part) => part.type === "text" && part.text.trim().length > 0));
 
   return (
     <MessagePrimitive.Root className="assistant-message" style={{ alignSelf: "flex-start", maxWidth: "80%" }}>
@@ -951,7 +984,7 @@ function AssistantMessage() {
           switch (part.type) {
             case "group-reasoning":
               return elvinConfig.reasoning.render
-                ? <ReasoningGroup defaultOpen={elvinConfig.reasoning.defaultOpen}>{children}</ReasoningGroup>
+                ? <ReasoningGroup defaultOpen={elvinConfig.reasoning.defaultOpen} streaming={part.status.type === "running" || (running && !answering)}>{children}</ReasoningGroup>
                 : <></>;
             case "reasoning":
               return elvinConfig.reasoning.render ? <ReasoningText text={part.text} /> : <></>;

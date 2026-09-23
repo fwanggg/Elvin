@@ -6,9 +6,11 @@ import { Dropdown } from "@/components/dropdown";
 import { describeStep, type StepPhase } from "@/lib/step-labels";
 import { ModelPicker } from "@/components/model-picker";
 import { MessageTiming } from "@/components/assistant-ui/elements/message-timing.aui";
+import { ReasoningContent, ReasoningRoot, ReasoningText, ReasoningTrigger } from "@/components/assistant-ui/elements/reasoning";
 import { StreamingText, type Segment } from "@/components/assistant-ui/elements/streaming-text";
 import { ThinkingIndicator } from "@/components/assistant-ui/elements/thinking-indicator";
 import { TooltipIconButton } from "@/components/assistant-ui/elements/tooltip-icon-button";
+import { ShimmerLabel } from "@/components/assistant-ui/elements/surfaces";
 import type { Design } from "@/lib/design-tokens";
 import {
   ActionBarMorePrimitive,
@@ -30,6 +32,7 @@ import {
   type AssistantRuntime,
   type ChatModelAdapter,
   type MessageTiming as StreamTiming,
+  type ReasoningMessagePartComponent,
   type TextMessagePartComponent,
   type ThreadMessage,
 } from "@assistant-ui/react";
@@ -115,6 +118,7 @@ type ControlSidebarProps = Readonly<{
   toolsMode: PartMode;
   reasoningMode: PartMode;
   stepsMode: StepsMode;
+  emoji: Toggle;
   openMode: OpenMode;
   softStream: Toggle;
   responseStatus: Toggle;
@@ -125,6 +129,7 @@ type ControlSidebarProps = Readonly<{
   onToolsModeChange: (value: PartMode) => void;
   onReasoningModeChange: (value: PartMode) => void;
   onStepsModeChange: (value: StepsMode) => void;
+  onEmojiChange: (value: Toggle) => void;
   onOpenModeChange: (value: OpenMode) => void;
   onSoftStreamChange: (value: Toggle) => void;
   onResponseStatusChange: (value: Toggle) => void;
@@ -139,6 +144,7 @@ type PreviewStageProps = Readonly<{
   appTheme: AppTheme;
   design: Design;
   stepsMode: StepsMode;
+  emoji: Toggle;
   pattern: Pattern;
   runtime: AssistantRuntime;
   modelName: string;
@@ -177,6 +183,7 @@ type AssistantSandboxProps = Readonly<{
   pattern: Pattern;
   modelName: string;
   stepsMode: StepsMode;
+  emoji: Toggle;
   toolsMode: PartMode;
   reasoningMode: PartMode;
   defaultOpen: boolean;
@@ -188,6 +195,7 @@ type AssistantRuntimeMessageProps = Readonly<{
   toolsMode: PartMode;
   reasoningMode: PartMode;
   stepsMode: StepsMode;
+  emoji: Toggle;
   defaultOpen: boolean;
   softStream: Toggle;
   responseStatus: Toggle;
@@ -268,6 +276,23 @@ const DESIGN_LABELS: Record<Design, string> = {
 };
 const DESIGN_LANGUAGES: ReadonlyArray<{ value: Design; label: string }> = (Object.keys(DESIGN_LABELS) as Design[]).map((value) => ({ value, label: DESIGN_LABELS[value] }));
 const PART_MODE_LABELS: Record<PartMode, string> = { shown: "Shown", hidden: "Hidden", off: "Off" };
+/**
+ * Turn markers, drawn with Google's animated Noto Emoji rather than LobeChat's
+ * Fluent artwork — different art, same idea: an HD asset that moves. Image
+ * assets are Apache-2.0 (fonts OFL), and each entry keeps the plain character so
+ * the marker still reads as text if the asset cannot load.
+ */
+const EMOJI_MARKS = {
+  assistant: { char: "🫧", codePoint: "1fae7" },
+  user: { char: "👋", codePoint: "1f44b" },
+} as const;
+
+type EmojiRole = keyof typeof EMOJI_MARKS;
+
+/** The animated set is served as WebP, so no Lottie player is needed. */
+function notoAnimatedUrl(codePoint: string): string {
+  return `https://fonts.gstatic.com/s/e/notoemoji/latest/${codePoint}/512.webp`;
+}
 const STEPS_MODE_LABELS: Record<StepsMode, string> = { raw: "Raw", humanized: "Humanized" };
 const OPEN_MODE_LABELS: Record<OpenMode, string> = { collapsed: "Collapsed", expanded: "Expanded" };
 const STREAM_MODE_LABELS: Record<StreamMode, string> = { true: "True", false: "False" };
@@ -286,6 +311,7 @@ export function AgentTestbed(): ReactNode {
   const [toolsMode, setToolsMode] = useState<PartMode>("shown");
   const [reasoningMode, setReasoningMode] = useState<PartMode>("shown");
   const [stepsMode, setStepsMode] = useState<StepsMode>("raw");
+  const [emoji, setEmoji] = useState<Toggle>("off");
   const [openMode, setOpenMode] = useState<OpenMode>("collapsed");
   const [softStream, setSoftStream] = useState<Toggle>("on");
   const [responseStatus, setResponseStatus] = useState<Toggle>("on");
@@ -501,6 +527,7 @@ export function AgentTestbed(): ReactNode {
             toolsMode={toolsMode}
             reasoningMode={reasoningMode}
             stepsMode={stepsMode}
+            emoji={emoji}
             openMode={openMode}
             softStream={softStream}
             responseStatus={responseStatus}
@@ -511,6 +538,7 @@ export function AgentTestbed(): ReactNode {
             onToolsModeChange={setToolsMode}
             onReasoningModeChange={setReasoningMode}
             onStepsModeChange={setStepsMode}
+            onEmojiChange={setEmoji}
             onOpenModeChange={setOpenMode}
             onSoftStreamChange={setSoftStream}
             onResponseStatusChange={setResponseStatus}
@@ -531,6 +559,7 @@ export function AgentTestbed(): ReactNode {
             toolsMode={toolsMode}
             reasoningMode={reasoningMode}
             stepsMode={stepsMode}
+            emoji={emoji}
             defaultOpen={openMode === "expanded"}
             softStream={softStream}
             responseStatus={responseStatus}
@@ -563,6 +592,7 @@ function ControlSidebar({
   toolsMode,
   reasoningMode,
   stepsMode,
+  emoji,
   openMode,
   softStream,
   responseStatus,
@@ -573,6 +603,7 @@ function ControlSidebar({
   onToolsModeChange,
   onReasoningModeChange,
   onStepsModeChange,
+  onEmojiChange,
   onOpenModeChange,
   onSoftStreamChange,
   onResponseStatusChange,
@@ -651,6 +682,15 @@ function ControlSidebar({
           onChange={onOpenModeChange}
           hint={getOpenModeHint(openMode)}
         />
+        <SegmentedControlBlock
+          label="Emoji"
+          name="emoji"
+          value={emoji}
+          options={["on", "off"]}
+          labels={TOGGLE_LABELS}
+          onChange={onEmojiChange}
+          hint={getEmojiHint(emoji)}
+        />
       </PanelSection>
       <div className="section-rule" />
       <PanelSection title="Response">
@@ -687,6 +727,7 @@ function PreviewStage({
   appTheme,
   design,
   stepsMode,
+  emoji,
   pattern,
   runtime,
   modelName,
@@ -753,7 +794,7 @@ function PreviewStage({
               {pattern !== "thread" && <MockApplication />}
               {pattern === "modal" && <div className="modal-launcher">⌄</div>}
               <AssistantRuntimeProvider runtime={runtime}>
-                <AssistantSandbox pattern={pattern} modelName={modelName} toolsMode={toolsMode} reasoningMode={reasoningMode} stepsMode={stepsMode} defaultOpen={defaultOpen} softStream={softStream} responseStatus={responseStatus} />
+                <AssistantSandbox pattern={pattern} modelName={modelName} toolsMode={toolsMode} reasoningMode={reasoningMode} stepsMode={stepsMode} emoji={emoji} defaultOpen={defaultOpen} softStream={softStream} responseStatus={responseStatus} />
               </AssistantRuntimeProvider>
             </>
           ) : (
@@ -890,7 +931,7 @@ function ConnectEmptyState({ baseUrl, apiKey, connecting, error, onBaseUrlChange
   );
 }
 
-function AssistantSandbox({ pattern, modelName, toolsMode, reasoningMode, stepsMode, defaultOpen, softStream, responseStatus }: AssistantSandboxProps): ReactNode {
+function AssistantSandbox({ pattern, modelName, toolsMode, reasoningMode, stepsMode, emoji, defaultOpen, softStream, responseStatus }: AssistantSandboxProps): ReactNode {
   const aui = useAui();
   const config = AuiConfig({
     suggestions: Suggestions([
@@ -931,34 +972,56 @@ function AssistantSandbox({ pattern, modelName, toolsMode, reasoningMode, stepsM
             </AuiIf>
             <ThreadPrimitive.Messages>
               {({ message }) => message.role === "user"
-                ? <UserRuntimeMessage />
-                : <AssistantRuntimeMessage toolsMode={toolsMode} reasoningMode={reasoningMode} stepsMode={stepsMode} defaultOpen={defaultOpen} softStream={softStream} responseStatus={responseStatus} />}
+                ? <UserRuntimeMessage emoji={emoji} />
+                : <AssistantRuntimeMessage toolsMode={toolsMode} reasoningMode={reasoningMode} stepsMode={stepsMode} emoji={emoji} defaultOpen={defaultOpen} softStream={softStream} responseStatus={responseStatus} />}
             </ThreadPrimitive.Messages>
-            <ThreadPrimitive.ViewportFooter className="composer-wrap">
-              <ComposerPrimitive.Root className="composer">
-                <ComposerPrimitive.Input placeholder="Send a message…" rows={1} />
-                <div className="composer-footer">
-                  <span>＋</span>
-                  <span>{modelName}</span>
-                  <AuiIf condition={(state) => !state.thread.isRunning}>
-                    <ComposerPrimitive.Send className="send-dot">↑</ComposerPrimitive.Send>
-                  </AuiIf>
-                  <AuiIf condition={(state) => state.thread.isRunning}>
-                    <ComposerPrimitive.Cancel className="send-dot running">■</ComposerPrimitive.Cancel>
-                  </AuiIf>
-                </div>
-              </ComposerPrimitive.Root>
-            </ThreadPrimitive.ViewportFooter>
           </ThreadPrimitive.Viewport>
+          {/* Its own row, outside the scroller: the thread scrolls above the
+              composer rather than passing behind it. */}
+          <ThreadPrimitive.ViewportFooter className="composer-wrap">
+            <ComposerPrimitive.Root className="composer">
+              <ComposerPrimitive.Input placeholder="Send a message…" rows={1} />
+              <div className="composer-footer">
+                <span>＋</span>
+                <span>{modelName}</span>
+                <AuiIf condition={(state) => !state.thread.isRunning}>
+                  <ComposerPrimitive.Send className="send-dot">↑</ComposerPrimitive.Send>
+                </AuiIf>
+                <AuiIf condition={(state) => state.thread.isRunning}>
+                  <ComposerPrimitive.Cancel className="send-dot running">■</ComposerPrimitive.Cancel>
+                </AuiIf>
+              </div>
+            </ComposerPrimitive.Root>
+          </ThreadPrimitive.ViewportFooter>
         </ThreadPrimitive.Root>
       </div>
     </AuiProvider>
   );
 }
 
-function UserRuntimeMessage(): ReactNode {
+/** One turn marker: the animated asset, falling back to the plain glyph. */
+function EmojiMark({ role }: Readonly<{ role: EmojiRole }>): ReactNode {
+  const [plain, setPlain] = useState(false);
+  const mark = EMOJI_MARKS[role];
+
+  if (plain) return <span className="message-emoji" aria-hidden="true">{mark.char}</span>;
   return (
-    <MessagePrimitive.Root className="user-bubble">
+    <img
+      className="message-emoji"
+      src={notoAnimatedUrl(mark.codePoint)}
+      alt=""
+      aria-hidden="true"
+      width={22}
+      height={22}
+      onError={() => setPlain(true)}
+    />
+  );
+}
+
+function UserRuntimeMessage({ emoji }: Readonly<{ emoji: Toggle }>): ReactNode {
+  return (
+    <MessagePrimitive.Root className={emoji === "on" ? "user-bubble emoji" : "user-bubble"}>
+      {emoji === "on" && <EmojiMark role="user" />}
       <MessagePrimitive.Parts>
         {({ part }) => part.type === "text" ? part.text : null}
       </MessagePrimitive.Parts>
@@ -966,9 +1029,11 @@ function UserRuntimeMessage(): ReactNode {
   );
 }
 
-function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, defaultOpen, softStream, responseStatus }: AssistantRuntimeMessageProps): ReactNode {
+function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, emoji, defaultOpen, softStream, responseStatus }: AssistantRuntimeMessageProps): ReactNode {
   const humanized = stepsMode === "humanized";
   const stepsShown = humanized && toolsMode === "shown";
+  const running = useAuiState((state) => state.message.status?.type === "running");
+  const answering = useAuiState((state) => state.message.parts.some((part) => part.type === "text" && part.text.trim().length > 0));
   // Humanized mode puts reasoning and tool calls in one group, so the middle of
   // the turn collapses into a single block of plain-language steps.
   const groupBy = useMemo(() => groupPartByType({
@@ -978,7 +1043,8 @@ function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, defaultO
 
   return (
     <MessagePrimitive.Root asChild>
-      <div>
+      <div className={emoji === "on" ? "message-row emoji" : "message-row"}>
+        {emoji === "on" && <EmojiMark role="assistant" />}
         <MessagePrimitive.Error>
           <p className="error-note"><ErrorPrimitive.Message /></p>
         </MessagePrimitive.Error>
@@ -987,14 +1053,25 @@ function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, defaultO
             switch (part.type) {
               case "group-steps":
                 return <StepList key={`steps-${part.indices[0]}-${defaultOpen}`} defaultOpen={defaultOpen}>{children}</StepList>;
-              case "group-reasoning":
-                return humanized
-                  ? <div className="steps-reasoning" key={`reasoning-${part.indices[0]}`}>{children}</div>
-                  : <ReasoningGroup key={`${part.indices[0]}-${defaultOpen}`} defaultOpen={defaultOpen}>{children}</ReasoningGroup>;
+              case "group-reasoning": {
+                if (humanized) return <div className="steps-reasoning" key={`reasoning-${part.indices[0]}`}>{children}</div>;
+                // The element holds itself open as a live, bottom-pinned preview
+                // while the trace streams — its trigger shimmers for exactly that
+                // window — then settles to the state the sidebar asks for.
+                const streaming = part.status.type === "running" || (running && !answering);
+                return (
+                  <ReasoningRoot key={`${part.indices[0]}-${defaultOpen}`} className="reasoning-root" streaming={streaming} defaultOpen={defaultOpen}>
+                    <ReasoningTrigger className="reasoning-trigger" active={streaming} />
+                    <ReasoningContent aria-busy={streaming}>
+                      <ReasoningText className="reasoning-text">{children}</ReasoningText>
+                    </ReasoningContent>
+                  </ReasoningRoot>
+                );
+              }
               case "group-tool":
                 return <div className="steps-list" key={`tools-${part.indices[0]}`}>{children}</div>;
               case "reasoning":
-                return reasoningMode === "shown" ? <p className="reasoning-line">{part.text}</p> : <></>;
+                return reasoningMode === "shown" ? <ReasoningPart {...part} /> : <></>;
               case "tool-call":
                 if (toolsMode !== "shown") return <></>;
                 return humanized
@@ -1009,9 +1086,14 @@ function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, defaultO
             }
           }}
         </MessagePrimitive.GroupedParts>
-        {/* Trails the parts, so a growing tool chain cannot push it away from the
-            composer: it names the call still pending, right under its own card. */}
-        <AssistantThinking humanized={stepsShown} />
+        {/* A reserved slot: the label comes and goes between rounds, and the space
+            it needs must not be taken from the layout each time. It trails the
+            parts, so a growing chain cannot push it away from the composer. */}
+        {running && (
+          <div className="thinking-slot">
+            <AssistantThinking humanized={stepsShown} />
+          </div>
+        )}
         {responseStatus === "on" && <AssistantActionBar />}
       </div>
     </MessagePrimitive.Root>
@@ -1025,11 +1107,14 @@ function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, defaultO
 function StepList({ defaultOpen, children }: DisclosureProps): ReactNode {
   const [open, setOpen] = useState(defaultOpen);
   const summary = useStepsSummary();
+  const running = useAuiState((state) => state.message.status?.type === "running");
 
   return (
     <div className="steps">
       <button className="steps-head" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
-        <span>{summary}</span>
+        {/* Keyed on the text, so every change replays the shimmer the way
+            the element's own trigger does rather than hard-swapping. */}
+        <ShimmerLabel key={summary} active={running} className="steps-summary">{summary}</ShimmerLabel>
         <span aria-hidden="true" style={{ marginLeft: "auto" }}>{open ? "⌄" : "›"}</span>
       </button>
       {open && <div className="steps-body">{children}</div>}
@@ -1079,16 +1164,21 @@ function AssistantThinking({ humanized }: Readonly<{ humanized: boolean }>): Rea
 }
 
 /**
- * Names the work in flight from the message itself: a pending tool call by name,
- * plain "Thinking" until the first part lands, and nothing once content streams.
- * While the step list is showing it already says which call is running.
+ * Names what the turn is doing whenever nothing else on screen is moving. The
+ * trace carries a shimmering trigger while it streams and the answer text
+ * carries itself, so the line's real job is the gap between rounds — after a
+ * tool result, where the previous rule fell silent for the rest of the turn.
  */
-function useThinkingLabel(suppressPendingCall: boolean): string | undefined {
+function useThinkingLabel(stepListShows: boolean): string | undefined {
   return useAuiState((state) => {
+    if (stepListShows) return undefined;
     if (state.message.status?.type !== "running") return undefined;
-    const pending = state.message.parts.find((part) => part.type === "tool-call" && part.result === undefined);
-    if (pending?.type === "tool-call") return suppressPendingCall ? undefined : `Running ${pending.toolName}`;
-    return state.message.parts.length === 0 ? "Thinking" : undefined;
+    const parts = state.message.parts;
+    const pending = parts.find((part) => part.type === "tool-call" && part.result === undefined);
+    if (pending?.type === "tool-call") return `Running ${pending.toolName}`;
+    if (parts.some((part) => part.type === "reasoning" && part.status?.type === "running")) return undefined;
+    if (parts.some((part) => part.type === "text" && part.text.trim().length > 0)) return undefined;
+    return "Thinking";
   });
 }
 
@@ -1185,16 +1275,22 @@ function streamTiming({ streamStartTime, firstTokenTime, totalChunks, toolCallCo
   };
 }
 
-function ReasoningGroup({ defaultOpen, children }: DisclosureProps): ReactNode {
-  const [open, setOpen] = useState(defaultOpen);
+/**
+ * Reasoning arrives as one growing string, so the newest words are the only
+ * thing that moves. Splitting on whitespace re-emits the provider's own line
+ * breaks, which is what lets a long trace read as steps rather than a wall.
+ */
+const ReasoningPart: ReasoningMessagePartComponent = ({ text }) => {
+  const tokens = useMemo(() => text.split(/(\s+)/), [text]);
 
   return (
-    <div className="reasoning">
-      <button className="part-head" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}><span>☼ Reasoning</span><span style={{ marginLeft: "auto" }}>{open ? "⌄" : "›"}</span></button>
-      {open && <div className="reasoning-body">{children}</div>}
-    </div>
+    <p className="reasoning-line">
+      {tokens.map((token, index) => (
+        token.trim().length === 0 ? token : <span className="reasoning-word" key={index}>{token}</span>
+      ))}
+    </p>
   );
-}
+};
 
 function ToolCard({ name, args, result, defaultOpen }: ToolCardProps): ReactNode {
   const [open, setOpen] = useState(defaultOpen);
@@ -1307,6 +1403,15 @@ function getReasoningModeHint(reasoningMode: PartMode): string {
       return "Reasoning can exist, but the UI suppresses it.";
     case "shown":
       return "Reasoning renders in a collapsible group.";
+  }
+}
+
+function getEmojiHint(emoji: Toggle): string {
+  switch (emoji) {
+    case "on":
+      return "Each turn carries a role emoji beside the message.";
+    case "off":
+      return "Messages render without an emoji marker.";
   }
 }
 
