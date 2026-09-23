@@ -105,11 +105,27 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, e
   const humanized = stepsMode === "humanized";
   const stepsShown = humanized && toolsMode === "shown";
   const running = useAuiState((state) => state.message.status?.type === "running");
-  const answering = useAuiState((state) => state.message.parts.some((part) => part.type === "text" && part.text.trim().length > 0));
-  const thinkingSeconds = useThinkingSeconds(running && !answering);
-  // Raw mode keeps the clock's last reading under the answer, so the time the
-  // model spent before it answered outlives the turn that spent it.
-  const settled = !humanized && thinkingSeconds !== undefined && thinkingSeconds >= 1;
+  // The turn is answering while the newest part is text. A tool call that lands
+  // after some text ends that, so the clock starts again rather than falling
+  // silent for the rest of the turn.
+  const answering = useAuiState((state) => {
+    const last = state.message.parts.at(-1);
+    return last?.type === "text" && last.text.trim().length > 0;
+  });
+  const clockRunning = running && !answering;
+  const thinkingSeconds = useThinkingSeconds(clockRunning);
+  const thinkingLabel = useThinkingLabel(stepsShown, reasoningMode === "shown");
+  const elapsed = clockRunning && thinkingSeconds !== undefined && thinkingSeconds >= 1 ? `${thinkingSeconds}s` : undefined;
+  // The line never blinks out mid-turn: it names the work while the turn runs,
+  // standing down only while a rendered trace shimmers, which is its own live
+  // indicator. Once its clock has stopped it reports the reading instead of going
+  // away — under the answer, where the number was taken. Humanized mode has its
+  // own step summary, so it shows nothing extra.
+  const thinking = thinkingLabel !== undefined
+    ? <ThinkingIndicator className="thinking-indicator" label={thinkingLabel} elapsed={elapsed} />
+    : !humanized && !clockRunning && thinkingSeconds !== undefined && thinkingSeconds >= 1
+      ? <p className="thinking-settled">Thought for {thinkingSeconds}s</p>
+      : null;
   // Humanized mode puts reasoning and tool calls in one group, so the middle of
   // the turn collapses into a single block of plain-language steps.
   const groupBy = useMemo(() => groupPartByType({
@@ -162,16 +178,10 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, e
             }
           }}
         </MessagePrimitive.GroupedParts>
-        {/* A reserved slot: the label comes and goes between rounds, and the space
-            it needs must not be taken from the layout each time. It trails the
+        {/* A reserved slot: the line changes state between rounds, and the space it
+            needs must not be taken from the layout each time. It trails the
             parts, so a growing chain cannot push it away from the composer. */}
-        {(running || settled) && (
-          <div className="thinking-slot">
-            {running
-              ? <AssistantThinking humanized={stepsShown} seconds={thinkingSeconds} />
-              : <p className="thinking-settled">Thought for {thinkingSeconds}s</p>}
-          </div>
-        )}
+        {thinking !== null && <div className="thinking-slot">{thinking}</div>}
         {/* The action bar unmounts itself while the message is not hovered, so
             its height is reserved here — the same reason the thinking label has
             a slot. Without it, hovering a message shifts everything below it. */}
@@ -236,27 +246,20 @@ function useStepsSummary(): string {
   });
 }
 
-function AssistantThinking({ humanized, seconds }: Readonly<{ humanized: boolean; seconds?: number }>): ReactNode {
-  const label = useThinkingLabel(humanized);
-
-  if (label === undefined) return null;
-  return <ThinkingIndicator className="thinking-indicator" label={label} elapsed={seconds === undefined || seconds < 1 ? undefined : `${seconds}s`} />;
-}
-
 /**
- * Names what the turn is doing whenever nothing else on screen is moving. The
- * trace carries a shimmering trigger while it streams and the answer text
- * carries itself, so the line's real job is the gap between rounds — after a
- * tool result, where the previous rule fell silent for the rest of the turn.
+ * Names what the turn is doing whenever nothing else on screen is moving. A
+ * rendered trace carries a shimmering trigger while it streams — so a hidden or
+ * off trace, which shimmers nowhere, must not silence the line with it — and the
+ * answer text carries itself, so the line's real job is the wait between rounds.
  */
-function useThinkingLabel(stepListShows: boolean): string | undefined {
+function useThinkingLabel(stepListShows: boolean, traceRendered: boolean): string | undefined {
   return useAuiState((state) => {
     if (stepListShows) return undefined;
     if (state.message.status?.type !== "running") return undefined;
     const parts = state.message.parts;
     const pending = parts.find((part) => part.type === "tool-call" && part.result === undefined);
     if (pending?.type === "tool-call") return `Running ${pending.toolName}`;
-    if (parts.some((part) => part.type === "reasoning" && part.status?.type === "running")) return undefined;
+    if (traceRendered && parts.some((part) => part.type === "reasoning" && part.status?.type === "running")) return undefined;
     if (parts.some((part) => part.type === "text" && part.text.trim().length > 0)) return undefined;
     return "Thinking";
   });
@@ -267,9 +270,9 @@ function useThinkingLabel(stepListShows: boolean): string | undefined {
  * thinks again and then answers spends its whole time thinking, so the count
  * keeps climbing across the gaps and through the trace instead of restarting at
  * every one of them — the number on screen while the turn runs is the same one
- * left behind when it ends. The clock stops at the first answer word, or at the
- * end of a turn that never answers, and keeps that reading rather than
- * resetting to nothing.
+ * left behind when it ends. It pauses for as long as the turn is writing its
+ * answer, starts again if more work follows, and keeps its last reading rather
+ * than resetting to nothing.
  */
 function useThinkingSeconds(active: boolean): number | undefined {
   const [seconds, setSeconds] = useState<number | undefined>(undefined);
