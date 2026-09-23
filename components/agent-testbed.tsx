@@ -307,11 +307,6 @@ export function AgentTestbed(): ReactNode {
     if (sessionRef.current.length === 0) sessionRef.current = storedThreadId();
   }, []);
 
-  function startThread(): void {
-    window.localStorage.setItem(THREAD_STORAGE_KEY, `elvin-${crypto.randomUUID().slice(0, 8)}`);
-    window.location.reload();
-  }
-
   const modelAdapter = useMemo<ChatModelAdapter>(() => ({
     async *run({ messages, abortSignal, unstable_threadId }) {
       const sessionId = sessionRef.current || unstable_threadId;
@@ -400,6 +395,18 @@ export function AgentTestbed(): ReactNode {
     },
   }), [apiKey, baseUrl, capability, model, reasoningMode, streamMode, toolsMode]);
   const runtime = useLocalRuntime(modelAdapter);
+
+  /**
+   * A new thread on the connection that is already open: a fresh session id for
+   * the provider and an empty transcript. Reloading here would drop the agent,
+   * the key and the model list with it.
+   */
+  function startThread(): void {
+    const id = `elvin-${crypto.randomUUID().slice(0, 8)}`;
+    window.localStorage.setItem(THREAD_STORAGE_KEY, id);
+    sessionRef.current = id;
+    void runtime.threads.switchToNewThread();
+  }
   const { host: statusHost, state: statusState } = getStatusLabel(connection, baseUrl, connectionError);
   const statusColor = STATUS_COLORS[connection];
   const isConnected = connection === "live";
@@ -420,9 +427,17 @@ export function AgentTestbed(): ReactNode {
     return () => { cancelled = true; };
   }, [showExportPanel, sourceParams]);
 
+  /** Drops what the provider told us, so a reconnect starts from nothing. */
+  function forgetProvider(): void {
+    setModels([]);
+    setCapabilities([]);
+    setCapability("");
+  }
+
   function disconnect(): void {
     setConnection("demo");
     setConnectionError("");
+    forgetProvider();
   }
 
   async function checkConnection(): Promise<void> {
@@ -430,9 +445,7 @@ export function AgentTestbed(): ReactNode {
     if (trimmedUrl.length === 0) {
       setConnection("demo");
       setConnectionError("Paste an OpenAI-compatible URL to render the sandbox.");
-      setModels([]);
-      setCapabilities([]);
-      setCapability("");
+      forgetProvider();
       return;
     }
 
@@ -448,16 +461,27 @@ export function AgentTestbed(): ReactNode {
       if (!response.ok || !data.ok) {
         setConnection("error");
         setConnectionError(data.error ?? "Connection failed");
+        forgetProvider();
         return;
       }
+      const nextModels = data.models ?? [];
+      const nextCapabilities = data.capabilities ?? [];
       setConnection("live");
-      setModels(data.models ?? []);
-      setCapabilities(data.capabilities ?? []);
-      if (!model.trim() && data.model) setModel(data.model);
-      if ((data.capabilities ?? []).length > 0) setCapability((current) => current || data.capabilities?.[0] || "");
+      setModels(nextModels);
+      setCapabilities(nextCapabilities);
+      // Anything chosen for the previous agent may not exist on this one.
+      setCapability((current) => (nextCapabilities.includes(current) ? current : nextCapabilities[0] ?? ""));
+      // The check echoes back the model it was sent, so a model only survives if
+      // this provider actually lists it.
+      setModel((current) => {
+        if (current.trim().length > 0 && nextModels.includes(current)) return current;
+        if (data.model && nextModels.includes(data.model)) return data.model;
+        return nextModels[0] ?? data.model ?? "";
+      });
     } catch (error) {
       setConnection("error");
       setConnectionError(error instanceof Error ? error.message : "Connection failed");
+      forgetProvider();
     }
   }
 
@@ -955,7 +979,6 @@ function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, defaultO
   return (
     <MessagePrimitive.Root asChild>
       <div>
-        <AssistantThinking humanized={stepsShown} />
         <MessagePrimitive.Error>
           <p className="error-note"><ErrorPrimitive.Message /></p>
         </MessagePrimitive.Error>
@@ -986,6 +1009,9 @@ function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, defaultO
             }
           }}
         </MessagePrimitive.GroupedParts>
+        {/* Trails the parts, so a growing tool chain cannot push it away from the
+            composer: it names the call still pending, right under its own card. */}
+        <AssistantThinking humanized={stepsShown} />
         {responseStatus === "on" && <AssistantActionBar />}
       </div>
     </MessagePrimitive.Root>

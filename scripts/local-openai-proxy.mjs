@@ -138,7 +138,10 @@ async function serveChat(request, response, rawBody) {
   const abort = new AbortController();
   request.on("close", () => abort.abort());
   const tools = Array.isArray(payload.tools) ? payload.tools.length : 0;
-  log(`POST /v1/chat/completions → ${payload.model} (stream=${Boolean(payload.stream)}, messages=${payload.messages?.length ?? 0}, tools=${tools}, reasoning=${JSON.stringify(payload.reasoning ?? null)}, dropped=${dropped.join(",") || "none"})`);
+  // The session header is the testbed's own; it pins conversation state on
+  // stateful providers, so a new thread should show a new value here.
+  const session = request.headers["x-hermes-session-id"] ?? "none";
+  log(`POST /v1/chat/completions → ${payload.model} (stream=${Boolean(payload.stream)}, session=${session}, messages=${payload.messages?.length ?? 0}, tools=${tools}, reasoning=${JSON.stringify(payload.reasoning ?? null)}, dropped=${dropped.join(",") || "none"})`);
 
   const started = Date.now();
   let upstreamResponse;
