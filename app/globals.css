@@ -1000,7 +1000,10 @@ h6 {
 @keyframes streaming-word-in { from { opacity: 0; } }
 /* Message actions (assistant-ui action bar + timing). On the sandbox palette,
    with the popovers in the playground's flat register. */
-.action-bar { display: flex; align-items: center; gap: 2px; margin-top: 10px; }
+/* The bar is unmounted while the message is not hovered, so the slot holds its
+   26px row plus the gap above it; message positions never depend on hover. */
+.action-slot { min-height: 26px; margin-top: 10px; }
+.action-bar { display: flex; align-items: center; gap: 2px; }
 .action-icon { width: 26px; height: 26px; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--a-muted); }
 .action-icon:hover { background: color-mix(in srgb, var(--a-fg) 8%, transparent); color: var(--a-fg); }
 .action-bar svg { width: 15px; height: 15px; }

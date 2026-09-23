@@ -166,7 +166,10 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, e
             <AssistantThinking humanized={stepsShown} />
           </div>
         )}
-        {responseStatus === "on" && <AssistantActionBar />}
+        {/* The action bar unmounts itself while the message is not hovered, so
+            its height is reserved here — the same reason the thinking label has
+            a slot. Without it, hovering a message shifts everything below it. */}
+        {responseStatus === "on" && <div className="action-slot"><AssistantActionBar /></div>}
       </div>
     </MessagePrimitive.Root>
   );
