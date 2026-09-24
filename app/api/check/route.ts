@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { unreachableProviderError } from "@/lib/provider-errors";
 
 type RequestBody = {
   baseUrl?: string;
@@ -97,7 +98,7 @@ async function checkModels(endpoint: string, apiKey?: string): Promise<ModelProb
     cache: "no-store",
   }).catch((error: unknown) => error instanceof Error ? error : new Error("Unable to reach model endpoint."));
 
-  if (response instanceof Error) return { ok: false, error: response.message };
+  if (response instanceof Error) return { ok: false, error: unreachableProviderError(endpoint, response) };
   const text = await response.text();
   if (!response.ok) return { ok: false, error: providerError(text, response.status) };
 
@@ -118,7 +119,7 @@ async function checkChat(endpoint: string, apiKey: string | undefined, model: st
     cache: "no-store",
   }).catch((error: unknown) => error instanceof Error ? error : new Error("Unable to reach chat endpoint."));
 
-  if (response instanceof Error) return { ok: false, error: response.message };
+  if (response instanceof Error) return { ok: false, error: unreachableProviderError(endpoint, response) };
   const text = await response.text();
   if (!response.ok) return { ok: false, error: providerError(text, response.status) };
   return { ok: true, models: [] };
