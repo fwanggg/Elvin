@@ -249,9 +249,9 @@ function ThoughtGroup({ label, seconds, running, defaultOpen, children }: Though
   const counted = seconds !== undefined && seconds >= 1;
 
   return (
-    <Collapsible className="thought-group" data-resting={running ? undefined : true} open={open} onOpenChange={setUserOpen}>
+    <Collapsible className="thought-group" open={open} onOpenChange={setUserOpen}>
       <CollapsibleTrigger className="thought-trigger">
-        <ThinkingIndicator label={label} elapsed={running && counted ? `${seconds}s` : undefined} />
+        <ThinkingIndicator label={label} active={running} elapsed={running && counted ? `${seconds}s` : undefined} />
         <span aria-hidden className="thought-chevron">{open ? "⌄" : "›"}</span>
       </CollapsibleTrigger>
       <CollapsibleContent className="thought-content">{children}</CollapsibleContent>

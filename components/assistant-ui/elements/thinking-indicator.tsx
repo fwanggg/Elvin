@@ -7,11 +7,14 @@ import { mono, ShimmerLabel } from "./surfaces";
 export function ThinkingIndicator({
   label,
   elapsed,
+  active = true,
   className,
   ...props
 }: Omit<ComponentProps<"div">, "children" | "label" | "elapsed"> & {
   label: string;
   elapsed?: string;
+  /** A settled reading is a record rather than a status: nothing pulses and nothing sweeps. */
+  active?: boolean;
 }) {
   return (
     <div
@@ -25,10 +28,14 @@ export function ThinkingIndicator({
     >
       <span
         aria-hidden
-        className="size-1.5 shrink-0 animate-pulse rounded-full bg-[var(--color-accent)] motion-reduce:animate-none"
+        className={cn(
+          "size-1.5 shrink-0 rounded-full bg-[var(--color-accent)]",
+          active ? "animate-pulse motion-reduce:animate-none" : "opacity-30",
+        )}
       />
       <ShimmerLabel
         key={label}
+        active={active}
         className="thinking-label relative inline-block leading-none"
       >
         {label}

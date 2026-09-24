@@ -1000,17 +1000,14 @@ h6 {
 .reasoning-root [data-slot="reasoning-fade"]:last-child { background: linear-gradient(to top, var(--a-bg), transparent); }
 .reasoning-line { margin: 0; white-space: pre-wrap; }
 /* The row is the thinking indicator the sandbox already uses, so its dot, its
-   shimmer and its count need no restyling — only the chevron beside them, and
-   the resting state, which stops pulsing because the turn is no longer working. */
+   shimmer and its count need no restyling — only the chevron beside them. The
+   row hands the element the turn's own state, so where it rests is decided where
+   the element is built: the sweep is drawn on a pseudo-element the `shimmer`
+   class owns, and undoing that from here is what once left a settled label
+   glowing — the element's own `active` is the thing that has to say so. */
 .thought-group { margin: 8px 0; }
 .thought-trigger { display: flex; align-items: center; gap: 6px; width: 100%; padding: 0; border: 0; background: transparent; color: var(--a-fg); cursor: pointer; text-align: left; }
 .thought-chevron { opacity: .45; font-size: 11px; }
-.thought-group[data-resting] [data-slot="thinking-indicator"] > span:first-child { animation: none; opacity: .3; }
-/* Settled, the row is a record rather than a live thing, so the label stops
-   sweeping too. The element's label carries the sweep in a `shimmer` class, so
-   undoing it means undoing what that class sets: the animation, and the clipped
-   gradient that carries it. */
-.thought-group[data-resting] [data-slot="thinking-indicator"] .shimmer { animation: none; background-image: none; -webkit-text-fill-color: currentColor; }
 .thought-content { padding: 10px 0 0 14px; }
 .thought-trace { margin: 0; max-height: 320px; overflow: auto; color: var(--a-muted); font-size: 13.5px; line-height: 1.6; }
 .thought-tools { display: flex; flex-direction: column; margin-top: 10px; }
