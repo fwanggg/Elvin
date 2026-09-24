@@ -10,7 +10,6 @@ export function configSource(config: SourceConfig): string {
     `  theme: ${JSON.stringify(config.theme)},`,
     `  design: ${JSON.stringify(config.design)},`,
     `  emoji: ${config.emoji === "on"},`,
-    `  steps: ${JSON.stringify(config.steps)},`,
     `  stream: ${config.stream === "true"},`,
     `  capability: ${JSON.stringify(config.capability || null)},`,
     "  toolCalls: {",

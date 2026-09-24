@@ -17,7 +17,6 @@ export async function GET(request: Request): Promise<Response> {
     theme: safeParam(url, "theme", ["dark", "light"], "dark"),
     design: safeParam(url, "design", DESIGNS, "swiss"),
     emoji: safeParam(url, "emoji", ["on", "off"], "off"),
-    steps: safeParam(url, "steps", ["raw", "humanized"], "raw"),
     tools: safeParam(url, "tools", ["shown", "humanized", "off"], "shown"),
     reasoning: safeParam(url, "reasoning", ["shown", "hidden", "off"], "shown"),
     open: safeParam(url, "open", ["collapsed", "expanded"], "collapsed"),

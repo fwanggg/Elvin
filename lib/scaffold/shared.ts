@@ -17,7 +17,6 @@ export type SourceConfig = {
   theme: string;
   design: Design;
   emoji: string;
-  steps: string;
   tools: string;
   reasoning: string;
   open: string;
