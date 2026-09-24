@@ -111,15 +111,13 @@ function eventsOf(body) {
   return events;
 }
 
-async function chatCase(scenario, toolsMode, reasoningMode) {
+async function chatCase(scenario) {
   const response = await fetch(`${APP}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       baseUrl: `http://127.0.0.1:${MOCK_PORT}/v1`,
       model: "mock-model",
-      toolsMode,
-      reasoningMode,
       stream: true,
       messages: [{ role: "user", content: `${scenario} prompt` }],
     }),
@@ -155,18 +153,14 @@ async function checkCase() {
 async function capture() {
   const chat = {};
   for (const scenario of Object.keys(SCENARIOS)) {
-    for (const toolsMode of ["shown", "humanized", "off"]) {
-      for (const reasoningMode of ["shown", "hidden", "off"]) {
-        chat[`${scenario}|${toolsMode}|${reasoningMode}`] = await chatCase(scenario, toolsMode, reasoningMode);
-      }
-    }
+    chat[scenario] = await chatCase(scenario);
   }
 
   const source = {};
   for (const query of [
-    "pattern=thread&theme=dark&tools=shown&reasoning=shown&open=collapsed&stream=true&model=mock-model",
-    "pattern=sidebar&theme=light&tools=humanized&reasoning=hidden&open=expanded&stream=false&model=mock-model&capability=x",
-    "pattern=modal&theme=dark&tools=off&reasoning=off&open=collapsed&stream=true&model=mock-model",
+    "pattern=thread&theme=dark&view=dev&open=collapsed&stream=true&model=mock-model",
+    "pattern=sidebar&theme=light&view=user&open=expanded&stream=false&model=mock-model&capability=x",
+    "pattern=modal&theme=dark&view=dev&open=collapsed&stream=true&model=mock-model",
   ]) {
     source[query] = await sourceCase(query);
   }

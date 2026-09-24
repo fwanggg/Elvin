@@ -9,7 +9,7 @@ import { ThinkingIndicator } from "@/components/assistant-ui/elements/thinking-i
 import { ToolCall } from "@/components/assistant-ui/elements/tool-call";
 import { TooltipIconButton } from "@/components/assistant-ui/elements/tooltip-icon-button";
 import { chipOf, describeResult, describeStep } from "@/lib/step-labels";
-import { type PartMode, type Toggle, type ToolsMode } from "@/components/sandbox/knobs";
+import { type Toggle, type ViewMode } from "@/components/sandbox/knobs";
 import {
   AuiIf,
   ActionBarMorePrimitive,
@@ -25,8 +25,7 @@ import {
 /** The sandbox's part renderers: what a turn looks like as it streams. */
 
 type AssistantRuntimeMessageProps = Readonly<{
-  toolsMode: ToolsMode;
-  reasoningMode: PartMode;
+  viewMode: ViewMode;
   emoji: Toggle;
   defaultOpen: boolean;
   softStream: Toggle;
@@ -96,8 +95,7 @@ export function UserRuntimeMessage({ emoji }: Readonly<{ emoji: Toggle }>): Reac
   );
 }
 
-export function AssistantRuntimeMessage({ toolsMode, reasoningMode, emoji, defaultOpen, softStream, responseStatus }: AssistantRuntimeMessageProps): ReactNode {
-  const reasoningShown = reasoningMode === "shown";
+export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen, softStream, responseStatus }: AssistantRuntimeMessageProps): ReactNode {
   // Most agents run tools and answer without ever streaming their thinking, so
   // the line may only claim the work: "Thought for 40s" would be a claim about
   // a trace that never arrived.
@@ -111,8 +109,8 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, emoji, defau
     return last?.type === "text" && last.text.trim().length > 0;
   });
   const clockRunning = running && !answering;
-  const thinkingSeconds = useThinkingSeconds(clockRunning && reasoningShown);
-  const thinkingLabel = useThinkingLabel(reasoningShown);
+  const thinkingSeconds = useThinkingSeconds(clockRunning);
+  const thinkingLabel = useThinkingLabel();
   // The badge stands down with the label, and for the same reason: while a trace
   // is on screen the panel's trigger is already carrying the clock, and two 8s
   // side by side say nothing the one of them does not. What the line keeps is the
@@ -123,7 +121,7 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, emoji, defau
   // arriving somewhere else. It is for the turn the panel cannot speak for,
   // though — a trace that arrived rests on its own label inside the panel — so
   // the line only ever hands over to "Worked for …".
-  const reading = reasoningShown && !reasoningArrived && !clockRunning && thinkingSeconds !== undefined && thinkingSeconds >= 1;
+  const reading = !reasoningArrived && !clockRunning && thinkingSeconds !== undefined && thinkingSeconds >= 1;
   const thinking = reading
     ? <p className="thinking-settled">{`Worked for ${thinkingSeconds}s`}</p>
     : clockRunning && thinkingLabel !== undefined
@@ -131,9 +129,7 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, emoji, defau
       : null;
   // The trace is one group however it runs, so a turn that reasons either side of
   // a tool call still reads as a single disclosure.
-  const groupBy = useMemo(() => groupPartByType(
-    reasoningMode === "shown" ? { reasoning: ["group-reasoning"] } : {},
-  ), [reasoningMode]);
+  const groupBy = useMemo(() => groupPartByType({ reasoning: ["group-reasoning"] }), []);
 
   return (
     <MessagePrimitive.Root asChild>
@@ -148,7 +144,7 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, emoji, defau
             it settles into takes the place the live line took. The slot holds its
             height for as long as the turn runs, so the label changing state in it
             cannot move the conversation either. */}
-        {(thinking !== null || (running && reasoningShown)) && <div className="thinking-slot">{thinking}</div>}
+        {(thinking !== null || running) && <div className="thinking-slot">{thinking}</div>}
         <MessagePrimitive.GroupedParts groupBy={groupBy}>
           {({ part }) => {
             switch (part.type) {
@@ -168,10 +164,9 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, emoji, defau
                   />
                 );
               case "reasoning":
-                return reasoningMode === "shown" ? <ReasoningPart {...part} /> : <></>;
+                return <ReasoningPart {...part} />;
               case "tool-call":
-                if (toolsMode === "off") return <></>;
-                if (toolsMode === "humanized") return <ToolCallRow key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} argsText={part.argsText} result={part.result} isError={part.isError} defaultOpen={defaultOpen} />;
+                if (viewMode === "user") return <ToolCallRow key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} argsText={part.argsText} result={part.result} isError={part.isError} defaultOpen={defaultOpen} />;
                 return <ToolCard key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} result={part.result} defaultOpen={defaultOpen} />;
               case "text":
                 return softStream === "on"
@@ -255,9 +250,8 @@ function resultFailed(result: unknown): boolean {
  * behind. It belongs to the reasoning group's knob, too: the trace hidden, the
  * line that stands for it goes with it, and so does the slot.
  */
-function useThinkingLabel(reasoningShown: boolean): string | undefined {
+function useThinkingLabel(): string | undefined {
   return useAuiState((state) => {
-    if (!reasoningShown) return undefined;
     if (state.message.status?.type !== "running") return undefined;
     const parts = state.message.parts;
     const pending = parts.find((part) => part.type === "tool-call" && part.result === undefined);

@@ -33,8 +33,7 @@ Every control changes the sandbox live. There is no build step between a decisio
 | **App theme** | `Dark` · `Light` |
 | **Design language** | Swiss Grid · Neo-Brutalism · Biophilic · Minimalist · Organic / Anti-grid · Skeuomorphism · Cyberpunk/Terminal |
 | **Stream** | `true` · `false` — streamed deltas versus one final response |
-| **Tool calls** | `Explicit` · `Humanized` · `Off` — the raw call card, assistant-ui's tool-call element (the step in plain language, its argument as a chip, and the request and result behind a disclosure), or never sent |
-| **Reasoning group** | `Shown` · `Hidden` · `Off` — same three states for the reasoning trace |
+| **View mode** | `Dev Mode` · `User Mode` — who the parts render for. Tools and reasoning always render: Dev Mode shows them as the agent sent them (a card per call, and the trace in its group), User Mode writes them for a person (each call a step in plain language, its argument a chip, and its raw request and result behind a disclosure) |
 | **Default state** | `Collapsed` · `Expanded` — how the trace and tool cards rest |
 | **Emoji** | `On` · `Off` — turn markers beside each message |
 | **Soft stream** | `On` · `Off` — newest words tinted as they land |

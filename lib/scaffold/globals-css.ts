@@ -94,8 +94,8 @@ export function globalsSource(config: SourceConfig): string {
     `@import url('${DESIGN_FONTS[config.design]}');\n`,
     `:root{${root}}\n`,
     SCAFFOLD_RULES,
-    config.reasoning === "shown" && REASONING_RULES,
-    config.tools !== "off" && TOOL_RULES,
+    REASONING_RULES,
+    TOOL_RULES,
     config.emoji === "on" && EMOJI_RULES,
   ], "");
 }

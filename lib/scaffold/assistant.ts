@@ -203,14 +203,11 @@ function AssistantMessage() {
         {({ part }) => {
           switch (part.type) {
             case "group-reasoning":
-              return elvinConfig.reasoning.render
-                ? <ReasoningSteps indices={part.indices} defaultOpen={elvinConfig.reasoning.defaultOpen} streaming={part.status.type === "running"} />
-                : <></>;
+              return <ReasoningSteps indices={part.indices} defaultOpen={elvinConfig.reasoning.defaultOpen} streaming={part.status.type === "running"} />;
             case "reasoning":
-              return elvinConfig.reasoning.render ? <ReasoningText text={part.text} /> : <></>;
+              return <ReasoningText text={part.text} />;
             case "tool-call":
-              if (!elvinConfig.toolCalls.render) return <></>;
-              if (elvinConfig.toolCalls.style === "humanized") return <ToolCallRow name={part.toolName} args={part.args} result={part.result} defaultOpen={elvinConfig.toolCalls.defaultOpen} />;
+              if (elvinConfig.view === "user") return <ToolCallRow name={part.toolName} args={part.args} result={part.result} defaultOpen={elvinConfig.toolCalls.defaultOpen} />;
               return part.toolUI ?? <ToolCard name={part.toolName} args={part.args} result={part.result} defaultOpen={elvinConfig.toolCalls.defaultOpen} />;
             case "text":
               return <p className="assistant-text">{part.text}</p>;

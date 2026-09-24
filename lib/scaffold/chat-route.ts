@@ -72,8 +72,8 @@ const MAX_TOOL_ROUNDS = 3;
 
 const SYSTEM_PROMPT = [
   'You are a helpful assistant.',
-  elvinConfig.toolCalls.send ? 'Use tools when they materially improve the answer.' : 'Do not call tools; answer from the conversation only.',
-  elvinConfig.reasoning.request ? 'If your provider supports a reasoning field, keep it concise.' : 'Do not include hidden reasoning fields.',
+  'Use tools when they materially improve the answer.',
+  'If your provider supports a reasoning field, keep it concise.',
 ].join(' ');
 
 const TOOL_DEFINITIONS = [
@@ -114,7 +114,7 @@ export async function POST(request: Request) {
   const body = (await request.json()) as { messages?: WireMessage[]; threadId?: string };
   const endpoint = \`\${(elvinConfig.baseURL ?? '').replace(/\\/+$/, '')}/chat/completions\`;
   const model = elvinConfig.model;
-  const tools = elvinConfig.toolCalls.send ? TOOL_DEFINITIONS : null;
+  const tools = TOOL_DEFINITIONS;
 
   const conversation: WireMessage[] = [
     { role: 'system', content: SYSTEM_PROMPT },
@@ -125,7 +125,7 @@ export async function POST(request: Request) {
   if (process.env.AGENT_API_KEY) headers.Authorization = \`Bearer \${process.env.AGENT_API_KEY}\`;
   if (body.threadId) headers[SESSION_HEADER] = body.threadId;
 
-  const reasoning = { reasoning: { enabled: elvinConfig.reasoning.request } };
+  const reasoning = { reasoning: { enabled: true } };
   const cacheKey = \`\${endpoint}|\${model}\`;
 
   const callProvider = async (turns: WireMessage[]): Promise<ProviderCall> => {

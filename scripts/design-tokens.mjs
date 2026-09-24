@@ -214,7 +214,7 @@ async function checkParity() {
 
   for (const design of designs) {
     for (const theme of THEMES) {
-      const response = await fetch(`${APP}/api/source?pattern=thread&theme=${theme}&design=${design}&tools=shown&reasoning=shown&open=collapsed&stream=true&model=x`);
+      const response = await fetch(`${APP}/api/source?pattern=thread&theme=${theme}&design=${design}&view=dev&open=collapsed&stream=true&model=x`);
       const zip = Buffer.from(await response.arrayBuffer());
       const globals = readZipEntry(zip, "app/globals.css");
       if (globals === null) {
