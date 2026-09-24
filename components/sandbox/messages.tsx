@@ -41,8 +41,9 @@ type ToolCardProps = Readonly<{
   span?: TurnSpan;
   /** The window the rows are laid out against. */
   totalMs: number;
-  /** The longest window of the turn, which takes the accent. */
-  slowestMs?: number;
+  /** The longest call, whose window takes the accent; absent when there is no
+   *  call long enough to stand out. */
+  slowestCallMs?: number;
 }>;
 type ToolCallRowProps = Readonly<{
   name: string;
@@ -116,7 +117,7 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen }: Assist
   // something, and alone, or with nothing measurable in it, marking says nothing.
   const callSpans = spans.filter((span) => span.kind === "tool");
   const longestCallMs = callSpans.reduce((longest, span) => Math.max(longest, span.ms), 0);
-  const slowestMs = callSpans.length > 1 && isMeasurable(longestCallMs) ? longestCallMs : undefined;
+  const slowestCallMs = callSpans.length > 1 && isMeasurable(longestCallMs) ? longestCallMs : undefined;
   // Only the fallback path needs this: a provider that reports no usage leaves
   // the estimate as the only reading of how much thinking there was.
   const reasoningChars = useAuiState((state) => state.message.parts.reduce((total, part) => (part.type === "reasoning" ? total + part.text.length : total), 0));
@@ -228,7 +229,7 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen }: Assist
               // prompt say, instead of folding into the run of steps.
               case "tool-call":
                 if (viewMode === "user") return <ToolCallRow key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} argsText={part.argsText} result={part.result} isError={part.isError} defaultOpen={defaultOpen} />;
-                return <ToolCard key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} result={part.result} defaultOpen={defaultOpen} span={spansOf(turnStats, "tool", part.toolCallId)[0]} totalMs={totalMs} slowestMs={slowestMs} />;
+                return <ToolCard key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} result={part.result} defaultOpen={defaultOpen} span={spansOf(turnStats, "tool", part.toolCallId)[0]} totalMs={totalMs} slowestCallMs={slowestCallMs} />;
               case "text":
                 return <StreamingTextPart type="text" text={part.text} status={part.status} />;
               default:
@@ -439,7 +440,7 @@ const ReasoningPart: ReasoningMessagePartComponent = ({ text }) => {
   );
 };
 
-function ToolCard({ name, args, result, defaultOpen, span, totalMs, slowestMs }: ToolCardProps): ReactNode {
+function ToolCard({ name, args, result, defaultOpen, span, totalMs, slowestCallMs }: ToolCardProps): ReactNode {
   const [open, setOpen] = useState(defaultOpen);
 
   return (
@@ -448,10 +449,10 @@ function ToolCard({ name, args, result, defaultOpen, span, totalMs, slowestMs }:
         {/* Inside the head, so the clock behind a call stops where its row does:
             an opened card shows the request and the result, and the fill has no
             business running down them. */}
-        <Timeline spans={span ? [span] : []} totalMs={totalMs} slowestMs={slowestMs} />
+        <Timeline spans={span ? [span] : []} totalMs={totalMs} slowest={isSlowestCall(span, slowestCallMs)} />
         <span>✓ Used tool <strong>{name}</strong></span>
         {span && isMeasurable(span.ms) && (
-          <span className={span.ms === slowestMs ? "row-stat slow" : "row-stat"} title={`${formatSpan(span.ms)} of the turn's ${formatSpan(totalMs)}`}>
+          <span className={isSlowestCall(span, slowestCallMs) ? "row-stat slow" : "row-stat"} title={`${formatSpan(span.ms)} of the ${formatSpan(totalMs)} the turn spent working`}>
             {formatSpan(span.ms)}
           </span>
         )}
@@ -480,11 +481,22 @@ function reasoningLabel(stats: TurnStats | undefined, chars: number, ms: number)
 }
 
 /**
- * The turn's clock, drawn behind a row: one fill per window, placed by when it
- * started and sized by how long it ran. The longest window of the turn takes the
- * accent, so the step that dominated the wait is the one that reads red.
+ * Whether a call is one of the turn's slow ones. Two calls within a tenth of the
+ * longest read as the same length at the resolution the rows print, so a tie is
+ * drawn as a tie instead of whichever of them the clock happened to favour.
  */
-function Timeline({ spans, totalMs, slowestMs }: Readonly<{ spans: readonly TurnSpan[]; totalMs: number; slowestMs?: number }>): ReactNode {
+function isSlowestCall(span: TurnSpan | undefined, slowestCallMs: number | undefined): boolean {
+  if (!span || slowestCallMs === undefined || !isMeasurable(span.ms)) return false;
+  return span.ms >= slowestCallMs * 0.9;
+}
+
+/**
+ * The turn's clock, drawn behind a row: one fill per window, placed by when it
+ * started and sized by how long it ran. Only calls are ever marked slowest — a
+ * turn that spends itself thinking is the ordinary case — so reasoning reads in
+ * the same ink as the rows beside it.
+ */
+function Timeline({ spans, totalMs, slowest }: Readonly<{ spans: readonly TurnSpan[]; totalMs: number; slowest?: boolean }>): ReactNode {
   // A window whose ends landed in one frame has no width to draw; it stays in
   // the data, where its tokens and its place in the order still count.
   const drawable = spans.filter((span) => isMeasurable(span.ms));
@@ -494,7 +506,7 @@ function Timeline({ spans, totalMs, slowestMs }: Readonly<{ spans: readonly Turn
       {drawable.map((span, index) => (
         <span
           key={index}
-          className={slowestMs !== undefined && span.ms === slowestMs ? "slowest" : undefined}
+          className={slowest ? "slowest" : undefined}
           style={{ left: `${(span.startMs / totalMs) * 100}%`, width: `${(span.ms / totalMs) * 100}%` }}
         />
       ))}
@@ -521,7 +533,9 @@ function TurnSummary({ stats }: Readonly<{ stats: TurnStats | undefined }>): Rea
     <p className="turn-summary">
       <span>{steps} {steps === 1 ? "step" : "steps"}</span>
       {tokens !== undefined && <span>{formatTokens(tokens)} reasoning tok</span>}
-      {isMeasurable(totalMs) && <span><strong>{formatSpan(totalMs)}</strong> total</span>}
+      {/* "of work", not "total": this is the window the rows account for, and the
+          answer's generation — which the message badge measures — is outside it. */}
+      {isMeasurable(totalMs) && <span><strong>{formatSpan(totalMs)}</strong> of work</span>}
     </p>
   );
 }

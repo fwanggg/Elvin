@@ -117,8 +117,6 @@ type DeltaState = {
   spans: TurnSpan[];
   /** Epoch of the turn's first activity: the timeline's zero. */
   startedAt: number | null;
-  /** Epoch of its last activity, whatever kind it was: the timeline's end. */
-  lastAt: number | null;
   /** Where the next window starts — the end of the one before it. */
   cursorAt: number | null;
   /** The window still open, if any. */
@@ -545,7 +543,6 @@ function eventStream(upstream: Response, sessionId: string | null, continueAfter
         roundStartedAt: Date.now(),
         spans: [],
         startedAt: null,
-        lastAt: null,
         cursorAt: null,
         openSpan: null,
         spanned: new Set(),
@@ -776,8 +773,6 @@ function stamp(state: DeltaState, before: { reasoning: number; text: number; cal
   const grewText = state.text.length > before.text;
   const grewCalls = state.toolCalls.size > before.calls;
   if (!grewReasoning && !grewText && !grewCalls) return;
-  state.lastAt = now;
-
   if (grewText) {
     // The answer is the turn's output rather than a window of work: it closes
     // the run before it and moves the cursor past itself.
@@ -834,14 +829,16 @@ function pushSpan(state: DeltaState, span: { kind: SpanKind; id?: string; starte
 }
 
 function turnStats(state: DeltaState): TurnStats {
-  // The window the rows are laid out against is the turn's own: first activity to
-  // last, including the stretches no row claims — a tool running, the provider
-  // thinking before its first token. That is why the bars do not add up to it.
-  const endOfSpans = state.spans.reduce((end, span) => Math.max(end, span.startMs + span.ms), 0);
-  const whole = state.startedAt !== null && state.lastAt !== null ? state.lastAt - state.startedAt : 0;
+  // The window the rows are laid out against is the work the turn did, so it
+  // ends where the last row ends. The answer is the turn's output rather than
+  // another window: it is what the message badge measures, and stretching this
+  // track to cover it would leave every row ending in dead air that is not dead
+  // air at all. The stretches no row claims — a tool running, the provider
+  // thinking before its next token — stay gaps inside this window, which is why
+  // the bars still do not add up to it.
   return {
     spans: state.spans,
-    totalMs: Math.max(whole, endOfSpans),
+    totalMs: state.spans.reduce((end, span) => Math.max(end, span.startMs + span.ms), 0),
     usage: state.usage,
     estimated: state.usage === null,
   };

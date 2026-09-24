@@ -35,7 +35,11 @@ export type TurnSpan = {
 
 export type TurnStats = {
   spans: TurnSpan[];
-  /** The window the spans are laid out against: first activity to last. */
+  /**
+   * The work window the spans are laid out against: where the first window opens
+   * to where the last one closes. The answer that follows is not part of it —
+   * that generation is the message badge's number, not a row's.
+   */
   totalMs: number;
   usage: UsageTotals | null;
   /** True while no usage has arrived: any token figure is an estimate. */
