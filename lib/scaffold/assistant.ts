@@ -210,6 +210,10 @@ function AssistantMessage() {
               return <ReasoningText text={part.text} />;
             case "tool-call":
               if (elvinConfig.view === "user") return <ToolCallRow name={part.toolName} args={part.args} result={part.result} defaultOpen={elvinConfig.toolCalls.defaultOpen} />;
+              // A tool UI that must stand on its own — an approval prompt, say — is
+              // marked display: "standalone" in the toolkit. Add the primitive's
+              // "standalone-tool-call" key to groupBy and it renders here as a leaf
+              // rather than folding into the trace with the routine calls.
               return part.toolUI ?? <ToolCard name={part.toolName} args={part.args} result={part.result} defaultOpen={elvinConfig.toolCalls.defaultOpen} />;
             case "text":
               return <p className="assistant-text">{part.text}</p>;
