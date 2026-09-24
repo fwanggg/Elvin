@@ -43,6 +43,7 @@ const REASONING_RULES = [
   ".thought-group[data-resting] .thought-dot{animation:none;opacity:.35}",
   ".thought-label{color:var(--a-muted);font-size:13px;font-weight:var(--label-weight)}",
   ".thought-chevron{opacity:.45;font-size:11px}",
+  ".thought-elapsed{font-family:var(--font-mono);font-size:11px;color:var(--a-muted)}",
   ".thought-content{padding:10px 0 0 14px}",
   ".thought-content .reasoning-line{margin:0 0 4px;color:var(--a-muted)}",
   ".thought-tools{display:flex;flex-direction:column;margin-top:10px}",

@@ -193,14 +193,22 @@ function AssistantMessage() {
   const running = useAuiState((state) => state.message.status?.type === "running");
   const reasoningArrived = useAuiState((state) => state.message.parts.some((part) => part.type === "reasoning" && part.text.trim().length > 0));
   const latestCall = useAuiState((state) => state.message.parts.filter((part) => part.type === "tool-call").at(-1));
+  // The turn is answering while the newest part is text, which stops the clock:
+  // the number the row shows while the turn works is the one it keeps afterwards.
+  const answering = useAuiState((state) => {
+    const last = state.message.parts.at(-1);
+    return last?.type === "text" && last.text.trim().length > 0;
+  });
+  const seconds = useTurnSeconds(running && !answering);
+  const counted = seconds !== undefined && seconds >= 1;
   const verb = useThinkingVerb();
   // What User Mode's row says. While the turn works it names the last call it made
   // — a running one in its own verb form, a finished one in its past form, so the
   // label does not fall back to the verb between calls — and a turn that has only
-  // been reading is named with the verb. Once it settles the row claims a trace
-  // only if one arrived.
+  // been reading is named with the verb. Once it settles the number takes over, and
+  // the row claims a trace only if one arrived.
   const thoughtLabel = !running
-    ? reasoningArrived ? "Thought" : "Worked"
+    ? reasoningArrived ? counted ? \`Thought for \${seconds}s\` : "Thought" : counted ? \`Worked for \${seconds}s\` : "Worked"
     : latestCall?.type === "tool-call"
       ? describeStep(latestCall.toolName, latestCall.args, latestCall.result === undefined ? "running" : "complete")
       : verb;
@@ -221,7 +229,7 @@ function AssistantMessage() {
           switch (part.type) {
             case "group-thought":
               return (
-                <ThoughtGroup label={thoughtLabel} running={running} defaultOpen={elvinConfig.reasoning.defaultOpen}>
+                <ThoughtGroup label={thoughtLabel} seconds={seconds} running={running} defaultOpen={elvinConfig.reasoning.defaultOpen}>
                   {children}
                 </ThoughtGroup>
               );
@@ -260,6 +268,27 @@ function AssistantMessage() {
 const THINKING_VERBS = ["Pondering", "Figuring", "Mulling", "Considering", "Working through"] as const;
 
 /**
+ * One clock per turn, not one per silence. A turn that reasons, calls a tool,
+ * thinks again and then answers spends its whole time thinking, so the count keeps
+ * climbing across the gaps and through the trace instead of restarting at every
+ * one of them — the number the row shows while the turn works is the same one left
+ * behind when it ends.
+ */
+function useTurnSeconds(active: boolean): number | undefined {
+  const [seconds, setSeconds] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (!active) return;
+    const start = Date.now();
+    setSeconds(0);
+    const id = window.setInterval(() => setSeconds(Math.round((Date.now() - start) / 1000)), 250);
+    return () => window.clearInterval(id);
+  }, [active]);
+
+  return seconds;
+}
+
+/**
  * One verb per turn. The label changes as the turn moves through its phases, so a
  * phrase drawn fresh on every render would read as a glitch rather than as a
  * status; this one is chosen once, when the message first renders, and kept.
@@ -278,7 +307,7 @@ function useThinkingVerb(): string {
  * dot, the label and the chevron; what opens under it is the parts themselves, so
  * the trace is the same text renderer and every call the same tool-call element.
  */
-function ThoughtGroup({ label, running, defaultOpen, children }: PropsWithChildren<{ label: string; running: boolean; defaultOpen: boolean }>) {
+function ThoughtGroup({ label, seconds, running, defaultOpen, children }: PropsWithChildren<{ label: string; seconds: number | undefined; running: boolean; defaultOpen: boolean }>) {
   const [initialOpen] = useState(defaultOpen);
   const [userOpen, setUserOpen] = useState<boolean | null>(null);
   // The row rests where the config puts it; a turn in flight does not open it.
@@ -289,6 +318,7 @@ function ThoughtGroup({ label, running, defaultOpen, children }: PropsWithChildr
       <button className="thought-trigger" type="button" aria-expanded={open} onClick={() => setUserOpen(!open)}>
         <span aria-hidden className="thought-dot" />
         <span className="thought-label">{label}</span>
+        {running && seconds !== undefined && seconds >= 1 && <span className="thought-elapsed">{seconds}s</span>}
         <span aria-hidden className="thought-chevron">{open ? "⌄" : "›"}</span>
       </button>
       {open && <div className="thought-content">{children}</div>}
@@ -356,6 +386,7 @@ export function ReasoningGroup({ defaultOpen, streaming, children }: PropsWithCh
   return (
     <div className="reasoning">
       <button className="reasoning-trigger" type="button" aria-expanded={open} onClick={() => setUserOpen(!open)}>
+        <span aria-hidden className="reasoning-trigger-icon">🧠</span>
         <span className="reasoning-trigger-label" data-active={streaming || undefined}>Reasoning</span>
         <span aria-hidden>{open ? "⌄" : "›"}</span>
       </button>
@@ -395,7 +426,7 @@ export function ToolCard({ name, args, result, defaultOpen }: { name: string; ar
   return (
     <div className="tool-card">
       <button className="tool-card-trigger" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
-        <span className="tool-card-name">Used tool {name}</span>
+        <span className="tool-card-name">✓ Used tool <strong>{name}</strong></span>
         <span aria-hidden>{open ? "⌄" : "›"}</span>
       </button>
       {open && (
