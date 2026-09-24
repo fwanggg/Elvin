@@ -29,8 +29,6 @@ type AssistantRuntimeMessageProps = Readonly<{
   viewMode: ViewMode;
   emoji: Toggle;
   defaultOpen: boolean;
-  softStream: Toggle;
-  responseStatus: Toggle;
 }>;
 
 type ToolCardProps = Readonly<{
@@ -96,7 +94,7 @@ export function UserRuntimeMessage({ emoji }: Readonly<{ emoji: Toggle }>): Reac
   );
 }
 
-export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen, softStream, responseStatus }: AssistantRuntimeMessageProps): ReactNode {
+export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen }: AssistantRuntimeMessageProps): ReactNode {
   // Most agents run tools and answer without ever streaming their thinking, so
   // the line may only claim the work: "Thought for 40s" would be a claim about
   // a trace that never arrived.
@@ -206,9 +204,7 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen, softStre
                 if (viewMode === "user") return <ToolCallRow key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} argsText={part.argsText} result={part.result} isError={part.isError} defaultOpen={defaultOpen} />;
                 return <ToolCard key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} result={part.result} defaultOpen={defaultOpen} />;
               case "text":
-                return softStream === "on"
-                  ? <StreamingTextPart type="text" text={part.text} status={part.status} />
-                  : <div className="assistant-text">{part.text}</div>;
+                return <StreamingTextPart type="text" text={part.text} status={part.status} />;
               default:
                 return null;
             }
@@ -217,7 +213,7 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen, softStre
         {/* The action bar unmounts itself while the message is not hovered, so
             its height is reserved here — the same reason the thinking label has
             a slot. Without it, hovering a message shifts everything below it. */}
-        {responseStatus === "on" && <div className="action-slot"><AssistantActionBar /></div>}
+        <div className="action-slot"><AssistantActionBar /></div>
       </div>
     </MessagePrimitive.Root>
   );
