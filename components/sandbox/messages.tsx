@@ -169,6 +169,12 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, emoji, defau
                 );
               case "reasoning":
                 return reasoningMode === "shown" ? <ReasoningPart {...part} /> : <></>;
+              // Every call renders inline here: the sandbox registers no tool UIs, so
+              // there is nothing for the primitive's "standalone-tool-call" group key
+              // to lift out of the trace — nor for a tool's `display: "standalone"`,
+              // which reaches groupBy through its GroupByContext. That is the knob to
+              // reach for the first time a call has to stand on its own, an approval
+              // prompt say, instead of folding into the run of steps.
               case "tool-call":
                 if (toolsMode === "off") return <></>;
                 if (toolsMode === "humanized") return <ToolCallRow key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} argsText={part.argsText} result={part.result} isError={part.isError} defaultOpen={defaultOpen} />;
