@@ -2048,7 +2048,7 @@
   "source": {
     "pattern=thread&theme=dark&tools=shown&reasoning=shown&open=collapsed&stream=true&model=mock-model": {
       "status": 200,
-      "digest": "e867655c5a9ebe2d",
+      "digest": "2ceb246b5a21b78d",
       "files": [
         "package.json",
         "tsconfig.json",
@@ -2068,7 +2068,7 @@
     },
     "pattern=sidebar&theme=light&tools=humanized&reasoning=hidden&open=expanded&stream=false&model=mock-model&capability=x": {
       "status": 200,
-      "digest": "a5968990a4c22b9b",
+      "digest": "2e98749da2dbb7e6",
       "files": [
         "package.json",
         "tsconfig.json",
@@ -2088,7 +2088,7 @@
     },
     "pattern=modal&theme=dark&tools=off&reasoning=off&open=collapsed&stream=true&model=mock-model": {
       "status": 200,
-      "digest": "59f3857c41659b1f",
+      "digest": "37761537b183c7ee",
       "files": [
         "package.json",
         "tsconfig.json",
