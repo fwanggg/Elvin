@@ -1038,6 +1038,9 @@ h6 {
 .step-bar { display: block; height: 9px; background: color-mix(in srgb, var(--a-fg) 6%, transparent); }
 .step-bar > span { display: block; height: 100%; background: color-mix(in srgb, var(--a-fg) 30%, transparent); }
 .step-ms { text-align: right; font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+/* The rows are inspectable and say so: under the pointer the reading brightens,
+   and the card it names lights up across the chat. */
+.run-step:hover .step-name { color: var(--a-fg); }
 .run-step.slow .step-name, .run-step.slow .step-ms { color: var(--color-accent); }
 .run-step.slow .step-bar > span { background: var(--color-accent); }
 /* Reasoning, drawn two ways. Dev Mode renders the element as it ships: its
@@ -1073,6 +1076,25 @@ h6 {
 .thought-tools { display: flex; flex-direction: column; margin-top: 10px; }
 .thought-tools > * { padding: 4px 0; border-top: 1px solid var(--a-border); }
 .thought-tools > *:first-child { border-top: 0; }
+/* The card a hovered step marks. Its palette is remapped rather than its parts
+   repainted, so the row, its reading, the detail it opens onto and the trace
+   inside it all swap together — and because every design's accent and its
+   foreground are a legible pair by definition, the mark reads in all of them,
+   which no fixed colour could promise. User Mode's single row answers to every
+   step of the turn, so a hover there lights the row that holds it. */
+[data-steps].is-linked {
+  --a-bg: var(--a-accent);
+  --a-chrome: color-mix(in srgb, var(--a-accent-fg) 8%, var(--a-accent));
+  --a-fg: var(--a-accent-fg);
+  --a-muted: color-mix(in srgb, var(--a-accent-fg) 72%, var(--a-accent));
+  --a-border: color-mix(in srgb, var(--a-accent-fg) 24%, transparent);
+  color: var(--a-fg);
+  background: var(--a-accent);
+}
+/* The one mark that yields to the highlight: a call that dominated reads red at
+   both ends of the turn, and three designs put that red on an accent of its own
+   colour. The panel's own row keeps the red throughout, so nothing is lost. */
+[data-steps].is-linked .row-stat.slow { color: var(--a-accent-fg); }
 /* Reasoning arrives as one growing string, so each word gets the entrance the
    answer text's words get — that is what keeps a long trace from appearing in
    whole paragraphs. */

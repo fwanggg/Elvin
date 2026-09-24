@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useAuiState } from "@assistant-ui/react";
-import { turnStatsOf, type TurnStats } from "@/lib/turn-stats";
+import { spanKey, turnStatsOf, type TurnStats } from "@/lib/turn-stats";
 
 /** One step of a run, ready to draw: what it was, and its window on the clock. */
 export type RunStep = {
@@ -38,10 +38,10 @@ function promptOf(message: { readonly content: readonly { readonly type: string;
     .trim();
 }
 
-function stepsOf(stats: TurnStats | undefined, names: Record<string, string>): RunStep[] {
+function stepsOf(run: number, stats: TurnStats | undefined, names: Record<string, string>): RunStep[] {
   if (!stats) return [];
-  return stats.spans.map((span, position) => ({
-    key: `${span.kind}-${span.id ?? position}`,
+  return stats.spans.map((span) => ({
+    key: spanKey(run, span),
     role: span.kind === "reasoning" ? "reasoning" : "call",
     label: span.kind === "reasoning" ? "reasoning" : names[span.id ?? ""] ?? span.id ?? "call",
     ms: span.ms,
@@ -85,7 +85,7 @@ export function useRuns(): Run[] {
         anchor: message.id,
         ...(ms !== undefined ? { ms } : {}),
         ...(stats ? { stats } : {}),
-        steps: stepsOf(stats, names),
+        steps: stepsOf(runs.length + 1, stats, names),
       });
     });
 

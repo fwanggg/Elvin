@@ -1,8 +1,24 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { formatRunIndex, formatSpan, formatTokenCount, isMeasurable, isStandout } from "@/lib/turn-stats";
 import type { Run } from "./runs";
+
+/**
+ * Lighting a step's card. The card's markup lives in the chat, so the panel asks
+ * the document for what answers to the key rather than being handed a node: the
+ * attribute is the whole contract between the two surfaces, and a step with no
+ * card beside it — a run in a pattern that draws no chat — lights nothing.
+ */
+function lightStep(key: string | null): void {
+  for (const element of document.querySelectorAll<HTMLElement>("[data-steps]")) {
+    const linked = key !== null && (element.dataset.steps ?? "").split(" ").includes(key);
+    element.classList.toggle("is-linked", linked);
+    // A mark off the viewport would be invisible, so the chat gives up the least
+    // it can: `nearest` moves nothing that is already in sight.
+    if (linked) element.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+}
 
 /**
  * The thread's telemetry, in its own plane beside the chat.
@@ -47,6 +63,11 @@ export function RunPanel({ runs, active, onSelect }: Readonly<{ runs: readonly R
 
 /** One run taken apart: its headline, its facts, then its steps. */
 function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
+  // The row under the pointer is gone when the panel turns to another run, and no
+  // pointerleave arrives for a node that unmounted, so the mark it left behind is
+  // cleared here.
+  useEffect(() => () => lightStep(null), [run.index]);
+
   const usage = run.stats?.usage ?? null;
   const calls = run.steps.filter((step) => step.role === "call");
   const longestCallMs = calls.reduce((longest, step) => Math.max(longest, step.ms), 0);
@@ -85,7 +106,13 @@ function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
             // ordinary case, and reasoning reads in the same ink as the rows above it.
             const slow = step.role === "call" && isStandout(step.ms, longestCallMs) && calls.length > 1;
             return (
-              <li key={step.key} className={slow ? "run-step slow" : "run-step"}>
+              <li
+                key={step.key}
+                className={slow ? "run-step slow" : "run-step"}
+                data-step={step.key}
+                onPointerEnter={() => lightStep(step.key)}
+                onPointerLeave={() => lightStep(null)}
+              >
                 <span className="step-name">{step.label}</span>
                 <span className="step-bar" aria-hidden="true">
                   <span style={{ width: `${pct(step.ms, longestStepMs)}%` }} />

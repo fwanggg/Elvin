@@ -66,6 +66,24 @@ export function spansOf(stats: TurnStats | undefined, kind: SpanKind, id?: strin
   return stats.spans.filter((span) => span.kind === kind && (id === undefined || span.id === id));
 }
 
+/**
+ * The key a window answers to on both surfaces: the panel's row for it, and the
+ * card in the chat that made it. The run is part of the address because every
+ * turn's clock starts where its own first activity was, so a thinking window in
+ * the next turn would otherwise answer to the same key as one in this. Within a
+ * run a call carries its own id, and a thinking window has none and answers to
+ * where it sits on the clock. That is the whole contract between the two readers
+ * — neither is told about the other, and the record is all they share.
+ */
+export function spanKey(run: number | undefined, span: TurnSpan): string {
+  return `${run ?? 0}-${span.kind}-${span.id ?? span.startMs}`;
+}
+
+/** Those keys as one card carries them: what the panel's hover puts to the document. */
+export function spanKeys(run: number | undefined, spans: readonly TurnSpan[]): string {
+  return spans.map((span) => spanKey(run, span)).join(" ");
+}
+
 /** Row stats read in seconds, one decimal: "0.3s", "12.6s". */
 export function formatSpan(ms: number): string {
   return `${(ms / 1000).toFixed(1)}s`;

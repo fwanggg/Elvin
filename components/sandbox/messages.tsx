@@ -10,7 +10,7 @@ import { ThinkingIndicator } from "@/components/assistant-ui/elements/thinking-i
 import { ToolCall } from "@/components/assistant-ui/elements/tool-call";
 import { TooltipIconButton } from "@/components/assistant-ui/elements/tooltip-icon-button";
 import { chipOf, describeResult, describeStep } from "@/lib/step-labels";
-import { formatRunIndex, formatSpan, formatTokens, isMeasurable, isStandout, spansOf, turnStatsOf, type TurnStats, type TurnSpan } from "@/lib/turn-stats";
+import { formatRunIndex, formatSpan, formatTokens, isMeasurable, isStandout, spanKey, spanKeys, spansOf, turnStatsOf, type TurnStats, type TurnSpan } from "@/lib/turn-stats";
 import { type Toggle, type ViewMode } from "@/components/sandbox/knobs";
 import {
   AuiIf,
@@ -39,6 +39,8 @@ type ToolCardProps = Readonly<{
   defaultOpen: boolean;
   /** This call's window on the turn's timeline, when the proxy measured one. */
   span?: TurnSpan;
+  /** The turn this call belongs to: part of the address the panel's rows carry. */
+  run: number | undefined;
   /** The window the rows are laid out against. */
   totalMs: number;
   /** The longest call, whose window takes the accent; absent when there is no
@@ -120,6 +122,10 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen }: Assist
   const reasoningArrived = useAuiState((state) => state.message.parts.some((part) => part.type === "reasoning" && part.text.trim().length > 0));
   const thoughtStarted = useThoughtStarted();
   const turnStats = useTurnStats();
+  // The turn these cards belong to. Their address carries it: every turn's clock
+  // starts where its own first activity was, so two turns file thinking windows at
+  // the same offsets and a key without the run would answer on both.
+  const runIndex = useRunIndex();
   const spans = turnStats?.spans ?? [];
   const totalMs = turnStats?.totalMs ?? 0;
   // The accent marks a call, never a thought: a turn that spends itself thinking
@@ -196,7 +202,7 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen }: Assist
               // that names the phase — the way Claude shows a turn at work.
               case "group-thought":
                 return (
-                  <ThoughtGroup key={part.indices[0]} label={thoughtLabel} seconds={thinkingSeconds} running={running} defaultOpen={defaultOpen}>
+                  <ThoughtGroup key={part.indices[0]} label={thoughtLabel} seconds={thinkingSeconds} running={running} defaultOpen={defaultOpen} steps={spanKeys(runIndex, turnStats?.spans ?? [])}>
                     {children}
                   </ThoughtGroup>
                 );
@@ -215,7 +221,7 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen }: Assist
                 const reasoningSpans = spansOf(turnStats, "reasoning");
                 const reasoningLabelText = reasoningLabel(turnStats, reasoningChars, reasoningSpans.reduce((sum, span) => sum + span.ms, 0));
                 return (
-                  <ReasoningRoot key={`${part.indices[0]}-${defaultOpen}`} className="reasoning-root" streaming={streaming} defaultOpen={defaultOpen}>
+                  <ReasoningRoot key={`${part.indices[0]}-${defaultOpen}`} className="reasoning-root" data-steps={spanKeys(runIndex, reasoningSpans)} streaming={streaming} defaultOpen={defaultOpen}>
                     {reasoningLabelText !== undefined && <span className="row-stat">{reasoningLabelText}</span>}
                     <ReasoningTrigger className="reasoning-trigger" active={streaming} />
                     <ReasoningContent aria-busy={streaming}>
@@ -239,7 +245,7 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen }: Assist
               // prompt say, instead of folding into the run of steps.
               case "tool-call":
                 if (viewMode === "user") return <ToolCallRow key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} argsText={part.argsText} result={part.result} isError={part.isError} defaultOpen={defaultOpen} />;
-                return <ToolCard key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} result={part.result} defaultOpen={defaultOpen} span={spansOf(turnStats, "tool", part.toolCallId)[0]} totalMs={totalMs} slowestCallMs={slowestCallMs} />;
+                return <ToolCard key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} result={part.result} defaultOpen={defaultOpen} run={runIndex} span={spansOf(turnStats, "tool", part.toolCallId)[0]} totalMs={totalMs} slowestCallMs={slowestCallMs} />;
               case "text":
                 return <StreamingTextPart type="text" text={part.text} status={part.status} />;
               default:
@@ -264,6 +270,8 @@ type ThoughtGroupProps = Readonly<{
   seconds: number | undefined;
   running: boolean;
   defaultOpen: boolean;
+  /** The whole turn's keys: the row holds every part, so it answers to each of them. */
+  steps: string;
   children: ReactNode;
 }>;
 
@@ -275,7 +283,7 @@ type ThoughtGroupProps = Readonly<{
  * as they do anywhere else; the disclosure is the primitive the vendored elements
  * are built on; and what opens inside is those elements themselves.
  */
-function ThoughtGroup({ label, seconds, running, defaultOpen, children }: ThoughtGroupProps): ReactNode {
+function ThoughtGroup({ label, seconds, running, defaultOpen, steps, children }: ThoughtGroupProps): ReactNode {
   const [initialOpen] = useState(defaultOpen);
   const [userOpen, setUserOpen] = useState<boolean | null>(null);
   // The row rests where the sidebar puts it. A turn in flight does not open it:
@@ -285,7 +293,7 @@ function ThoughtGroup({ label, seconds, running, defaultOpen, children }: Though
   const counted = seconds !== undefined && seconds >= 1;
 
   return (
-    <Collapsible className="thought-group" open={open} onOpenChange={setUserOpen}>
+    <Collapsible className="thought-group" data-steps={steps} open={open} onOpenChange={setUserOpen}>
       <CollapsibleTrigger className="thought-trigger">
         <ThinkingIndicator label={label} active={running} elapsed={running && counted ? `${seconds}s` : undefined} />
         <span aria-hidden className="thought-chevron">{open ? "⌄" : "›"}</span>
@@ -461,12 +469,12 @@ const ReasoningPart: ReasoningMessagePartComponent = ({ text }) => {
   );
 };
 
-function ToolCard({ name, args, result, defaultOpen, span, totalMs, slowestCallMs }: ToolCardProps): ReactNode {
+function ToolCard({ name, args, result, defaultOpen, run, span, totalMs, slowestCallMs }: ToolCardProps): ReactNode {
   const [open, setOpen] = useState(defaultOpen);
   const slow = span !== undefined && slowestCallMs !== undefined && isStandout(span.ms, slowestCallMs);
 
   return (
-    <div className="part-card">
+    <div className="part-card" data-steps={span !== undefined ? spanKey(run, span) : undefined}>
       <button className="part-head" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
         <span>✓ Used tool <strong>{name}</strong></span>
         {span && isMeasurable(span.ms) && (
