@@ -18,7 +18,7 @@ import {
 } from "@assistant-ui/react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { elvinConfig } from "../../elvin.config";
-import { ReasoningGroup, ReasoningText } from "./reasoning-group";
+import { ReasoningGroup, ReasoningText, type ReasoningStep } from "./reasoning-group";
 import { ToolCallRow } from "./tool-call-row";
 import { ToolCard } from "./tool-card";
 
@@ -200,11 +200,11 @@ function AssistantMessage() {
         <p className="assistant-error"><ErrorPrimitive.Message /></p>
       </MessagePrimitive.Error>
       <MessagePrimitive.GroupedParts groupBy={groupBy}>
-        {({ part, children }) => {
+        {({ part }) => {
           switch (part.type) {
             case "group-reasoning":
               return elvinConfig.reasoning.render
-                ? <ReasoningGroup defaultOpen={elvinConfig.reasoning.defaultOpen} streaming={part.status.type === "running" || (running && !answering)}>{children}</ReasoningGroup>
+                ? <ReasoningSteps indices={part.indices} defaultOpen={elvinConfig.reasoning.defaultOpen} streaming={part.status.type === "running"} />
                 : <></>;
             case "reasoning":
               return elvinConfig.reasoning.render ? <ReasoningText text={part.text} /> : <></>;
@@ -221,6 +221,29 @@ function AssistantMessage() {
       </MessagePrimitive.GroupedParts>
     </MessagePrimitive.Root>
   );
+}
+
+/**
+ * The panel takes the trace as steps rather than as rendered children, so the
+ * group's own part is read here: one step for the group, since a provider
+ * streams its thinking as a single growing string, titled the way the element's
+ * docs fall back when no summary is shipped.
+ */
+function ReasoningSteps({ indices, defaultOpen, streaming }: { indices: readonly number[]; defaultOpen: boolean; streaming: boolean }) {
+  const trace = useAuiState((state) => {
+    const part = state.message.parts[indices[0]];
+    return part?.type === "reasoning" ? part.text : "";
+  });
+  const summary = useAuiState((state) => {
+    const part = state.message.parts[indices[0]];
+    return part?.type === "reasoning" ? part.unstable_summary ?? "" : "";
+  });
+  const steps = useMemo<ReasoningStep[]>(
+    () => (trace.trim().length > 0 ? [{ title: summary || "Thinking", body: trace }] : []),
+    [summary, trace],
+  );
+
+  return <ReasoningGroup steps={steps} defaultOpen={defaultOpen} streaming={streaming} />;
 }
 
 function collectToolCalls(value: Array<{ toolCallId?: string; name: string; arguments?: unknown; result?: unknown }> | undefined) {
@@ -267,13 +290,17 @@ function readableMessageContent(message: ThreadMessage) {
 export function reasoningGroupSource(): string {
   return `"use client";
 
-import { useMemo, useState, type PropsWithChildren } from "react";
+import { useMemo, useState } from "react";
+
+export type ReasoningStep = { title: string; body: string };
 
 /**
- * Open while the model is still working, then settle to the configured default.
- * A manual toggle sticks, so reading the trace never fights the stream.
+ * The same shape the sandbox shows: no card, a trigger row that shimmers while
+ * the trace streams and names the phase once it settles, and the trace under it
+ * as steps. Open while the model is still working, then settle to the configured
+ * default; a manual toggle sticks, so reading the trace never fights the stream.
  */
-export function ReasoningGroup({ defaultOpen, streaming, children }: PropsWithChildren<{ defaultOpen: boolean; streaming: boolean }>) {
+export function ReasoningGroup({ steps, defaultOpen, streaming }: { steps: ReasoningStep[]; defaultOpen: boolean; streaming: boolean }) {
   const [initialOpen] = useState(defaultOpen);
   const [userOpen, setUserOpen] = useState<boolean | null>(null);
   const open = userOpen ?? (streaming || initialOpen);
@@ -281,10 +308,22 @@ export function ReasoningGroup({ defaultOpen, streaming, children }: PropsWithCh
   return (
     <div className="reasoning">
       <button className="reasoning-trigger" type="button" aria-expanded={open} onClick={() => setUserOpen(!open)}>
-        <span className="reasoning-trigger-label" data-active={streaming || undefined}>Reasoning</span>
+        <span className="reasoning-trigger-label" data-active={streaming || undefined}>{streaming ? "Thinking" : "Thought"}</span>
         <span aria-hidden>{open ? "⌄" : "›"}</span>
       </button>
-      {open && <div className="reasoning-content">{children}</div>}
+      {open && steps.length > 0 && (
+        <ol className="reasoning-steps">
+          {steps.map((step, index) => (
+            <li className="reasoning-step" key={step.title + "-" + index}>
+              <span aria-hidden className="reasoning-dot" data-active={(streaming && index === steps.length - 1) || undefined} />
+              <span className="reasoning-step-text">
+                <p className="reasoning-step-title">{step.title}</p>
+                <p className="reasoning-step-body">{step.body}</p>
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   );
 }

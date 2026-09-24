@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { CheckIcon, CopyIcon, DownloadIcon, EllipsisIcon, RefreshCwIcon, ThumbsDownIcon, ThumbsUpIcon, Volume2Icon } from "lucide-react";
 import { MessageTiming } from "@/components/assistant-ui/elements/message-timing.aui";
-import { ReasoningContent, ReasoningRoot, ReasoningText, ReasoningTrigger } from "@/components/assistant-ui/elements/reasoning";
+import { ReasoningPanel, type ReasoningStep } from "@/components/assistant-ui/elements/reasoning-panel";
 import { StreamingText, type Segment } from "@/components/assistant-ui/elements/streaming-text";
 import { ThinkingIndicator } from "@/components/assistant-ui/elements/thinking-indicator";
 import { ToolCall } from "@/components/assistant-ui/elements/tool-call";
@@ -116,10 +116,12 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, emoji, defau
   const elapsed = clockRunning && thinkingSeconds !== undefined && thinkingSeconds >= 1 ? `${thinkingSeconds}s` : undefined;
   // The reading the clock took, put in the place the live line took: once the
   // clock stops, the two swap in place rather than one leaving and the other
-  // arriving somewhere else. It only claims a trace when one actually arrived.
-  const reading = reasoningShown && !clockRunning && thinkingSeconds !== undefined && thinkingSeconds >= 1;
+  // arriving somewhere else. It is for the turn the panel cannot speak for,
+  // though — a trace that arrived rests on its own label inside the panel — so
+  // the line only ever hands over to "Worked for …".
+  const reading = reasoningShown && !reasoningArrived && !clockRunning && thinkingSeconds !== undefined && thinkingSeconds >= 1;
   const thinking = reading
-    ? <p className="thinking-settled">{reasoningArrived ? `Thought for ${thinkingSeconds}s` : `Worked for ${thinkingSeconds}s`}</p>
+    ? <p className="thinking-settled">{`Worked for ${thinkingSeconds}s`}</p>
     : clockRunning && thinkingLabel !== undefined
       ? <ThinkingIndicator className="thinking-indicator" label={thinkingLabel} elapsed={elapsed} />
       : null;
@@ -144,22 +146,23 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, emoji, defau
             cannot move the conversation either. */}
         {(thinking !== null || (running && reasoningShown)) && <div className="thinking-slot">{thinking}</div>}
         <MessagePrimitive.GroupedParts groupBy={groupBy}>
-          {({ part, children }) => {
+          {({ part }) => {
             switch (part.type) {
-              case "group-reasoning": {
-                // The element holds itself open as a live, bottom-pinned preview
-                // while the trace streams — its trigger shimmers for exactly that
-                // window — then settles to the state the sidebar asks for.
-                const streaming = part.status.type === "running" || (running && !answering);
+              case "group-reasoning":
+                // The panel element draws the whole disclosure: its trigger is
+                // the live line, a shimmering "Thinking" carrying the running
+                // clock, settling onto the reading the clock took, and the trace
+                // opens underneath it as a step list. Its parts are read inside
+                // rather than rendered as children — the panel is props-driven.
                 return (
-                  <ReasoningRoot key={`${part.indices[0]}-${defaultOpen}`} className="reasoning-root" streaming={streaming} defaultOpen={defaultOpen}>
-                    <ReasoningTrigger className="reasoning-trigger" active={streaming} />
-                    <ReasoningContent aria-busy={streaming}>
-                      <ReasoningText className="reasoning-text">{children}</ReasoningText>
-                    </ReasoningContent>
-                  </ReasoningRoot>
+                  <ReasoningSteps
+                    key={`${part.indices[0]}-${defaultOpen}`}
+                    indices={part.indices}
+                    streaming={part.status.type === "running"}
+                    defaultOpen={defaultOpen}
+                    seconds={thinkingSeconds}
+                  />
                 );
-              }
               case "reasoning":
                 return reasoningMode === "shown" ? <ReasoningPart {...part} /> : <></>;
               case "tool-call":
@@ -184,6 +187,55 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, emoji, defau
   );
 }
 
+type ReasoningStepsProps = {
+  indices: readonly number[];
+  streaming: boolean;
+  defaultOpen: boolean;
+  /** The turn clock's reading, so the trigger can rest on the number it took. */
+  seconds: number | undefined;
+};
+
+/**
+ * The reasoning panel, fed from the message's own parts. The element is
+ * props-driven, so the trace is read here instead of rendered as children: one
+ * step for the group, since a provider in this testbed streams its thinking as a
+ * single growing string, titled the way the element's docs fall back when no
+ * summary is shipped. While the turn runs the trigger shimmers with the live
+ * clock; once it settles it rests on the reading, so the number on screen during
+ * the turn is the one left behind after it.
+ */
+function ReasoningSteps({ indices, streaming, defaultOpen, seconds }: ReasoningStepsProps): ReactNode {
+  const trace = useAuiState((state) => {
+    const part = state.message.parts[indices[0]];
+    return part?.type === "reasoning" ? part.text : "";
+  });
+  const summary = useAuiState((state) => {
+    const part = state.message.parts[indices[0]];
+    return part?.type === "reasoning" ? part.unstable_summary ?? "" : "";
+  });
+  const steps = useMemo<ReasoningStep[]>(
+    () => (trace.trim().length > 0 ? [{ title: summary || "Thinking", body: trace }] : []),
+    [summary, trace],
+  );
+  const [initialOpen] = useState(defaultOpen);
+  const [userOpen, setUserOpen] = useState<boolean | null>(null);
+  const open = userOpen ?? (streaming || initialOpen);
+  const counted = seconds !== undefined && seconds >= 1;
+
+  return (
+    <ReasoningPanel
+      className="reasoning-panel"
+      steps={steps}
+      visibleSteps={steps.length}
+      streaming={streaming}
+      open={open}
+      onOpenChange={setUserOpen}
+      restingLabel={counted ? `Thought for ${seconds}s` : "Thought"}
+      elapsed={streaming && counted ? `${seconds}s` : undefined}
+    />
+  );
+}
+
 /** Our adapter does not set `isError`, so an error-shaped result counts too. */
 
 function resultFailed(result: unknown): boolean {
@@ -192,10 +244,12 @@ function resultFailed(result: unknown): boolean {
 
 /**
  * Names what the turn is doing from the moment it starts, and keeps naming it:
- * the line is not a gap filler, so a running trace does not silence it and the
- * callers decide when it hands over to the reading it leaves behind. It belongs
- * to the reasoning group's knob, though: the trace hidden, the line that stands
- * for it goes with it, and so does the slot that was holding its place.
+ * the line is not a gap filler, so a tool still running keeps it on screen even
+ * once a trace has arrived. The trace is the reasoning panel's own trigger,
+ * though, so the line leaves that window to it rather than saying "Thinking"
+ * twice, and the callers decide when it hands over to the reading it leaves
+ * behind. It belongs to the reasoning group's knob, too: the trace hidden, the
+ * line that stands for it goes with it, and so does the slot.
  */
 function useThinkingLabel(reasoningShown: boolean): string | undefined {
   return useAuiState((state) => {
@@ -204,6 +258,9 @@ function useThinkingLabel(reasoningShown: boolean): string | undefined {
     const parts = state.message.parts;
     const pending = parts.find((part) => part.type === "tool-call" && part.result === undefined);
     if (pending?.type === "tool-call") return `Running ${pending.toolName}`;
+    // The panel's trigger carries this window: it shimmers for exactly as long
+    // as the trace is running, so the line leaves the phase to it.
+    if (parts.some((part) => part.type === "reasoning" && part.text.trim().length > 0)) return undefined;
     return "Thinking";
   });
 }
