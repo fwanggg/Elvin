@@ -985,13 +985,20 @@ h6 {
 .part-card { margin: 8px 0; overflow: hidden; border: var(--ds-border) solid var(--a-border); border-radius: var(--ds-radius-card); background: var(--a-bg); box-shadow: var(--ds-shadow); }
 .part-head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 12px; border: 0; background: transparent; cursor: pointer; font-size: 13px; text-align: left; }
 .part-detail { padding: 10px 12px; border-top: 1px solid var(--a-border); background: var(--a-chrome); color: var(--a-fg); font-family: var(--font-mono); font-size: 12px; line-height: 1.5; }
-/* Reasoning, drawn by the assistant-ui panel element: a trigger that shimmers
-   while the trace streams and then rests on the reading the clock took, over a
-   step list. It brings no card of its own. The element arrives on Tailwind theme
-   tokens, so the sandbox palette reaches it the way it reaches the other
-   vendored elements — these two rules are fit, not restyle: the chat column is
-   wider than the element's standalone default, and the accent this app draws its
-   live states in is not Tailwind's blue. */
+/* Reasoning, drawn two ways. Dev Mode renders the element as it ships: its
+   trigger is the brain and the word "Reasoning", inside the outline the element
+   carries, and the sandbox palette reaches it through the data slots the way it
+   reaches the other vendored elements. User Mode renders the panel, which is
+   Tailwind-classed and brings no card of its own; those two rules are fit, not
+   restyle — the chat column is wider than the element's standalone default, and
+   the accent this app draws its live states in is not Tailwind's blue. */
+.reasoning-root { padding: 8px 12px; border: var(--ds-border) solid var(--a-border); border-radius: var(--ds-radius-card); background: var(--a-bg); box-shadow: var(--ds-shadow); }
+.reasoning-root [data-slot="reasoning-trigger"] { max-width: none; color: var(--a-muted); font-size: 13px; }
+.reasoning-root [data-slot="reasoning-trigger"]:hover { color: var(--a-fg); }
+.reasoning-root [data-slot="reasoning-trigger-chevron"] { margin-left: auto; }
+.reasoning-root [data-slot="reasoning-text"] { max-height: 260px; padding-inline-start: 12px; border-inline-start: 1px solid var(--a-border); color: var(--a-fg); font-size: 13px; line-height: 1.5; }
+.reasoning-root [data-slot="reasoning-fade"]:first-child { background: linear-gradient(to bottom, var(--a-bg), transparent); }
+.reasoning-root [data-slot="reasoning-fade"]:last-child { background: linear-gradient(to top, var(--a-bg), transparent); }
 .reasoning-panel { max-width: none; }
 [data-slot="reasoning-panel"] .animate-pulse { background: var(--a-accent); }
 .reasoning-line { margin: 0; white-space: pre-wrap; }

@@ -22,17 +22,18 @@ const SCAFFOLD_RULES = [
   "",
 ].join("\n");
 
-// The trace mirrors what the sandbox shows: a trigger row with no card around
-// it, shimmering while the model is still writing and naming the phase once it
-// settles, over the trace as steps whose newest words land one at a time.
+// The trace, drawn two ways. Dev Mode draws the group as a box of its own, with
+// the trace as children and the word "Reasoning" on the trigger. User Mode draws
+// the panel, which has no card in it, so its rules land on `.reasoning-panel` and
+// on the step list inside it. Both share the trigger's shimmer and the trace's
+// words, which land one at a time instead of in whole paragraphs.
 const REASONING_RULES = [
-  ".reasoning{margin:8px 0}",
-  ".reasoning-trigger{display:inline-flex;gap:6px;align-items:center;padding:4px 0;border:0;background:transparent;color:var(--a-muted);cursor:pointer;font-size:13.5px}",
-  ".reasoning-trigger:hover{color:var(--a-fg)}",
-  ".reasoning-trigger-label{font-weight:var(--label-weight);letter-spacing:var(--label-tracking)}",
+  ".reasoning{margin:8px 0;border:var(--border-width) solid var(--a-border);border-radius:var(--radius-card);background:var(--a-bg);box-shadow:var(--shadow);overflow:hidden}",
+  ".reasoning-trigger{display:flex;width:100%;gap:8px;align-items:center;justify-content:space-between;padding:8px 12px;border:0;background:transparent;color:inherit;cursor:pointer}",
+  ".reasoning-trigger-label{font-size:13px;font-weight:var(--label-weight);letter-spacing:var(--label-tracking)}",
   ".reasoning-trigger-label[data-active]{background-image:linear-gradient(90deg,color-mix(in oklab,currentColor 35%,transparent) 40%,currentColor 50%,color-mix(in oklab,currentColor 35%,transparent) 60%);background-size:250% 100%;background-repeat:no-repeat;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:reasoning-shimmer 1.8s linear infinite}",
   "@keyframes reasoning-shimmer{from{background-position:100% 0}to{background-position:0 0}}",
-  ".reasoning-steps{display:flex;flex-direction:column;gap:16px;list-style:none;margin:0;padding:12px 0 4px;animation:reasoning-open .24s cubic-bezier(.23,1,.32,1) both}",
+  ".reasoning-content{padding:0 12px 12px;font-size:14px;line-height:1.6;opacity:.75;animation:reasoning-open .24s cubic-bezier(.23,1,.32,1) both}",
   ".reasoning-step{display:flex;gap:12px}",
   ".reasoning-dot{flex:none;width:5px;height:5px;margin-top:7px;border-radius:999px;background:color-mix(in srgb,currentColor 20%,transparent)}",
   ".reasoning-dot[data-active]{background:var(--a-accent);animation:reasoning-pulse 1.6s ease-in-out infinite}",
@@ -41,10 +42,15 @@ const REASONING_RULES = [
   ".reasoning-step-body{margin:2px 0 0;font-size:13px;line-height:1.6;color:var(--a-muted);overflow-wrap:break-word}",
   "@keyframes reasoning-pulse{50%{opacity:.45}}",
   "@keyframes reasoning-open{from{opacity:0;translate:0 -4px}}",
+  ".reasoning-panel{margin:8px 0}",
+  ".reasoning-panel .reasoning-trigger{display:inline-flex;gap:6px;align-items:center;padding:4px 0;border:0;background:transparent;color:var(--a-muted);cursor:pointer;font-size:13.5px}",
+  ".reasoning-panel .reasoning-trigger:hover{color:var(--a-fg)}",
+  ".reasoning-panel .reasoning-trigger-label{font-weight:var(--label-weight);letter-spacing:var(--label-tracking)}",
+  ".reasoning-panel .reasoning-steps{display:flex;flex-direction:column;gap:16px;list-style:none;margin:0;padding:12px 0 4px;animation:reasoning-open .24s cubic-bezier(.23,1,.32,1) both}",
   ".reasoning-line{margin:0;white-space:pre-wrap}",
   ".reasoning-word{animation:reasoning-word-in .35s cubic-bezier(.23,1,.32,1) both}",
   "@keyframes reasoning-word-in{from{opacity:0}}",
-  "@media (prefers-reduced-motion:reduce){.reasoning-trigger-label[data-active]{animation:none;-webkit-text-fill-color:currentColor;background-image:none}.reasoning-dot,.reasoning-steps,.reasoning-word{animation:none}}",
+  "@media (prefers-reduced-motion:reduce){.reasoning-trigger-label[data-active]{animation:none;-webkit-text-fill-color:currentColor;background-image:none}.reasoning-content,.reasoning-dot,.reasoning-steps,.reasoning-word{animation:none}}",
   "",
 ].join("\n");
 

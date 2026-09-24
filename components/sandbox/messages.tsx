@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { CheckIcon, CopyIcon, DownloadIcon, EllipsisIcon, RefreshCwIcon, ThumbsDownIcon, ThumbsUpIcon, Volume2Icon } from "lucide-react";
 import { MessageTiming } from "@/components/assistant-ui/elements/message-timing.aui";
+import { ReasoningContent, ReasoningRoot, ReasoningText, ReasoningTrigger } from "@/components/assistant-ui/elements/reasoning";
 import { ReasoningPanel, type ReasoningStep } from "@/components/assistant-ui/elements/reasoning-panel";
 import { StreamingText, type Segment } from "@/components/assistant-ui/elements/streaming-text";
 import { ThinkingIndicator } from "@/components/assistant-ui/elements/thinking-indicator";
@@ -146,23 +147,34 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen, softStre
             cannot move the conversation either. */}
         {(thinking !== null || running) && <div className="thinking-slot">{thinking}</div>}
         <MessagePrimitive.GroupedParts groupBy={groupBy}>
-          {({ part }) => {
+          {({ part, children }) => {
             switch (part.type) {
-              case "group-reasoning":
-                // The panel element draws the whole disclosure: its trigger is
-                // the live line, a shimmering "Thinking" carrying the running
-                // clock, settling onto the reading the clock took, and the trace
-                // opens underneath it as a step list. Its parts are read inside
-                // rather than rendered as children — the panel is props-driven.
+              case "group-reasoning": {
+                // The trace is rendered two ways, because the two modes want
+                // different things from it. Dev Mode draws the agent's own
+                // shapes, so it is the reasoning element as it ships — the brain,
+                // the word "Reasoning", and the outline the element carries — and
+                // its parts render as children. User Mode writes the same trace
+                // for a person: the panel's step list, which is props-driven, so
+                // its parts are read rather than rendered.
+                const streaming = part.status.type === "running";
+                if (viewMode === "user") {
+                  return (
+                    <ReasoningSteps key={`${part.indices[0]}-${defaultOpen}`} indices={part.indices} streaming={streaming} defaultOpen={defaultOpen} seconds={thinkingSeconds} />
+                  );
+                }
+                // The element holds itself open as a live, bottom-pinned preview
+                // while the trace streams — its trigger shimmers for exactly that
+                // window — then settles to the state the sidebar asks for.
                 return (
-                  <ReasoningSteps
-                    key={`${part.indices[0]}-${defaultOpen}`}
-                    indices={part.indices}
-                    streaming={part.status.type === "running"}
-                    defaultOpen={defaultOpen}
-                    seconds={thinkingSeconds}
-                  />
+                  <ReasoningRoot key={`${part.indices[0]}-${defaultOpen}`} className="reasoning-root" streaming={streaming} defaultOpen={defaultOpen}>
+                    <ReasoningTrigger className="reasoning-trigger" active={streaming} />
+                    <ReasoningContent aria-busy={streaming}>
+                      <ReasoningText className="reasoning-text">{children}</ReasoningText>
+                    </ReasoningContent>
+                  </ReasoningRoot>
                 );
+              }
               case "reasoning":
                 return <ReasoningPart {...part} />;
               case "tool-call":
