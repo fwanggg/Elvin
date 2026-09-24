@@ -1,6 +1,6 @@
 # Elvin
 
-Point Elvin at any OpenAI-compatible endpoint and the same agent is rendered across seven design languages, three UI patterns and both themes — streaming, reasoning, tool calls and all — then export the exact source as a runnable Next.js app.
+Point Elvin at any OpenAI-compatible endpoint and the same agent is rendered across seven design languages, three UI patterns and both themes — streaming, reasoning, tool calls and all.
 
 **[Live demo → elvinoss.vercel.app](https://elvinoss.vercel.app/)**
 
@@ -38,19 +38,17 @@ Every control changes the sandbox live. There is no build step between a decisio
 ## Project layout
 
 ```
-app/                    # the testbed: shell, controls, sandbox, export dialog
+app/                    # the testbed: shell, controls, sandbox
   api/check/            #   connect probe: models and capabilities
   api/chat/             #   provider proxy, normalised into one event stream
-  api/source/           #   the exported scaffold, as JSON or a zip
 components/
   agent-testbed.tsx     #   the testbed itself: shell, controls, adapter
   sandbox/              #   the sandboxed app's renderers and knobs
   assistant-ui/         #   vendored assistant-ui elements, kept unmodified
   ui/                   #   vendored shadcn/ui primitives
 lib/
-  scaffold/             #   the source the export emits, one module per file
-  design-tokens.ts      #   generated from the design-language CSS
   step-labels.ts        #   tool calls as plain-language steps
+  turn-stats.ts         #   what the proxy measured, shared with the renderers
 scripts/                # gateway, behaviour baseline, provider probe
 reports/                # baselines and screenshots
 ```
@@ -61,7 +59,7 @@ Issues and pull requests are welcome.
 
 Two conventions keep the repo honest:
 
-- **Design languages are generated, not hand-maintained.** Editing the design-language blocks in `app/globals.css` means running `npm run design:sync`; `npm run design:check` fails when the generated tokens drift.
+- **Design languages live in one place.** Each language's palette, type and geometry sits in its own `[data-design]` block in `app/globals.css`, and the sandbox reads it from the cascade rather than from a parallel token table.
 - **Behaviour is fingerprinted.** Run `node scripts/verify-behavior.mjs --compare` before and after a refactor; it must report identical behaviour.
 
 ## License

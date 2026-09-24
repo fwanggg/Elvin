@@ -16,8 +16,6 @@ import { createServer } from "node:http";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { createHash } from "node:crypto";
-
 const APP = process.env.APP_URL ?? "http://localhost:3000";
 const MOCK_PORT = Number(process.env.MOCK_PORT ?? 4020);
 const BASELINE = path.resolve("reports/behavior-baseline.json");
@@ -150,17 +148,6 @@ async function chatCase(scenario) {
   };
 }
 
-async function sourceCase(query) {
-  const zip = await fetch(`${APP}/api/source?${query}`);
-  const manifest = await fetch(`${APP}/api/source?${query}&list=1`).then((r) => r.json());
-  const bytes = Buffer.from(await zip.arrayBuffer());
-  return {
-    status: zip.status,
-    digest: createHash("sha256").update(bytes).digest("hex").slice(0, 16),
-    files: manifest.files,
-  };
-}
-
 async function checkCase() {
   const response = await fetch(`${APP}/api/check`, {
     method: "POST",
@@ -176,16 +163,7 @@ async function capture() {
     chat[scenario] = await chatCase(scenario);
   }
 
-  const source = {};
-  for (const query of [
-    "pattern=thread&theme=dark&view=dev&open=collapsed&stream=true&model=mock-model",
-    "pattern=sidebar&theme=light&view=user&open=expanded&stream=false&model=mock-model&capability=x",
-    "pattern=modal&theme=dark&view=dev&open=collapsed&stream=true&model=mock-model",
-  ]) {
-    source[query] = await sourceCase(query);
-  }
-
-  return { chat, source, check: await checkCase() };
+  return { chat, check: await checkCase() };
 }
 
 function differences(baseline, current) {
@@ -209,7 +187,6 @@ try {
     await writeFile(BASELINE, JSON.stringify(current, null, 2), "utf8");
     console.log(`baseline written to ${path.relative(process.cwd(), BASELINE)}`);
     console.log(`  chat cases: ${Object.keys(current.chat).length}`);
-    console.log(`  source cases: ${Object.keys(current.source).length}`);
     console.log(`  check: ${current.check.status}`);
   } else {
     if (!existsSync(BASELINE)) {
@@ -218,7 +195,7 @@ try {
     }
     const baseline = JSON.parse(await readFile(BASELINE, "utf8"));
     let failed = false;
-    for (const section of ["chat", "source", "check"]) {
+    for (const section of ["chat", "check"]) {
       const changed = differences(baseline[section], current[section]);
       if (changed.length === 0) {
         console.log(`  ${section}: unchanged (${Object.keys(baseline[section]).length} cases)`);

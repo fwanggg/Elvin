@@ -4,8 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Dropdown } from "@/components/dropdown";
 import { ModelPicker } from "@/components/model-picker";
 import { type Segment } from "@/components/assistant-ui/elements/streaming-text";
-import type { Design } from "@/lib/design-tokens";
-import { type AppTheme, type OpenMode, type Pattern, type Toggle, type ViewMode, type Viewport } from "@/components/sandbox/knobs";
+import { type AppTheme, type Design, type OpenMode, type Pattern, type Toggle, type ViewMode, type Viewport } from "@/components/sandbox/knobs";
 import { type TurnStats, type UsageTotals } from "@/lib/turn-stats";
 import { AssistantRuntimeMessage, UserRuntimeMessage } from "@/components/sandbox/messages";
 import {
@@ -33,8 +32,6 @@ type ConnectionState = "demo" | "connecting" | "live" | "error";
  * owns the id. Persisted so a reload continues the same thread.
  */
 const THREAD_STORAGE_KEY = "elvin.threadId";
-/** File the export pane opens on: the one that records every knob. */
-const DEFAULT_SOURCE_FILE = "elvin.config.ts";
 
 
 type ToolCall = {
@@ -92,9 +89,6 @@ type ThemeVariableName =
   | "--a-accent-fg";
 type RenderedPart = { type: "reasoning"; text: string } | ToolCallPart | { type: "text"; text: string };
 
-type SourceFile = Readonly<{ name: string; content: string }>;
-type FileTreeRow = { label: string; depth: number; dir: boolean; path: string };
-
 type ControlSidebarProps = Readonly<{
   pattern: Pattern;
   viewport: Viewport;
@@ -108,7 +102,6 @@ type ControlSidebarProps = Readonly<{
   onViewModeChange: (value: ViewMode) => void;
   onEmojiChange: (value: Toggle) => void;
   onOpenModeChange: (value: OpenMode) => void;
-  onOpenExport: () => void;
 }>;
 
 type PreviewStageProps = Readonly<{
@@ -136,8 +129,6 @@ type PreviewStageProps = Readonly<{
   onDisconnect: () => void;
   onStartThread: () => void;
   onAppThemeChange: (value: AppTheme) => void;
-  onExport: () => void;
-  exportOpen: boolean;
   onBaseUrlChange: (value: string) => void;
   onApiKeyChange: (value: string) => void;
   onConnect: () => void;
@@ -162,14 +153,6 @@ type AssistantSandboxProps = Readonly<{
   threadKey: number;
 }>;
 
-
-type ExportDialogProps = Readonly<{
-  files: readonly SourceFile[];
-  selectedFile: string;
-  onSelectFile: (name: string) => void;
-  sourceUrl: string;
-  onClose: () => void;
-}>;
 
 type PanelSectionProps = Readonly<{
   title: string;
@@ -246,9 +229,6 @@ export function AgentTestbed(): ReactNode {
   const [apiKey, setApiKey] = useState("");
   const [connection, setConnection] = useState<ConnectionState>("demo");
   const [connectionError, setConnectionError] = useState("");
-  const [showExportPanel, setShowExportPanel] = useState(false);
-  const [exportFiles, setExportFiles] = useState<readonly SourceFile[]>([]);
-  const [selectedFile, setSelectedFile] = useState(DEFAULT_SOURCE_FILE);
   const [threadGeneration, setThreadGeneration] = useState(0);
   const sessionRef = useRef("");
 
@@ -369,23 +349,6 @@ export function AgentTestbed(): ReactNode {
   const { host: statusHost, state: statusState } = getStatusLabel(connection, baseUrl, connectionError);
   const statusColor = STATUS_COLORS[connection];
   const isConnected = connection === "live";
-  const sourceParams = useMemo(() => {
-    return buildSourceParams({ pattern, appTheme, design, emoji, viewMode, openMode, model, capability });
-  }, [appTheme, capability, design, emoji, model, openMode, pattern, viewMode]);
-  const sourceUrl = `/api/source?${sourceParams}`;
-
-  // The pane reads the bytes the download carries rather than re-rendering them,
-  // so the preview and the zip cannot disagree.
-  useEffect(() => {
-    if (!showExportPanel) return;
-    let cancelled = false;
-    fetch(`/api/source?${sourceParams}&contents=1`)
-      .then((response) => response.json() as Promise<{ files?: SourceFile[] }>)
-      .then((data) => { if (!cancelled) setExportFiles(data.files ?? []); })
-      .catch(() => { if (!cancelled) setExportFiles([]); });
-    return () => { cancelled = true; };
-  }, [showExportPanel, sourceParams]);
-
   /** Drops what the provider told us, so a reconnect starts from nothing. */
   function forgetProvider(): void {
     setModels([]);
@@ -465,7 +428,6 @@ export function AgentTestbed(): ReactNode {
             onViewModeChange={setViewMode}
             onEmojiChange={setEmoji}
             onOpenModeChange={setOpenMode}
-            onOpenExport={() => setShowExportPanel(true)}
           />
           <PreviewStage
             statusColor={statusColor}
@@ -492,15 +454,12 @@ export function AgentTestbed(): ReactNode {
             onDisconnect={disconnect}
             onStartThread={startThread}
             onModelChange={setModel}
-            onExport={() => setShowExportPanel(true)}
-            exportOpen={showExportPanel}
             onBaseUrlChange={setBaseUrl}
             onApiKeyChange={setApiKey}
             onConnect={() => void checkConnection()}
           />
         </div>
 
-        {showExportPanel && <ExportDialog files={exportFiles} selectedFile={selectedFile} onSelectFile={setSelectedFile} sourceUrl={sourceUrl} onClose={() => setShowExportPanel(false)} />}
       </section>
     </main>
   );
@@ -519,7 +478,6 @@ function ControlSidebar({
   onViewModeChange,
   onEmojiChange,
   onOpenModeChange,
-  onOpenExport,
 }: ControlSidebarProps): ReactNode {
   return (
     <aside className="sidebar">
@@ -579,8 +537,6 @@ function ControlSidebar({
           hint={getEmojiHint(emoji)}
         />
       </PanelSection>
-      <div className="section-rule" />
-      <ExportSuggestionLink onOpenExport={onOpenExport} />
     </aside>
   );
 }
@@ -610,8 +566,6 @@ function PreviewStage({
   onDisconnect,
   onStartThread,
   onModelChange,
-  onExport,
-  exportOpen,
   onBaseUrlChange,
   onApiKeyChange,
   onConnect,
@@ -658,10 +612,6 @@ function PreviewStage({
           <span className={threadPulse > 0 ? "metric-cell-head metric-icon thread-plus" : "metric-cell-head metric-icon"} key={`plus-${threadPulse}`} aria-hidden="true">+</span>
           <span className="metric-value">New Thread</span>
         </button>
-        <button className="metric-cell metric-action solid" type="button" aria-haspopup="dialog" aria-controls="export" onClick={onExport}>
-          <span className="metric-cell-head metric-icon" aria-hidden="true">{"<>"}</span>
-          <span className="metric-value">Export Code</span>
-        </button>
       </div>
       <div className="canvas" data-viewport={viewport}>
         {/* The app theme control rides the renderer's own top-right corner: it
@@ -692,84 +642,6 @@ function PreviewStage({
         </div>
       </div>
     </section>
-  );
-}
-
-function ExportDialog({ files, selectedFile, onSelectFile, sourceUrl, onClose }: ExportDialogProps): ReactNode {
-  const panelRef = useRef<HTMLDivElement>(null);
-  const closeRef = useRef<HTMLButtonElement>(null);
-
-  // Open on the close button, and hand focus back to whatever opened the dialog.
-  useEffect(() => {
-    const opener = document.activeElement;
-    closeRef.current?.focus();
-    return () => { if (opener instanceof HTMLElement) opener.focus(); };
-  }, []);
-
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent): void {
-      if (event.key === "Escape") {
-        onClose();
-        return;
-      }
-      if (event.key !== "Tab") return;
-
-      const focusable = panelRef.current?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])');
-      if (!focusable || focusable.length === 0) return;
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    }
-
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
-
-  return (
-    <div className="export-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <div className="export-modal" id="export" ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="export-title">
-        <div className="export-modal-head">
-          <h2 id="export-title">Get the source</h2>
-          <button className="export-modal-close" type="button" aria-label="Close export dialog" onClick={onClose} ref={closeRef}>×</button>
-        </div>
-        <div className="export-modal-body">
-          <div className="file-list">
-            <h6>Files · {files.length}</h6>
-            {fileTreeRows(files.map((file) => file.name)).map((row) => row.dir
-              ? <div className="file-row dir" key={row.path} style={{ paddingLeft: 16 + row.depth * 14 }}>{row.label}/</div>
-              : (
-                <button
-                  className="file-row"
-                  key={row.path}
-                  type="button"
-                  aria-current={row.path === selectedFile}
-                  style={{ paddingLeft: 16 + row.depth * 14 }}
-                  onClick={() => onSelectFile(row.path)}
-                >
-                  <span className="file-row-label">{row.label}</span>
-                  {row.path === selectedFile && <span className="selection-mark" aria-hidden="true" />}
-                </button>
-              ))}
-          </div>
-          <div className="code-preview">
-            <div className="code-title">{selectedFile}</div>
-            {/* The key resets the pane's scroll when another file is opened. */}
-            <pre key={selectedFile}>{files.find((file) => file.name === selectedFile)?.content ?? ""}</pre>
-          </div>
-        </div>
-        <div className="export-cta">
-          <p className="hint">Download the exact Next.js + assistant-ui scaffold for the current knobs. Sign-up gating is intentionally stubbed out for this MVP.</p>
-          <a className="btn btn-primary" href={sourceUrl}>Download .zip ↓</a>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -934,15 +806,6 @@ function SegmentedControlBlock<T extends string>({ label, hint, name, value, opt
   );
 }
 
-function ExportSuggestionLink({ onOpenExport }: Readonly<{ onOpenExport: () => void }>): ReactNode {
-  return (
-    <a className="status-link" href="#export" onClick={(event) => { event.preventDefault(); onOpenExport(); }}>
-      <span><strong>3 usability suggestions</strong><br /><span className="hint">Exploratory, not shipped</span></span>
-      <span className="tag">Beta</span>
-    </a>
-  );
-}
-
 function MockApplication(): ReactNode {
   return (
     <div className="mock-app" style={{ background: "var(--a-chrome)" }}>
@@ -1002,31 +865,6 @@ function getOpenModeHint(openMode: OpenMode): string {
     case "collapsed":
       return "Collapsible parts start closed.";
   }
-}
-
-function buildSourceParams({ pattern, appTheme, design, emoji, viewMode, openMode, model, capability }: Readonly<{ pattern: Pattern; appTheme: AppTheme; design: Design; emoji: Toggle; viewMode: ViewMode; openMode: OpenMode; model: string; capability: string }>): string {
-  const params = new URLSearchParams({ pattern, theme: appTheme, design, emoji, view: viewMode, open: openMode });
-  if (model.trim()) params.set("model", model.trim());
-  if (capability) params.set("capability", capability);
-  return params.toString();
-}
-
-function fileTreeRows(files: string[]): FileTreeRow[] {
-  const rows: FileTreeRow[] = [];
-  const seen = new Set<string>();
-
-  for (const file of [...files].sort()) {
-    const segments = file.split("/");
-    for (let index = 0; index < segments.length - 1; index += 1) {
-      const dir = `${segments.slice(0, index + 1).join("/")}/`;
-      if (seen.has(dir)) continue;
-      seen.add(dir);
-      rows.push({ label: segments[index], depth: index, dir: true, path: dir });
-    }
-    rows.push({ label: segments[segments.length - 1], depth: segments.length - 1, dir: false, path: file });
-  }
-
-  return rows;
 }
 
 function readableMessageContent(message: ThreadMessage): string {

@@ -14,3 +14,11 @@ export type OpenMode = "collapsed" | "expanded";
 /** How the sandbox is framed on the canvas, not something the app itself changes. */
 export type Viewport = "desktop" | "mobile";
 export type Toggle = "on" | "off";
+
+/**
+ * The design languages `app/globals.css` declares, in the order the sidebar
+ * offers them. Listed here with the rest of the vocabulary so the shell and the
+ * sandbox read the same set.
+ */
+export const DESIGNS = ["swiss", "brutalist", "biophilic", "minimal", "organic", "skeuomorphic", "cyberpunk"] as const;
+export type Design = (typeof DESIGNS)[number];

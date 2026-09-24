@@ -779,15 +779,6 @@ h6 {
   font-size: 13px;
 }
 .hint { margin: 0; font-size: 12px; line-height: 1.45; color: var(--color-text); }
-.status-link {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
-  color: var(--color-text);
-  text-decoration: none;
-}
-.tag { display: inline-flex; align-items: center; align-self: center; padding: 3px 10px; background: var(--color-accent-100); color: var(--color-accent-800); font-size: 11px; letter-spacing: .02em; }
 .stage { min-height: 0; display: flex; flex-direction: column; min-width: 0; background: var(--color-neutral-200); }
 /* Stage header. Ruled cells — the agent, the model the sandbox will call, and
    the two stage actions — so the renderer's own inputs sit on the line above
@@ -807,8 +798,6 @@ h6 {
 .metric-action { flex: none; border: 0; background: transparent; color: var(--color-text); font: inherit; cursor: pointer; text-align: left; }
 .metric-action .metric-cell-head { color: inherit; }
 .metric-action:hover { background: color-mix(in srgb, var(--color-text) 6%, transparent); }
-.metric-action.solid { background: var(--color-accent); color: var(--color-bg); }
-.metric-action.solid:hover { background: var(--color-accent-600); }
 /* New Thread, the one stage cell that starts something. A press tints it under
    the finger, and the click leaves a wash of the accent fading back out while
    the plus turns a quarter — a quarter leaves the glyph a plus, so the mark has
@@ -1084,51 +1073,6 @@ h6 {
 .action-menu { min-width: 180px; padding: 4px; border: 1px solid var(--color-divider); border-radius: 0; background: var(--color-bg); color: var(--color-text); box-shadow: none; }
 .action-menu-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 0; font-size: 13px; }
 @keyframes send-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.14); } }
-/* Export dialog. Fixed overlay so the scaffold preview never reflows the stage.
-   House tokens only — this is Elvin's chrome, not the sandboxed renderer. */
-.export-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 30;
-  display: grid;
-  /* An implicit row would size to the dialog's max-content and push it off
-     centre, so the track is pinned to the viewport. */
-  grid-template-rows: minmax(0, 1fr);
-  place-items: center;
-  padding: 24px;
-  background: color-mix(in srgb, var(--color-neutral-900) 58%, transparent);
-}
-.export-modal {
-  display: flex;
-  flex-direction: column;
-  width: min(880px, 100%);
-  max-height: min(660px, 100%);
-  border: var(--ds-border) solid var(--ds-edge);
-  border-radius: var(--ds-radius-card);
-  background: var(--color-bg);
-  box-shadow: 0 24px 60px -24px rgba(45, 43, 43, .6);
-  animation: modal-rise .16s cubic-bezier(.23, 1, .32, 1) both;
-}
-@keyframes modal-rise { from { opacity: 0; translate: 0 8px; } }
-@media (prefers-reduced-motion: reduce) { .export-modal { animation: none; } }
-.export-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: var(--ds-space-bar); border-bottom: var(--ds-border) solid var(--ds-edge-soft); }
-.export-modal-head h2 { margin: 0; font-family: var(--font-heading); font-size: 22px; font-weight: 800; letter-spacing: -.01em; }
-.export-modal-close { flex: none; width: 34px; height: 34px; display: grid; place-items: center; border: var(--ds-border) solid var(--ds-edge); border-radius: var(--ds-radius); background: transparent; color: var(--color-text); cursor: pointer; font-family: var(--font-heading); font-size: 18px; line-height: 1; }
-.export-modal-close:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
-.export-modal-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
-.file-list { min-height: 0; overflow: auto; padding: 14px 0; border-right: var(--ds-border) solid var(--ds-edge-soft); font-size: 13px; }
-.file-list h6 { margin: 0 16px 10px; }
-.file-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 5px 16px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; }
-button.file-row { cursor: pointer; }
-button.file-row:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
-button.file-row[aria-current="true"] { font-weight: 800; }
-.file-row.dir { color: var(--color-neutral-600); }
-.file-row-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.code-preview { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
-.code-title { padding: 10px 16px; border-bottom: var(--ds-border) solid var(--ds-edge-soft); font: 12px ui-monospace, Menlo, monospace; }
-.code-preview pre { flex: 1; min-height: 0; margin: 0; overflow: auto; padding: 16px; font: 12px/1.7 ui-monospace, Menlo, monospace; }
-.export-cta { display: flex; align-items: center; gap: 20px; padding: var(--ds-space-bar); border-top: var(--ds-border) solid var(--ds-edge-soft); background: var(--color-surface); }
-.export-cta .btn { flex: none; margin-left: auto; }
 .error { color: var(--color-accent-700); }
 @media (max-width: 960px) {
   .shell { padding: 0; }
@@ -1137,9 +1081,6 @@ button.file-row[aria-current="true"] { font-weight: 800; }
   .main-grid { grid-template-columns: 1fr; height: auto; overflow: auto; }
   .sidebar { border-right: 0; border-bottom: 2px solid var(--color-divider); }
   .canvas { min-height: 620px; padding: 12px; }
-  .export-modal-body { grid-template-columns: 1fr; grid-template-rows: minmax(0, 180px) minmax(0, 1fr); }
-  .file-list { border-right: 0; border-bottom: var(--ds-border) solid var(--ds-edge-soft); }
-  .export-cta { flex-wrap: wrap; }
 }
 /* Phone frame: the sandbox inside answers the 390px it was given, not the
    window. Kept last so these rules can override the base ones above. */
