@@ -16,9 +16,10 @@ import {
   type ChatModelRunResult,
   type ThreadMessage,
 } from "@assistant-ui/react";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type PropsWithChildren, type ReactNode } from "react";
 import { elvinConfig } from "../../elvin.config";
-import { ReasoningGroup, ReasoningPanel, ReasoningText, type ReasoningStep } from "./reasoning-group";
+import { describeStep } from "./step-label";
+import { ReasoningGroup, ReasoningText } from "./reasoning-group";
 import { ToolCallRow } from "./tool-call-row";
 import { ToolCard } from "./tool-card";
 
@@ -189,9 +190,21 @@ function EmojiMark({ role }: { role: keyof typeof EMOJI_MARKS }) {
 }
 
 function AssistantMessage() {
-  const groupBy = useMemo(() => groupPartByType({ reasoning: ["group-reasoning"] }), []);
   const running = useAuiState((state) => state.message.status?.type === "running");
-  const answering = useAuiState((state) => state.message.parts.some((part) => part.type === "text" && part.text.trim().length > 0));
+  const reasoningArrived = useAuiState((state) => state.message.parts.some((part) => part.type === "reasoning" && part.text.trim().length > 0));
+  const pending = useAuiState((state) => state.message.parts.find((part) => part.type === "tool-call" && part.result === undefined));
+  const verb = useThinkingVerb();
+  // What User Mode's row says. While the turn works it names the phase — the call
+  // that is still running, in its own verb form, or the verb a turn that is only
+  // reading gets — and once it settles it claims a trace only if one arrived.
+  const thoughtLabel = !running
+    ? reasoningArrived ? "Thought" : "Worked"
+    : pending?.type === "tool-call" ? describeStep(pending.toolName, pending.args, "running") : verb;
+  // Only User Mode folds the whole middle of a turn into one row. Dev Mode groups
+  // the trace alone and leaves every call its own card.
+  const groupBy = useMemo(() => (elvinConfig.view === "user"
+    ? groupPartByType({ reasoning: ["group-thought", "group-reasoning"], "tool-call": ["group-thought", "group-tool"] })
+    : groupPartByType({ reasoning: ["group-reasoning"] })), []);
 
   return (
     <MessagePrimitive.Root className={elvinConfig.emoji ? "assistant-message emoji-row" : "assistant-message"} style={{ alignSelf: "flex-start", maxWidth: "80%" }}>
@@ -202,10 +215,23 @@ function AssistantMessage() {
       <MessagePrimitive.GroupedParts groupBy={groupBy}>
         {({ part, children }) => {
           switch (part.type) {
+            case "group-thought":
+              return (
+                <ThoughtGroup label={thoughtLabel} running={running} defaultOpen={elvinConfig.reasoning.defaultOpen}>
+                  {children}
+                </ThoughtGroup>
+              );
             case "group-reasoning":
+              // The trace. Dev Mode draws the element as it ships, in the outline
+              // it carries; User Mode hands the same parts up to the row, where
+              // they read as the prose the model wrote.
               return elvinConfig.view === "user"
-                ? <ReasoningSteps indices={part.indices} defaultOpen={elvinConfig.reasoning.defaultOpen} streaming={part.status.type === "running"} />
+                ? <>{children}</>
                 : <ReasoningGroup defaultOpen={elvinConfig.reasoning.defaultOpen} streaming={part.status.type === "running"}>{children}</ReasoningGroup>;
+            // The calls the turn made, under the trace they came from. Each row is
+            // the tool-call element, so it opens onto its own request and result.
+            case "group-tool":
+              return <div className="thought-tools">{children}</div>;
             case "reasoning":
               return <ReasoningText text={part.text} />;
             case "tool-call":
@@ -226,27 +252,43 @@ function AssistantMessage() {
   );
 }
 
-/**
- * User Mode's panel takes the trace as steps rather than as rendered children, so
- * the group's own part is read here: one step for the group, since a provider
- * streams its thinking as a single growing string, titled the way the element's
- * docs fall back when no summary is shipped.
- */
-function ReasoningSteps({ indices, defaultOpen, streaming }: { indices: readonly number[]; defaultOpen: boolean; streaming: boolean }) {
-  const trace = useAuiState((state) => {
-    const part = state.message.parts[indices[0]];
-    return part?.type === "reasoning" ? part.text : "";
-  });
-  const summary = useAuiState((state) => {
-    const part = state.message.parts[indices[0]];
-    return part?.type === "reasoning" ? part.unstable_summary ?? "" : "";
-  });
-  const steps = useMemo<ReasoningStep[]>(
-    () => (trace.trim().length > 0 ? [{ title: summary || "Thinking", body: trace }] : []),
-    [summary, trace],
-  );
+/** Claude names the work with a verb, so a turn that is only reading gets one. */
+const THINKING_VERBS = ["Pondering", "Figuring", "Mulling", "Considering", "Working through"] as const;
 
-  return <ReasoningPanel steps={steps} defaultOpen={defaultOpen} streaming={streaming} />;
+/**
+ * One verb per turn. The label changes as the turn moves through its phases, so a
+ * phrase drawn fresh on every render would read as a glitch rather than as a
+ * status; this one is chosen once, when the message first renders, and kept.
+ */
+function useThinkingVerb(): string {
+  const chosen = useRef<string | null>(null);
+  if (chosen.current === null) {
+    chosen.current = THINKING_VERBS[Math.floor(Math.random() * THINKING_VERBS.length)];
+  }
+  return chosen.current;
+}
+
+/**
+ * User Mode's middle, drawn the way Claude draws one: a single row naming what the
+ * turn is doing, over the trace and the calls it produced. The row carries the
+ * dot, the label and the chevron; what opens under it is the parts themselves, so
+ * the trace is the same text renderer and every call the same tool-call element.
+ */
+function ThoughtGroup({ label, running, defaultOpen, children }: PropsWithChildren<{ label: string; running: boolean; defaultOpen: boolean }>) {
+  const [initialOpen] = useState(defaultOpen);
+  const [userOpen, setUserOpen] = useState<boolean | null>(null);
+  const open = userOpen ?? (running || initialOpen);
+
+  return (
+    <div className="thought-group" data-resting={running ? undefined : true}>
+      <button className="thought-trigger" type="button" aria-expanded={open} onClick={() => setUserOpen(!open)}>
+        <span aria-hidden className="thought-dot" />
+        <span className="thought-label">{label}</span>
+        <span aria-hidden className="thought-chevron">{open ? "⌄" : "›"}</span>
+      </button>
+      {open && <div className="thought-content">{children}</div>}
+    </div>
+  );
 }
 
 function collectToolCalls(value: Array<{ toolCallId?: string; name: string; arguments?: unknown; result?: unknown }> | undefined) {
@@ -295,8 +337,6 @@ export function reasoningGroupSource(): string {
 
 import { useMemo, useState, type PropsWithChildren } from "react";
 
-export type ReasoningStep = { title: string; body: string };
-
 /**
  * Dev Mode's pass: the group as its own box, with the trace rendered as children
  * by the caller. Open while the model is still working, then settle to the
@@ -315,40 +355,6 @@ export function ReasoningGroup({ defaultOpen, streaming, children }: PropsWithCh
         <span aria-hidden>{open ? "⌄" : "›"}</span>
       </button>
       {open && <div className="reasoning-content">{children}</div>}
-    </div>
-  );
-}
-
-/**
- * User Mode's pass: the same trace with no card of its own — a trigger row that
- * shimmers while the trace streams and names the phase once it settles, over the
- * trace as steps. It takes the trace as steps rather than as children, so the
- * caller reads the group's own part.
- */
-export function ReasoningPanel({ steps, defaultOpen, streaming }: { steps: ReasoningStep[]; defaultOpen: boolean; streaming: boolean }) {
-  const [initialOpen] = useState(defaultOpen);
-  const [userOpen, setUserOpen] = useState<boolean | null>(null);
-  const open = userOpen ?? (streaming || initialOpen);
-
-  return (
-    <div className="reasoning-panel">
-      <button className="reasoning-trigger" type="button" aria-expanded={open} onClick={() => setUserOpen(!open)}>
-        <span className="reasoning-trigger-label" data-active={streaming || undefined}>{streaming ? "Thinking" : "Thought"}</span>
-        <span aria-hidden>{open ? "⌄" : "›"}</span>
-      </button>
-      {open && steps.length > 0 && (
-        <ol className="reasoning-steps">
-          {steps.map((step, index) => (
-            <li className="reasoning-step" key={step.title + "-" + index}>
-              <span aria-hidden className="reasoning-dot" data-active={(streaming && index === steps.length - 1) || undefined} />
-              <span className="reasoning-step-text">
-                <p className="reasoning-step-title">{step.title}</p>
-                <p className="reasoning-step-body">{step.body}</p>
-              </span>
-            </li>
-          ))}
-        </ol>
-      )}
     </div>
   );
 }

@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CheckIcon, CopyIcon, DownloadIcon, EllipsisIcon, RefreshCwIcon, ThumbsDownIcon, ThumbsUpIcon, Volume2Icon } from "lucide-react";
 import { MessageTiming } from "@/components/assistant-ui/elements/message-timing.aui";
 import { ReasoningContent, ReasoningRoot, ReasoningText, ReasoningTrigger } from "@/components/assistant-ui/elements/reasoning";
-import { ReasoningPanel, type ReasoningStep } from "@/components/assistant-ui/elements/reasoning-panel";
 import { StreamingText, type Segment } from "@/components/assistant-ui/elements/streaming-text";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThinkingIndicator } from "@/components/assistant-ui/elements/thinking-indicator";
 import { ToolCall } from "@/components/assistant-ui/elements/tool-call";
 import { TooltipIconButton } from "@/components/assistant-ui/elements/tooltip-icon-button";
@@ -101,6 +101,7 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen, softStre
   // the line may only claim the work: "Thought for 40s" would be a claim about
   // a trace that never arrived.
   const reasoningArrived = useAuiState((state) => state.message.parts.some((part) => part.type === "reasoning" && part.text.trim().length > 0));
+  const thoughtStarted = useThoughtStarted();
   const running = useAuiState((state) => state.message.status?.type === "running");
   // The turn is answering while the newest part is text. A tool call that lands
   // after some text ends that, so the clock starts again rather than falling
@@ -112,25 +113,33 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen, softStre
   const clockRunning = running && !answering;
   const thinkingSeconds = useThinkingSeconds(clockRunning);
   const thinkingLabel = useThinkingLabel(viewMode);
-  // The badge stands down with the label, and for the same reason: while a trace
-  // is on screen the panel's trigger is already carrying the clock, and two 8s
-  // side by side say nothing the one of them does not. What the line keeps is the
-  // fact the panel cannot state — which tool the turn is waiting on.
-  const elapsed = clockRunning && !reasoningArrived && thinkingSeconds !== undefined && thinkingSeconds >= 1 ? `${thinkingSeconds}s` : undefined;
-  // The reading the clock took, put in the place the live line took: once the
-  // clock stops, the two swap in place rather than one leaving and the other
-  // arriving somewhere else. It is for the turn the panel cannot speak for,
-  // though — a trace that arrived rests on its own label inside the panel — so
-  // the line only ever hands over to "Worked for …".
-  const reading = !reasoningArrived && !clockRunning && thinkingSeconds !== undefined && thinkingSeconds >= 1;
-  const thinking = reading
-    ? <p className="thinking-settled">{`Worked for ${thinkingSeconds}s`}</p>
-    : clockRunning && thinkingLabel !== undefined
-      ? <ThinkingIndicator className="thinking-indicator" label={thinkingLabel} elapsed={elapsed} />
-      : null;
-  // The trace is one group however it runs, so a turn that reasons either side of
-  // a tool call still reads as a single disclosure.
-  const groupBy = useMemo(() => groupPartByType({ reasoning: ["group-reasoning"] }), []);
+  const counted = thinkingSeconds !== undefined && thinkingSeconds >= 1;
+  const elapsed = clockRunning && counted ? `${thinkingSeconds}s` : undefined;
+  // The line speaks into the gap before anything has arrived to draw. Once a
+  // reasoning part or a call exists, User Mode's own row carries the phase and
+  // Dev Mode's box and cards always do, so the line has nothing left to say; and
+  // a turn that ends inside that gap hands over to the reading it took.
+  const thinking = thoughtStarted
+    ? null
+    : !clockRunning && counted
+      ? <p className="thinking-settled">{`Worked for ${thinkingSeconds}s`}</p>
+      : clockRunning && thinkingLabel !== undefined
+        ? <ThinkingIndicator className="thinking-indicator" label={thinkingLabel} elapsed={elapsed} />
+        : null;
+  // What the row says. While the turn works it names the phase — "Searching the
+  // web for 4821", or the verb for a turn that is only reading; once it settles
+  // the number takes over, and it claims a trace only when one actually arrived.
+  const thoughtLabel = running && thinkingLabel !== undefined
+    ? thinkingLabel
+    : counted
+      ? reasoningArrived ? `Thought for ${thinkingSeconds}s` : `Worked for ${thinkingSeconds}s`
+      : reasoningArrived ? "Thought" : "Worked";
+  // The middle of a turn is one group either way, but only User Mode folds all of
+  // it together: there the trace and the calls open under a single row. Dev Mode
+  // groups the trace alone and leaves every call its own card.
+  const groupBy = useMemo(() => (viewMode === "user"
+    ? groupPartByType({ reasoning: ["group-thought", "group-reasoning"], "tool-call": ["group-thought", "group-tool"] })
+    : groupPartByType({ reasoning: ["group-reasoning"] })), [viewMode]);
 
   return (
     <MessagePrimitive.Root asChild>
@@ -149,27 +158,28 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen, softStre
             them: its reasoning box shimmers for the window the line would have
             named, and its tool cards name their calls. So the line — and the
             slot it was holding open — do not render there at all. */}
-        {viewMode === "user" && (thinking !== null || running) && <div className="thinking-slot">{thinking}</div>}
+        {viewMode === "user" && thinking !== null && <div className="thinking-slot">{thinking}</div>}
         <MessagePrimitive.GroupedParts groupBy={groupBy}>
           {({ part, children }) => {
             switch (part.type) {
+              // User Mode's middle: the trace and the calls, folded under one row
+              // that names the phase — the way Claude shows a turn at work.
+              case "group-thought":
+                return (
+                  <ThoughtGroup key={part.indices[0]} label={thoughtLabel} seconds={thinkingSeconds} running={running} defaultOpen={defaultOpen}>
+                    {children}
+                  </ThoughtGroup>
+                );
               case "group-reasoning": {
-                // The trace is rendered two ways, because the two modes want
-                // different things from it. Dev Mode draws the agent's own
-                // shapes, so it is the reasoning element as it ships — the brain,
-                // the word "Reasoning", and the outline the element carries — and
-                // its parts render as children. User Mode writes the same trace
-                // for a person: the panel's step list, which is props-driven, so
-                // its parts are read rather than rendered.
-                const streaming = part.status.type === "running";
+                // The trace itself. Dev Mode draws the element as it ships — the
+                // brain, the word "Reasoning", the outline it carries — with its
+                // parts as children. User Mode hands the same parts to the
+                // element's text renderer, so the trace reads as prose rather
+                // than as a panel of steps.
                 if (viewMode === "user") {
-                  return (
-                    <ReasoningSteps key={`${part.indices[0]}-${defaultOpen}`} indices={part.indices} streaming={streaming} defaultOpen={defaultOpen} seconds={thinkingSeconds} />
-                  );
+                  return <ReasoningText className="thought-trace">{children}</ReasoningText>;
                 }
-                // The element holds itself open as a live, bottom-pinned preview
-                // while the trace streams — its trigger shimmers for exactly that
-                // window — then settles to the state the sidebar asks for.
+                const streaming = part.status.type === "running";
                 return (
                   <ReasoningRoot key={`${part.indices[0]}-${defaultOpen}`} className="reasoning-root" streaming={streaming} defaultOpen={defaultOpen}>
                     <ReasoningTrigger className="reasoning-trigger" active={streaming} />
@@ -179,6 +189,11 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen, softStre
                   </ReasoningRoot>
                 );
               }
+              // The calls a turn made on its way to the answer, under the trace
+              // they came from. Each row is the tool-call element, so it opens
+              // onto the same request and result the humanized step does.
+              case "group-tool":
+                return <div className="thought-tools">{children}</div>;
               case "reasoning":
                 return <ReasoningPart {...part} />;
               // Every call renders inline here: the sandbox registers no tool UIs, so
@@ -208,52 +223,36 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen, softStre
   );
 }
 
-type ReasoningStepsProps = {
-  indices: readonly number[];
-  streaming: boolean;
-  defaultOpen: boolean;
-  /** The turn clock's reading, so the trigger can rest on the number it took. */
+type ThoughtGroupProps = Readonly<{
+  label: string;
   seconds: number | undefined;
-};
+  running: boolean;
+  defaultOpen: boolean;
+  children: ReactNode;
+}>;
 
 /**
- * The reasoning panel, fed from the message's own parts. The element is
- * props-driven, so the trace is read here instead of rendered as children: one
- * step for the group, since a provider in this testbed streams its thinking as a
- * single growing string, titled the way the element's docs fall back when no
- * summary is shipped. While the turn runs the trigger shimmers with the live
- * clock; once it settles it rests on the reading, so the number on screen during
- * the turn is the one left behind after it.
+ * User Mode's middle, drawn the way Claude draws one: a single row naming what
+ * the turn is doing — a verb, the running count, a chevron — that opens onto the
+ * reasoning and the calls beneath it. The row is the thinking indicator the
+ * sandbox already uses, so its dot, its shimmer and its count behave here exactly
+ * as they do anywhere else; the disclosure is the primitive the vendored elements
+ * are built on; and what opens inside is those elements themselves.
  */
-function ReasoningSteps({ indices, streaming, defaultOpen, seconds }: ReasoningStepsProps): ReactNode {
-  const trace = useAuiState((state) => {
-    const part = state.message.parts[indices[0]];
-    return part?.type === "reasoning" ? part.text : "";
-  });
-  const summary = useAuiState((state) => {
-    const part = state.message.parts[indices[0]];
-    return part?.type === "reasoning" ? part.unstable_summary ?? "" : "";
-  });
-  const steps = useMemo<ReasoningStep[]>(
-    () => (trace.trim().length > 0 ? [{ title: summary || "Thinking", body: trace }] : []),
-    [summary, trace],
-  );
+function ThoughtGroup({ label, seconds, running, defaultOpen, children }: ThoughtGroupProps): ReactNode {
   const [initialOpen] = useState(defaultOpen);
   const [userOpen, setUserOpen] = useState<boolean | null>(null);
-  const open = userOpen ?? (streaming || initialOpen);
+  const open = userOpen ?? (running || initialOpen);
   const counted = seconds !== undefined && seconds >= 1;
 
   return (
-    <ReasoningPanel
-      className="reasoning-panel"
-      steps={steps}
-      visibleSteps={steps.length}
-      streaming={streaming}
-      open={open}
-      onOpenChange={setUserOpen}
-      restingLabel={counted ? `Thought for ${seconds}s` : "Thought"}
-      elapsed={streaming && counted ? `${seconds}s` : undefined}
-    />
+    <Collapsible className="thought-group" data-resting={running ? undefined : true} open={open} onOpenChange={setUserOpen}>
+      <CollapsibleTrigger className="thought-trigger">
+        <ThinkingIndicator label={label} elapsed={running && counted ? `${seconds}s` : undefined} />
+        <span aria-hidden className="thought-chevron">{open ? "⌄" : "›"}</span>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="thought-content">{children}</CollapsibleContent>
+    </Collapsible>
   );
 }
 
@@ -263,28 +262,48 @@ function resultFailed(result: unknown): boolean {
   return result !== null && typeof result === "object" && "error" in (result as Record<string, unknown>);
 }
 
+/** Claude names the work with a verb, so a turn that is only reading gets one. */
+const THINKING_VERBS = ["Pondering", "Figuring", "Mulling", "Considering", "Working through"] as const;
+
 /**
- * Names what the turn is doing from the moment it starts, and keeps naming it:
- * the line is not a gap filler, so it stays on screen while the turn works. What
- * it may say depends on the mode, though. Dev Mode draws a card per call, and the
- * card names the call itself, so the line leaves that fact to it and keeps the
- * phase it precedes; User Mode has no card until a call has finished, so there
- * the line is the only thing that can say one is still running. Either way the
- * panel's trigger carries the trace, so the line leaves that window to it.
+ * One verb per turn. The label changes as the turn moves through its phases, so
+ * a phrase drawn fresh on every render would read as a glitch rather than as a
+ * status; this one is chosen once, when the message first renders, and kept.
+ */
+function useThinkingVerb(): string {
+  const chosen = useRef<string | null>(null);
+  if (chosen.current === null) {
+    chosen.current = THINKING_VERBS[Math.floor(Math.random() * THINKING_VERBS.length)];
+  }
+  return chosen.current;
+}
+
+/**
+ * What the turn is doing, in the words a person would use for it. A call that is
+ * still running is named by its own verb form — "Searching the web for 4821" —
+ * and the rest of the time the turn is thinking, which is named with a verb
+ * rather than with the word "thinking". Dev Mode says none of this: its box and
+ * its cards already carry the phase, so a label here would only repeat them.
  */
 function useThinkingLabel(viewMode: ViewMode): string | undefined {
+  const verb = useThinkingVerb();
+
   return useAuiState((state) => {
+    if (viewMode !== "user") return undefined;
     if (state.message.status?.type !== "running") return undefined;
-    const parts = state.message.parts;
-    if (viewMode === "user") {
-      const pending = parts.find((part) => part.type === "tool-call" && part.result === undefined);
-      if (pending?.type === "tool-call") return `Running ${pending.toolName}`;
-    }
-    // The panel's trigger carries this window: it shimmers for exactly as long
-    // as the trace is running, so the line leaves the phase to it.
-    if (parts.some((part) => part.type === "reasoning" && part.text.trim().length > 0)) return undefined;
-    return "Thinking";
+    const pending = state.message.parts.find((part) => part.type === "tool-call" && part.result === undefined);
+    if (pending?.type === "tool-call") return describeStep(pending.toolName, pending.args, "running");
+    return verb;
   });
+}
+
+/**
+ * Whether the turn has anything to draw yet. The line speaks only into the gap
+ * before the first reasoning part or call arrives; after that the row owns the
+ * phase, and the line and its slot stand down.
+ */
+function useThoughtStarted(): boolean {
+  return useAuiState((state) => state.message.parts.some((part) => part.type === "reasoning" || part.type === "tool-call"));
 }
 
 /**

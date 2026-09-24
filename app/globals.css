@@ -988,10 +988,9 @@ h6 {
 /* Reasoning, drawn two ways. Dev Mode renders the element as it ships: its
    trigger is the brain and the word "Reasoning", inside the outline the element
    carries, and the sandbox palette reaches it through the data slots the way it
-   reaches the other vendored elements. User Mode renders the panel, which is
-   Tailwind-classed and brings no card of its own; those two rules are fit, not
-   restyle — the chat column is wider than the element's standalone default, and
-   the accent this app draws its live states in is not Tailwind's blue. */
+   reaches the other vendored elements. User Mode draws the middle of a turn the
+   way Claude does — one row that names the phase, then the trace and the calls
+   beneath it, divided by hairlines rather than by a box around every call. */
 .reasoning-root { padding: 8px 12px; border: var(--ds-border) solid var(--a-border); border-radius: var(--ds-radius-card); background: var(--a-bg); box-shadow: var(--ds-shadow); }
 .reasoning-root [data-slot="reasoning-trigger"] { max-width: none; color: var(--a-muted); font-size: 13px; }
 .reasoning-root [data-slot="reasoning-trigger"]:hover { color: var(--a-fg); }
@@ -999,9 +998,19 @@ h6 {
 .reasoning-root [data-slot="reasoning-text"] { max-height: 260px; padding-inline-start: 12px; border-inline-start: 1px solid var(--a-border); color: var(--a-fg); font-size: 13px; line-height: 1.5; }
 .reasoning-root [data-slot="reasoning-fade"]:first-child { background: linear-gradient(to bottom, var(--a-bg), transparent); }
 .reasoning-root [data-slot="reasoning-fade"]:last-child { background: linear-gradient(to top, var(--a-bg), transparent); }
-.reasoning-panel { max-width: none; }
-[data-slot="reasoning-panel"] .animate-pulse { background: var(--a-accent); }
 .reasoning-line { margin: 0; white-space: pre-wrap; }
+/* The row is the thinking indicator the sandbox already uses, so its dot, its
+   shimmer and its count need no restyling — only the chevron beside them, and
+   the resting state, which stops pulsing because the turn is no longer working. */
+.thought-group { margin: 8px 0; }
+.thought-trigger { display: flex; align-items: center; gap: 6px; width: 100%; padding: 0; border: 0; background: transparent; color: var(--a-fg); cursor: pointer; text-align: left; }
+.thought-chevron { opacity: .45; font-size: 11px; }
+.thought-group[data-resting] [data-slot="thinking-indicator"] > span:first-child { animation: none; opacity: .3; }
+.thought-content { padding: 10px 0 0 14px; }
+.thought-trace { margin: 0; max-height: 320px; overflow: auto; color: var(--a-muted); font-size: 13.5px; line-height: 1.6; }
+.thought-tools { display: flex; flex-direction: column; margin-top: 10px; }
+.thought-tools > * { padding: 9px 0; border-top: 1px solid var(--a-border); }
+.thought-tools > *:first-child { border-top: 0; }
 /* Reasoning arrives as one growing string, so each word gets the entrance the
    answer text's words get — that is what keeps a long trace from appearing in
    whole paragraphs. */
