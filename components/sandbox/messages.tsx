@@ -9,7 +9,7 @@ import { ThinkingIndicator } from "@/components/assistant-ui/elements/thinking-i
 import { ToolCall } from "@/components/assistant-ui/elements/tool-call";
 import { TooltipIconButton } from "@/components/assistant-ui/elements/tooltip-icon-button";
 import { ShimmerLabel } from "@/components/assistant-ui/elements/surfaces";
-import { describeResult, describeStep, objectOf, type StepPhase } from "@/lib/step-labels";
+import { chipOf, describeResult, describeStep, type StepPhase } from "@/lib/step-labels";
 import { type PartMode, type StepsMode, type Toggle, type ToolsMode } from "@/components/sandbox/knobs";
 import {
   AuiIf,
@@ -392,7 +392,7 @@ function ToolCallRow({ name, args, argsText, result, isError, defaultOpen }: Too
       className="tool-call"
       label={describeStep(name, args, failed ? "failed" : "complete")}
       activeLabel={describeStep(name, args, "running")}
-      query={objectOf(args) ?? name}
+      query={chipOf(args)}
       request={argsText !== undefined && argsText.length > 0 ? argsText : JSON.stringify(args ?? {}, null, 2)}
       result={describeResult(result)}
       running={result === undefined}

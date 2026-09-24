@@ -60,6 +60,19 @@ export function describeStep(toolName: string, args: unknown, phase: StepPhase):
   return \`\${headline}\${noun ? \` \${noun}\` : ""}\${object ? \` for “\${object}”\` : ""}\`;
 }
 
+/** Beyond this an argument is data — a command, a query string — not a chip. */
+const CHIP_LIMIT = 24;
+
+/**
+ * The argument for the chip beside the step, or nothing. A shell command's only
+ * argument is the command, and the chip is not the place for it: the step's own
+ * sentence already quotes it, and a wrapped command turns the row into a block.
+ */
+export function chipOf(args: unknown): string {
+  const object = objectOf(args);
+  return object !== undefined && object.length <= CHIP_LIMIT ? object : "";
+}
+
 /** The one-line form of a tool's result, for a disclosure's Result block. */
 export function describeResult(result: unknown): string {
   if (result === undefined || result === null) return "";

@@ -388,7 +388,7 @@ export function toolCallRowSource(): string {
   return `"use client";
 
 import { useState } from "react";
-import { describeResult, describeStep, objectOf } from "./step-label";
+import { chipOf, describeResult, describeStep } from "./step-label";
 
 /**
  * One tool call, drawn the way assistant-ui's tool-call element draws it: the
@@ -406,7 +406,7 @@ export function ToolCallRow({ name, args, result, defaultOpen }: { name: string;
       <button className="tool-call-trigger" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
         <span className="tool-call-chevron" aria-hidden="true">{open ? "⌄" : "›"}</span>
         <span className="tool-call-label" data-active={running || undefined}>{running ? describeStep(name, args, "running") : describeStep(name, args, failed ? "failed" : "complete")}</span>
-        <span className="tool-call-chip">{objectOf(args) ?? name}</span>
+        <span className="tool-call-chip">{chipOf(args)}</span>
         {!running && <span className="tool-call-check" aria-hidden="true">✓</span>}
       </button>
       {open && (

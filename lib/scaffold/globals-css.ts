@@ -76,6 +76,7 @@ const TOOL_RULES = [
   ".tool-card-content{padding:0 12px 12px}",
   ".tool-card-content pre{margin:0;font-family:var(--font-mono);font-size:12px;overflow:auto}",
   ".tool-call{margin:6px 0}",
+  ".tool-call .font-mono:empty{display:none}",
   ".tool-call-trigger{display:flex;width:100%;gap:8px;align-items:center;padding:4px 0;border:0;background:transparent;color:var(--a-muted);cursor:pointer;font:inherit;font-size:13.5px;text-align:left}",
   ".tool-call-trigger:hover{color:var(--a-fg)}",
   ".tool-call-chevron{opacity:.6}",

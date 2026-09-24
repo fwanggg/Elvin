@@ -1047,6 +1047,9 @@ h6 {
 /* A turn can call several tools in a row: the element's rows carry their own
    padding, but a stack still needs the separation the raw cards get. */
 .tool-call { max-width: none; margin: 6px 0; }
+/* The chip is for a label, and the row withholds it when a call has nothing that
+   reads as one — the element renders the empty pill regardless, so it goes. */
+.tool-call .font-mono:empty { display: none; }
 /* Message actions (assistant-ui action bar + timing). On the sandbox palette,
    with the popovers in the playground's flat register. */
 /* The bar is unmounted while the message is not hovered, so the slot holds its
