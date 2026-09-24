@@ -155,7 +155,7 @@ async function checkCase() {
 async function capture() {
   const chat = {};
   for (const scenario of Object.keys(SCENARIOS)) {
-    for (const toolsMode of ["shown", "hidden", "off"]) {
+    for (const toolsMode of ["shown", "humanized", "off"]) {
       for (const reasoningMode of ["shown", "hidden", "off"]) {
         chat[`${scenario}|${toolsMode}|${reasoningMode}`] = await chatCase(scenario, toolsMode, reasoningMode);
       }
@@ -165,7 +165,7 @@ async function capture() {
   const source = {};
   for (const query of [
     "pattern=thread&theme=dark&tools=shown&reasoning=shown&open=collapsed&stream=true&model=mock-model",
-    "pattern=sidebar&theme=light&tools=hidden&reasoning=hidden&open=expanded&stream=false&model=mock-model&capability=x",
+    "pattern=sidebar&theme=light&tools=humanized&reasoning=hidden&open=expanded&stream=false&model=mock-model&capability=x",
     "pattern=modal&theme=dark&tools=off&reasoning=off&open=collapsed&stream=true&model=mock-model",
   ]) {
     source[query] = await sourceCase(query);
@@ -213,9 +213,13 @@ try {
       failed = true;
       console.error(`  ${section}: CHANGED`);
       for (const key of changed) {
+        const before = baseline[section][key];
+        const after = current[section][key];
         console.error(`    - ${key}`);
-        console.error(`        before: ${JSON.stringify(baseline[section][key]).slice(0, 240)}`);
-        console.error(`        after:  ${JSON.stringify(current[section][key]).slice(0, 240)}`);
+        // A knob value that changed name shows up as a case that went and a case
+        // that arrived, so each side is reported only when it exists.
+        console.error(`        before: ${before === undefined ? "(no such case)" : JSON.stringify(before).slice(0, 240)}`);
+        console.error(`        after:  ${after === undefined ? "(no such case)" : JSON.stringify(after).slice(0, 240)}`);
       }
     }
     console.log(failed ? "BEHAVIOUR CHANGED" : "behaviour identical");

@@ -228,7 +228,7 @@
         }
       ]
     },
-    "plain|hidden|shown": {
+    "plain|humanized|shown": {
       "status": 200,
       "contentType": "text/event-stream; charset=utf-8",
       "events": [
@@ -304,7 +304,7 @@
         }
       ]
     },
-    "plain|hidden|hidden": {
+    "plain|humanized|hidden": {
       "status": 200,
       "contentType": "text/event-stream; charset=utf-8",
       "events": [
@@ -380,7 +380,7 @@
         }
       ]
     },
-    "plain|hidden|off": {
+    "plain|humanized|off": {
       "status": 200,
       "contentType": "text/event-stream; charset=utf-8",
       "events": [
@@ -714,7 +714,7 @@
         }
       ]
     },
-    "tools|hidden|shown": {
+    "tools|humanized|shown": {
       "status": 200,
       "contentType": "text/event-stream; charset=utf-8",
       "events": [
@@ -790,7 +790,7 @@
         }
       ]
     },
-    "tools|hidden|hidden": {
+    "tools|humanized|hidden": {
       "status": 200,
       "contentType": "text/event-stream; charset=utf-8",
       "events": [
@@ -866,7 +866,7 @@
         }
       ]
     },
-    "tools|hidden|off": {
+    "tools|humanized|off": {
       "status": 200,
       "contentType": "text/event-stream; charset=utf-8",
       "events": [
@@ -1200,7 +1200,7 @@
         }
       ]
     },
-    "thought|hidden|shown": {
+    "thought|humanized|shown": {
       "status": 200,
       "contentType": "text/event-stream; charset=utf-8",
       "events": [
@@ -1276,7 +1276,7 @@
         }
       ]
     },
-    "thought|hidden|hidden": {
+    "thought|humanized|hidden": {
       "status": 200,
       "contentType": "text/event-stream; charset=utf-8",
       "events": [
@@ -1352,7 +1352,7 @@
         }
       ]
     },
-    "thought|hidden|off": {
+    "thought|humanized|off": {
       "status": 200,
       "contentType": "text/event-stream; charset=utf-8",
       "events": [
@@ -1736,7 +1736,7 @@
         }
       ]
     },
-    "both|hidden|shown": {
+    "both|humanized|shown": {
       "status": 200,
       "contentType": "text/event-stream; charset=utf-8",
       "events": [
@@ -1837,7 +1837,7 @@
         }
       ]
     },
-    "both|hidden|hidden": {
+    "both|humanized|hidden": {
       "status": 200,
       "contentType": "text/event-stream; charset=utf-8",
       "events": [
@@ -1938,7 +1938,7 @@
         }
       ]
     },
-    "both|hidden|off": {
+    "both|humanized|off": {
       "status": 200,
       "contentType": "text/event-stream; charset=utf-8",
       "events": [
@@ -2048,7 +2048,7 @@
   "source": {
     "pattern=thread&theme=dark&tools=shown&reasoning=shown&open=collapsed&stream=true&model=mock-model": {
       "status": 200,
-      "digest": "9eb36fabdf68eb72",
+      "digest": "a6d03d0656ec42a1",
       "files": [
         "package.json",
         "tsconfig.json",
@@ -2062,12 +2062,13 @@
         "components/assistant/ElvinAssistant.tsx",
         "components/assistant/reasoning-group.tsx",
         "components/assistant/tool-card.tsx",
+        "components/assistant/tool-call-row.tsx",
         "components/assistant/step-label.ts"
       ]
     },
-    "pattern=sidebar&theme=light&tools=hidden&reasoning=hidden&open=expanded&stream=false&model=mock-model&capability=x": {
+    "pattern=sidebar&theme=light&tools=humanized&reasoning=hidden&open=expanded&stream=false&model=mock-model&capability=x": {
       "status": 200,
-      "digest": "280ac5f6a5a77efe",
+      "digest": "b8724375e02b5d16",
       "files": [
         "package.json",
         "tsconfig.json",
@@ -2081,12 +2082,13 @@
         "components/assistant/ElvinAssistant.tsx",
         "components/assistant/reasoning-group.tsx",
         "components/assistant/tool-card.tsx",
+        "components/assistant/tool-call-row.tsx",
         "components/assistant/step-label.ts"
       ]
     },
     "pattern=modal&theme=dark&tools=off&reasoning=off&open=collapsed&stream=true&model=mock-model": {
       "status": 200,
-      "digest": "d8320e5abbb87ccd",
+      "digest": "cc9e22a93d3e43e3",
       "files": [
         "package.json",
         "tsconfig.json",
@@ -2100,6 +2102,7 @@
         "components/assistant/ElvinAssistant.tsx",
         "components/assistant/reasoning-group.tsx",
         "components/assistant/tool-card.tsx",
+        "components/assistant/tool-call-row.tsx",
         "components/assistant/step-label.ts"
       ]
     }

@@ -79,6 +79,12 @@
 .app-shell {
   --color-blue-500: var(--color-accent);
   --color-blue-400: var(--color-accent);
+  /* The elements also mix their own text and surfaces against Tailwind's
+     --foreground and --background. Inside the sandbox those have to be the
+     language's ink and paper, not the house ones: a disclosure panel that reads
+     its label as dark-on-dark is the house ink showing through. */
+  --foreground: var(--a-fg);
+  --background: var(--a-bg);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -969,7 +975,10 @@ h6 {
 .user-bubble.emoji { position: relative; margin-right: 30px; }
 .user-bubble.emoji > .message-emoji { left: 100%; margin-left: 8px; }
 .assistant-text { font-size: var(--ds-body-size); line-height: 1.65; text-wrap: pretty; white-space: pre-wrap; }
-.part-card { overflow: hidden; border: var(--ds-border) solid var(--a-border); border-radius: var(--ds-radius-card); background: var(--a-bg); box-shadow: var(--ds-shadow); }
+/* A turn can call several tools in a row, and the cards then stack: each carries
+   its own gap so a stack reads as separate calls rather than one striped block.
+   The scaffold's .tool-card has always done the same. */
+.part-card { margin: 8px 0; overflow: hidden; border: var(--ds-border) solid var(--a-border); border-radius: var(--ds-radius-card); background: var(--a-bg); box-shadow: var(--ds-shadow); }
 .part-head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 12px; border: 0; background: transparent; cursor: pointer; font-size: 13px; text-align: left; }
 .part-detail { padding: 10px 12px; border-top: 1px solid var(--a-border); background: var(--a-chrome); color: var(--a-fg); font-family: var(--font-mono); font-size: 12px; line-height: 1.5; }
 /* Reasoning (assistant-ui element). Its trigger shimmers while the trace streams
@@ -1035,6 +1044,9 @@ h6 {
    the fade the words arrive on are the element's own — its blue tokens are named
    in the palette above, which is what makes them follow the design language. */
 .streaming-text { max-width: none; min-height: 0; }
+/* A turn can call several tools in a row: the element's rows carry their own
+   padding, but a stack still needs the separation the raw cards get. */
+.tool-call { max-width: none; margin: 6px 0; }
 /* Message actions (assistant-ui action bar + timing). On the sandbox palette,
    with the popovers in the playground's flat register. */
 /* The bar is unmounted while the message is not hovered, so the slot holds its

@@ -20,6 +20,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { elvinConfig } from "../../elvin.config";
 import { ReasoningGroup, ReasoningText } from "./reasoning-group";
 import { describeStep } from "./step-label";
+import { ToolCallRow } from "./tool-call-row";
 import { ToolCard } from "./tool-card";
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { readonly [key: string]: JsonValue };
@@ -258,6 +259,7 @@ function AssistantMessage() {
               return elvinConfig.reasoning.render ? <ReasoningText text={part.text} /> : <></>;
             case "tool-call":
               if (!elvinConfig.toolCalls.render) return <></>;
+              if (elvinConfig.toolCalls.style === "humanized") return <ToolCallRow name={part.toolName} args={part.args} result={part.result} defaultOpen={elvinConfig.toolCalls.defaultOpen} />;
               if (humanized) return <StepLine name={part.toolName} args={part.args} result={part.result} />;
               return part.toolUI ?? <ToolCard name={part.toolName} args={part.args} result={part.result} defaultOpen={elvinConfig.toolCalls.defaultOpen} />;
             case "text":
@@ -374,6 +376,46 @@ export function ToolCard({ name, args, result, defaultOpen }: { name: string; ar
       {open && (
         <div className="tool-card-content">
           <pre>{JSON.stringify({ args, result }, null, 2)}</pre>
+        </div>
+      )}
+    </div>
+  );
+}
+`;
+}
+
+export function toolCallRowSource(): string {
+  return `"use client";
+
+import { useState } from "react";
+import { describeResult, describeStep, objectOf } from "./step-label";
+
+/**
+ * One tool call, drawn the way assistant-ui's tool-call element draws it: the
+ * step in plain language with its primary argument as a chip, and the raw
+ * request and result behind the disclosure. Elvin's own copy of that element is
+ * Tailwind-based; this one is plain CSS, like the rest of the scaffold.
+ */
+export function ToolCallRow({ name, args, result, defaultOpen }: { name: string; args: unknown; result: unknown; defaultOpen: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const running = result === undefined;
+  const failed = result !== null && typeof result === "object" && "error" in (result as Record<string, unknown>);
+
+  return (
+    <div className="tool-call">
+      <button className="tool-call-trigger" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+        <span className="tool-call-chevron" aria-hidden="true">{open ? "⌄" : "›"}</span>
+        <span className="tool-call-label" data-active={running || undefined}>{running ? describeStep(name, args, "running") : describeStep(name, args, failed ? "failed" : "complete")}</span>
+        <span className="tool-call-chip">{objectOf(args) ?? name}</span>
+        {!running && <span className="tool-call-check" aria-hidden="true">✓</span>}
+      </button>
+      {open && (
+        <div className="tool-call-panel">
+          <p className="tool-call-field">Request</p>
+          <p className="tool-call-request">{JSON.stringify(args ?? {}, null, 2)}</p>
+          <div className="tool-call-divider" />
+          <p className="tool-call-field">Result</p>
+          <p className="tool-call-result">{describeResult(result)}</p>
         </div>
       )}
     </div>

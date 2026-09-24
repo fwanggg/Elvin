@@ -6,10 +6,11 @@ import { MessageTiming } from "@/components/assistant-ui/elements/message-timing
 import { ReasoningContent, ReasoningRoot, ReasoningText, ReasoningTrigger } from "@/components/assistant-ui/elements/reasoning";
 import { StreamingText, type Segment } from "@/components/assistant-ui/elements/streaming-text";
 import { ThinkingIndicator } from "@/components/assistant-ui/elements/thinking-indicator";
+import { ToolCall } from "@/components/assistant-ui/elements/tool-call";
 import { TooltipIconButton } from "@/components/assistant-ui/elements/tooltip-icon-button";
 import { ShimmerLabel } from "@/components/assistant-ui/elements/surfaces";
-import { describeStep, type StepPhase } from "@/lib/step-labels";
-import { type PartMode, type StepsMode, type Toggle } from "@/components/sandbox/knobs";
+import { describeResult, describeStep, objectOf, type StepPhase } from "@/lib/step-labels";
+import { type PartMode, type StepsMode, type Toggle, type ToolsMode } from "@/components/sandbox/knobs";
 import {
   AuiIf,
   ActionBarMorePrimitive,
@@ -25,7 +26,7 @@ import {
 /** The sandbox's part renderers: what a turn looks like as it streams. */
 
 type AssistantRuntimeMessageProps = Readonly<{
-  toolsMode: PartMode;
+  toolsMode: ToolsMode;
   reasoningMode: PartMode;
   stepsMode: StepsMode;
   emoji: Toggle;
@@ -43,6 +44,14 @@ type ToolCardProps = Readonly<{
   name: string;
   args: unknown;
   result: unknown;
+  defaultOpen: boolean;
+}>;
+type ToolCallRowProps = Readonly<{
+  name: string;
+  args: unknown;
+  argsText: string | undefined;
+  result: unknown;
+  isError?: boolean;
   defaultOpen: boolean;
 }>;
 
@@ -171,7 +180,8 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, e
               case "reasoning":
                 return reasoningMode === "shown" ? <ReasoningPart {...part} /> : <></>;
               case "tool-call":
-                if (toolsMode !== "shown") return <></>;
+                if (toolsMode === "off") return <></>;
+                if (toolsMode === "humanized") return <ToolCallRow key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} argsText={part.argsText} result={part.result} isError={part.isError} defaultOpen={defaultOpen} />;
                 return humanized
                   ? <StepLine key={part.toolCallId} name={part.toolName} args={part.args} result={part.result} isError={part.isError} />
                   : <ToolCard key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} result={part.result} defaultOpen={defaultOpen} />;
@@ -364,5 +374,30 @@ function ToolCard({ name, args, result, defaultOpen }: ToolCardProps): ReactNode
       <button className="part-head" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}><span>✓ Used tool <strong>{name}</strong></span><span style={{ marginLeft: "auto" }}>{open ? "⌄" : "›"}</span></button>
       {open && <div className="part-detail">{`Arguments\n${JSON.stringify(args ?? {}, null, 2)}\n\nResult\n${JSON.stringify(result ?? {}, null, 2)}`}</div>}
     </div>
+  );
+}
+
+/**
+ * The same call, handed to assistant-ui's tool-call element: a chevron, the step
+ * in plain language, its primary argument as a chip, a checkmark once it settles,
+ * and the raw request and result behind the disclosure. The labels come from the
+ * vocabulary the humanized steps use, so the two readings agree.
+ */
+function ToolCallRow({ name, args, argsText, result, isError, defaultOpen }: ToolCallRowProps): ReactNode {
+  const [open, setOpen] = useState(defaultOpen);
+  const failed = isError === true || resultFailed(result);
+
+  return (
+    <ToolCall
+      className="tool-call"
+      label={describeStep(name, args, failed ? "failed" : "complete")}
+      activeLabel={describeStep(name, args, "running")}
+      query={objectOf(args) ?? name}
+      request={argsText !== undefined && argsText.length > 0 ? argsText : JSON.stringify(args ?? {}, null, 2)}
+      result={describeResult(result)}
+      running={result === undefined}
+      open={open}
+      onOpenChange={setOpen}
+    />
   );
 }

@@ -75,6 +75,18 @@ const TOOL_RULES = [
   ".tool-card-name{font-size:13px;font-weight:var(--label-weight)}",
   ".tool-card-content{padding:0 12px 12px}",
   ".tool-card-content pre{margin:0;font-family:var(--font-mono);font-size:12px;overflow:auto}",
+  ".tool-call{margin:6px 0}",
+  ".tool-call-trigger{display:flex;width:100%;gap:8px;align-items:center;padding:4px 0;border:0;background:transparent;color:var(--a-muted);cursor:pointer;font:inherit;font-size:13.5px;text-align:left}",
+  ".tool-call-trigger:hover{color:var(--a-fg)}",
+  ".tool-call-chevron{opacity:.6}",
+  ".tool-call-label[data-active]{background-image:linear-gradient(90deg,color-mix(in oklab,currentColor 35%,transparent) 40%,currentColor 50%,color-mix(in oklab,currentColor 35%,transparent) 60%);background-size:250% 100%;background-repeat:no-repeat;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:reasoning-shimmer 1.8s linear infinite}",
+  ".tool-call-chip{background:color-mix(in srgb,currentColor 8%,transparent);border-radius:6px;font-family:var(--font-mono);font-size:11px;padding:2px 6px}",
+  ".tool-call-check{color:var(--color-ok,#1c6b3f);margin-left:auto}",
+  ".tool-call-panel{background:color-mix(in srgb,currentColor 5%,transparent);border-radius:14px;margin-top:8px;padding:10px 14px}",
+  ".tool-call-field{margin:0 0 4px;color:var(--a-muted);font-family:var(--font-mono);font-size:11px}",
+  ".tool-call-request{margin:0;font-family:var(--font-mono);font-size:12px;white-space:pre-wrap}",
+  ".tool-call-result{margin:0;font-size:13px;white-space:pre-wrap}",
+  ".tool-call-divider{height:1px;margin:8px -14px;background:color-mix(in srgb,currentColor 8%,transparent)}",
   "",
 ].join("\n");
 
@@ -93,7 +105,7 @@ export function globalsSource(config: SourceConfig): string {
     `:root{${root}}\n`,
     SCAFFOLD_RULES,
     config.reasoning === "shown" && REASONING_RULES,
-    config.tools === "shown" && TOOL_RULES,
+    config.tools !== "off" && TOOL_RULES,
     config.steps === "humanized" && STEPS_RULES,
     config.emoji === "on" && EMOJI_RULES,
   ], "");

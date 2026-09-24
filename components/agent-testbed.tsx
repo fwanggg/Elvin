@@ -5,7 +5,7 @@ import { Dropdown } from "@/components/dropdown";
 import { ModelPicker } from "@/components/model-picker";
 import { type Segment } from "@/components/assistant-ui/elements/streaming-text";
 import type { Design } from "@/lib/design-tokens";
-import { type AppTheme, type OpenMode, type PartMode, type Pattern, type StepsMode, type StreamMode, type Toggle, type Viewport } from "@/components/sandbox/knobs";
+import { type AppTheme, type OpenMode, type PartMode, type Pattern, type StepsMode, type StreamMode, type Toggle, type ToolsMode, type Viewport } from "@/components/sandbox/knobs";
 import { AssistantRuntimeMessage, UserRuntimeMessage } from "@/components/sandbox/messages";
 import {
   AssistantRuntimeProvider,
@@ -101,7 +101,7 @@ type ControlSidebarProps = Readonly<{
   streamMode: StreamMode;
   viewport: Viewport;
   design: Design;
-  toolsMode: PartMode;
+  toolsMode: ToolsMode;
   reasoningMode: PartMode;
   stepsMode: StepsMode;
   emoji: Toggle;
@@ -112,7 +112,7 @@ type ControlSidebarProps = Readonly<{
   onStreamModeChange: (value: StreamMode) => void;
   onViewportChange: (value: Viewport) => void;
   onDesignChange: (value: Design) => void;
-  onToolsModeChange: (value: PartMode) => void;
+  onToolsModeChange: (value: ToolsMode) => void;
   onReasoningModeChange: (value: PartMode) => void;
   onStepsModeChange: (value: StepsMode) => void;
   onEmojiChange: (value: Toggle) => void;
@@ -138,7 +138,7 @@ type PreviewStageProps = Readonly<{
   model: string;
   models: string[];
   onModelChange: (value: string) => void;
-  toolsMode: PartMode;
+  toolsMode: ToolsMode;
   reasoningMode: PartMode;
   defaultOpen: boolean;
   softStream: Toggle;
@@ -172,7 +172,7 @@ type AssistantSandboxProps = Readonly<{
   modelName: string;
   stepsMode: StepsMode;
   emoji: Toggle;
-  toolsMode: PartMode;
+  toolsMode: ToolsMode;
   reasoningMode: PartMode;
   defaultOpen: boolean;
   softStream: Toggle;
@@ -237,6 +237,8 @@ const DESIGN_LABELS: Record<Design, string> = {
 };
 const DESIGN_LANGUAGES: ReadonlyArray<{ value: Design; label: string }> = (Object.keys(DESIGN_LABELS) as Design[]).map((value) => ({ value, label: DESIGN_LABELS[value] }));
 const PART_MODE_LABELS: Record<PartMode, string> = { shown: "Shown", hidden: "Hidden", off: "Off" };
+/** Tool calls add a rendering the reasoning group has no use for. */
+const TOOLS_MODE_LABELS: Record<ToolsMode, string> = { shown: "Shown", humanized: "Humanized", off: "Off" };
 const STEPS_MODE_LABELS: Record<StepsMode, string> = { raw: "Raw", humanized: "Humanized" };
 const OPEN_MODE_LABELS: Record<OpenMode, string> = { collapsed: "Collapsed", expanded: "Expanded" };
 const STREAM_MODE_LABELS: Record<StreamMode, string> = { true: "True", false: "False" };
@@ -252,7 +254,7 @@ export function AgentTestbed(): ReactNode {
   const [pattern, setPattern] = useState<Pattern>("thread");
   const [appTheme, setAppTheme] = useState<AppTheme>("dark");
   const [design, setDesign] = useState<Design>("swiss");
-  const [toolsMode, setToolsMode] = useState<PartMode>("shown");
+  const [toolsMode, setToolsMode] = useState<ToolsMode>("shown");
   const [reasoningMode, setReasoningMode] = useState<PartMode>("shown");
   const [stepsMode, setStepsMode] = useState<StepsMode>("raw");
   const [emoji, setEmoji] = useState<Toggle>("off");
@@ -599,8 +601,8 @@ function ControlSidebar({
           label="Tool calls"
           name="tools"
           value={toolsMode}
-          options={["shown", "hidden", "off"]}
-          labels={PART_MODE_LABELS}
+          options={["shown", "humanized", "off"]}
+          labels={TOOLS_MODE_LABELS}
           onChange={onToolsModeChange}
           hint={getToolsModeHint(toolsMode)}
         />
@@ -1073,14 +1075,14 @@ function getStatusLabel(connection: ConnectionState, baseUrl: string, connection
   }
 }
 
-function getToolsModeHint(toolsMode: PartMode): string {
+function getToolsModeHint(toolsMode: ToolsMode): string {
   switch (toolsMode) {
     case "off":
       return "No tools are sent to the model.";
-    case "hidden":
-      return "Tools are sent; call cards are hidden.";
+    case "humanized":
+      return "Each call renders the way assistant-ui draws one: the step in plain language, its argument as a chip, and the raw request and result behind a disclosure.";
     case "shown":
-      return "Tools are sent and rendered as cards.";
+      return "Tools are sent and rendered as raw call cards.";
   }
 }
 
@@ -1134,7 +1136,7 @@ function getResponseStatusHint(responseStatus: Toggle): string {
     : "No actions or timing are rendered.";
 }
 
-function buildSourceParams({ pattern, appTheme, design, emoji, stepsMode, toolsMode, reasoningMode, openMode, streamMode, model, capability }: Readonly<{ pattern: Pattern; appTheme: AppTheme; design: Design; emoji: Toggle; stepsMode: StepsMode; toolsMode: PartMode; reasoningMode: PartMode; openMode: OpenMode; streamMode: StreamMode; model: string; capability: string }>): string {
+function buildSourceParams({ pattern, appTheme, design, emoji, stepsMode, toolsMode, reasoningMode, openMode, streamMode, model, capability }: Readonly<{ pattern: Pattern; appTheme: AppTheme; design: Design; emoji: Toggle; stepsMode: StepsMode; toolsMode: ToolsMode; reasoningMode: PartMode; openMode: OpenMode; streamMode: StreamMode; model: string; capability: string }>): string {
   const params = new URLSearchParams({ pattern, theme: appTheme, design, emoji, steps: stepsMode, tools: toolsMode, reasoning: reasoningMode, open: openMode, stream: streamMode });
   if (model.trim()) params.set("model", model.trim());
   if (capability) params.set("capability", capability);
@@ -1195,7 +1197,7 @@ function fromResponse(toolCalls: ToolCall[] | undefined): Map<string, ToolCallPa
   return map;
 }
 
-function assembleContent({ toolsMode, reasoningMode, text, reasoning, toolCalls }: Readonly<{ toolsMode: PartMode; reasoningMode: PartMode; text: string; reasoning: string; toolCalls: Map<string, ToolCallPart> }>): RenderedPart[] {
+function assembleContent({ toolsMode, reasoningMode, text, reasoning, toolCalls }: Readonly<{ toolsMode: ToolsMode; reasoningMode: PartMode; text: string; reasoning: string; toolCalls: Map<string, ToolCallPart> }>): RenderedPart[] {
   return [
     ...(reasoningMode !== "off" && reasoning.length > 0 ? [{ type: "reasoning" as const, text: reasoning }] : []),
     ...(toolsMode !== "off" ? [...toolCalls.values()] : []),

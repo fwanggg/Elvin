@@ -9,7 +9,7 @@ type RequestBody = {
   baseUrl?: string;
   apiKey?: string;
   model?: string;
-  toolsMode?: "shown" | "hidden" | "off";
+  toolsMode?: "shown" | "humanized" | "off";
   reasoningMode?: "shown" | "hidden" | "off";
   messages?: IncomingMessage[];
   stream?: boolean;

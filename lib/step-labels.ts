@@ -74,7 +74,8 @@ function wordsOf(name: string): string[] {
     .map((word) => word.toLowerCase());
 }
 
-function objectOf(args: unknown): string | undefined {
+/** The argument a polished assistant quotes beside the step, if there is one. */
+export function objectOf(args: unknown): string | undefined {
   if (typeof args === "string") return args.length > 0 && args.length <= OBJECT_LIMIT ? args : undefined;
   if (!args || typeof args !== "object") return undefined;
 
@@ -102,4 +103,22 @@ export function describeStep(toolName: string, args: unknown, phase: StepPhase):
   const object = objectOf(args);
 
   return `${headline}${noun ? ` ${noun}` : ""}${object ? ` for “${object}”` : ""}`;
+}
+/** The one-line form of a tool's result, for a disclosure's Result block. */
+export function describeResult(result: unknown): string {
+  if (result === undefined || result === null) return "";
+  if (typeof result === "string") return result;
+  if (typeof result === "number" || typeof result === "boolean") return String(result);
+
+  if (typeof result === "object") {
+    const record = result as Record<string, unknown>;
+    if (typeof record.error === "string") return record.error;
+
+    const pairs = Object.entries(record)
+      .filter(([, value]) => value !== undefined && value !== null)
+      .map(([key, value]) => `${key}: ${typeof value === "object" ? JSON.stringify(value) : String(value)}`);
+    if (pairs.length > 0) return pairs.join(" · ");
+  }
+
+  return JSON.stringify(result);
 }

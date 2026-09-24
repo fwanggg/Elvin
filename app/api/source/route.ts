@@ -1,5 +1,5 @@
 import { DESIGN_FONTS, DESIGN_PALETTE, DESIGN_TOKENS, DESIGNS, type Design, type Theme } from "@/lib/design-tokens";
-import { assistantComponentSource, reasoningGroupSource, toolCardSource } from "@/lib/scaffold/assistant";
+import { assistantComponentSource, reasoningGroupSource, toolCallRowSource, toolCardSource } from "@/lib/scaffold/assistant";
 import { stepLabelSource } from "@/lib/scaffold/step-label";
 import { chatRouteSource } from "@/lib/scaffold/chat-route";
 import { configSource } from "@/lib/scaffold/config";
@@ -18,7 +18,7 @@ export async function GET(request: Request): Promise<Response> {
     design: safeParam(url, "design", DESIGNS, "swiss"),
     emoji: safeParam(url, "emoji", ["on", "off"], "off"),
     steps: safeParam(url, "steps", ["raw", "humanized"], "raw"),
-    tools: safeParam(url, "tools", ["shown", "hidden", "off"], "shown"),
+    tools: safeParam(url, "tools", ["shown", "humanized", "off"], "shown"),
     reasoning: safeParam(url, "reasoning", ["shown", "hidden", "off"], "shown"),
     open: safeParam(url, "open", ["collapsed", "expanded"], "collapsed"),
     model: url.searchParams.get("model")?.trim() || "acme-support-agent",
@@ -77,6 +77,7 @@ function generatedFiles(config: SourceConfig): SourceFile[] {
     { name: "components/assistant/ElvinAssistant.tsx", content: assistantComponentSource() },
     { name: "components/assistant/reasoning-group.tsx", content: reasoningGroupSource() },
     { name: "components/assistant/tool-card.tsx", content: toolCardSource() },
+    { name: "components/assistant/tool-call-row.tsx", content: toolCallRowSource() },
     { name: "components/assistant/step-label.ts", content: stepLabelSource() },
   ];
 }
