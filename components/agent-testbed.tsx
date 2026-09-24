@@ -238,7 +238,7 @@ const DESIGN_LABELS: Record<Design, string> = {
 const DESIGN_LANGUAGES: ReadonlyArray<{ value: Design; label: string }> = (Object.keys(DESIGN_LABELS) as Design[]).map((value) => ({ value, label: DESIGN_LABELS[value] }));
 const PART_MODE_LABELS: Record<PartMode, string> = { shown: "Shown", hidden: "Hidden", off: "Off" };
 /** Tool calls add a rendering the reasoning group has no use for. */
-const TOOLS_MODE_LABELS: Record<ToolsMode, string> = { shown: "Shown", humanized: "Humanized", off: "Off" };
+const TOOLS_MODE_LABELS: Record<ToolsMode, string> = { shown: "Explicit", humanized: "Humanized", off: "Off" };
 const STEPS_MODE_LABELS: Record<StepsMode, string> = { raw: "Raw", humanized: "Humanized" };
 const OPEN_MODE_LABELS: Record<OpenMode, string> = { collapsed: "Collapsed", expanded: "Expanded" };
 const STREAM_MODE_LABELS: Record<StreamMode, string> = { true: "True", false: "False" };
@@ -1082,7 +1082,7 @@ function getToolsModeHint(toolsMode: ToolsMode): string {
     case "humanized":
       return "Each call renders the way assistant-ui draws one: the step in plain language, its argument as a chip, and the raw request and result behind a disclosure.";
     case "shown":
-      return "Tools are sent and rendered as raw call cards.";
+      return "Tools are sent and rendered as explicit call cards.";
   }
 }
 
