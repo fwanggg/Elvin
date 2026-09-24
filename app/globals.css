@@ -976,6 +976,13 @@ h6 {
 .timeline { position: absolute; inset: 0; pointer-events: none; }
 .timeline > span { position: absolute; inset-block: 0; background: color-mix(in srgb, var(--a-fg) 7%, transparent); }
 .timeline > span.slowest { background: color-mix(in srgb, var(--color-accent) 26%, transparent); }
+/* A fill covers the row it belongs to, not the card it sits in: an opened card
+   shows the trace or a request and its result, and the clock behind the row has
+   no business running down them. A call's fill lives inside its own head; the
+   reasoning row's is pinned to the trigger's line — the card's 8px padding plus
+   the 32px that trigger takes (its `py-1.5` and `text-sm`). */
+.part-head > :not(.timeline) { position: relative; }
+.reasoning-root .timeline { top: 8px; bottom: auto; height: 32px; }
 /* The row's own reading, right-aligned: a tool row sits it beside its chevron,
    and the reasoning row hangs it in the card's corner instead, because the
    element's trigger ends at its own label. */

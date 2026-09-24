@@ -110,10 +110,13 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen }: Assist
   const turnStats = useTurnStats();
   const spans = turnStats?.spans ?? [];
   const totalMs = turnStats?.totalMs ?? 0;
-  // One long window among several is the shape of a turn that waited on
-  // something; alone, or with nothing measurable in it, marking says nothing.
-  const longestMs = spans.reduce((longest, span) => Math.max(longest, span.ms), 0);
-  const slowestMs = spans.length > 1 && isMeasurable(longestMs) ? longestMs : undefined;
+  // The accent marks a call, never a thought: a turn that spends itself thinking
+  // is the ordinary case, and reasoning reads in the same ink as the rows beside
+  // it. One long call among several is the shape of a turn that waited on
+  // something, and alone, or with nothing measurable in it, marking says nothing.
+  const callSpans = spans.filter((span) => span.kind === "tool");
+  const longestCallMs = callSpans.reduce((longest, span) => Math.max(longest, span.ms), 0);
+  const slowestMs = callSpans.length > 1 && isMeasurable(longestCallMs) ? longestCallMs : undefined;
   // Only the fallback path needs this: a provider that reports no usage leaves
   // the estimate as the only reading of how much thinking there was.
   const reasoningChars = useAuiState((state) => state.message.parts.reduce((total, part) => (part.type === "reasoning" ? total + part.text.length : total), 0));
@@ -201,7 +204,7 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen }: Assist
                 const reasoningLabelText = reasoningLabel(turnStats, reasoningChars, reasoningSpans.reduce((sum, span) => sum + span.ms, 0));
                 return (
                   <ReasoningRoot key={`${part.indices[0]}-${defaultOpen}`} className="reasoning-root" streaming={streaming} defaultOpen={defaultOpen}>
-                    <Timeline spans={reasoningSpans} totalMs={totalMs} slowestMs={slowestMs} />
+                    <Timeline spans={reasoningSpans} totalMs={totalMs} />
                     {reasoningLabelText !== undefined && <span className="row-stat">{reasoningLabelText}</span>}
                     <ReasoningTrigger className="reasoning-trigger" active={streaming} />
                     <ReasoningContent aria-busy={streaming}>
@@ -441,8 +444,11 @@ function ToolCard({ name, args, result, defaultOpen, span, totalMs, slowestMs }:
 
   return (
     <div className="part-card">
-      <Timeline spans={span ? [span] : []} totalMs={totalMs} slowestMs={slowestMs} />
       <button className="part-head" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+        {/* Inside the head, so the clock behind a call stops where its row does:
+            an opened card shows the request and the result, and the fill has no
+            business running down them. */}
+        <Timeline spans={span ? [span] : []} totalMs={totalMs} slowestMs={slowestMs} />
         <span>✓ Used tool <strong>{name}</strong></span>
         {span && isMeasurable(span.ms) && (
           <span className={span.ms === slowestMs ? "row-stat slow" : "row-stat"} title={`${formatSpan(span.ms)} of the turn's ${formatSpan(totalMs)}`}>
