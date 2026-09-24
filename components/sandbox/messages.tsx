@@ -10,7 +10,7 @@ import { ThinkingIndicator } from "@/components/assistant-ui/elements/thinking-i
 import { ToolCall } from "@/components/assistant-ui/elements/tool-call";
 import { TooltipIconButton } from "@/components/assistant-ui/elements/tooltip-icon-button";
 import { chipOf, describeResult, describeStep } from "@/lib/step-labels";
-import { formatSpan, formatTokens, isMeasurable, spansOf, turnStatsOf, type TurnStats, type TurnSpan } from "@/lib/turn-stats";
+import { formatRunIndex, formatSpan, formatTokens, isMeasurable, isStandout, spansOf, turnStatsOf, type TurnStats, type TurnSpan } from "@/lib/turn-stats";
 import { type Toggle, type ViewMode } from "@/components/sandbox/knobs";
 import {
   AuiIf,
@@ -91,14 +91,25 @@ function EmojiMark({ role }: Readonly<{ role: EmojiRole }>): ReactNode {
   );
 }
 
-export function UserRuntimeMessage({ emoji }: Readonly<{ emoji: Toggle }>): ReactNode {
+/**
+ * The turn, labelled. The runs panel lists the same count, so a row there and a
+ * label here point at each other; `data-run` is what the panel scrolls to.
+ */
+export function UserRuntimeMessage({ emoji, activeRun }: Readonly<{ emoji: Toggle; activeRun: number | null }>): ReactNode {
+  const run = useRunIndex();
+
   return (
-    <MessagePrimitive.Root className={emoji === "on" ? "user-bubble emoji" : "user-bubble"}>
-      {emoji === "on" && <EmojiMark role="user" />}
-      <MessagePrimitive.Parts>
-        {({ part }) => part.type === "text" ? part.text : null}
-      </MessagePrimitive.Parts>
-    </MessagePrimitive.Root>
+    <div className="run-turn" data-run={run}>
+      {run !== undefined && (
+        <span className={run === activeRun ? "run-label active" : "run-label"}>{`Run ${formatRunIndex(run)}`}</span>
+      )}
+      <MessagePrimitive.Root className={emoji === "on" ? "user-bubble emoji" : "user-bubble"}>
+        {emoji === "on" && <EmojiMark role="user" />}
+        <MessagePrimitive.Parts>
+          {({ part }) => part.type === "text" ? part.text : null}
+        </MessagePrimitive.Parts>
+      </MessagePrimitive.Root>
+    </div>
   );
 }
 
@@ -205,7 +216,6 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen }: Assist
                 const reasoningLabelText = reasoningLabel(turnStats, reasoningChars, reasoningSpans.reduce((sum, span) => sum + span.ms, 0));
                 return (
                   <ReasoningRoot key={`${part.indices[0]}-${defaultOpen}`} className="reasoning-root" streaming={streaming} defaultOpen={defaultOpen}>
-                    <Timeline spans={reasoningSpans} totalMs={totalMs} />
                     {reasoningLabelText !== undefined && <span className="row-stat">{reasoningLabelText}</span>}
                     <ReasoningTrigger className="reasoning-trigger" active={streaming} />
                     <ReasoningContent aria-busy={streaming}>
@@ -237,10 +247,9 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen }: Assist
             }
           }}
         </MessagePrimitive.GroupedParts>
-        {/* The turn's own ledger: how many steps it took, what it thought, and how
-            long the whole stretch ran. Dev Mode's register, so User Mode, which
-            writes the middle as prose, keeps it off. */}
-        {viewMode === "dev" && <TurnSummary stats={turnStats} />}
+        {/* Dev Mode's register, so User Mode, which writes the middle as prose,
+            keeps it off. */}
+        {viewMode === "dev" && <ResponseRow stats={turnStats} />}
         {/* The action bar unmounts itself while the message is not hovered, so
             its height is reserved here — the same reason the thinking label has
             a slot. Without it, hovering a message shifts everything below it. */}
@@ -349,6 +358,18 @@ function useTurnStats(): TurnStats | undefined {
 }
 
 /**
+ * Which turn this message opens, counted over the user messages — the same count
+ * the runs panel lists.
+ */
+function useRunIndex(): number | undefined {
+  return useAuiState((state) => {
+    const position = state.thread.messages.findIndex((message) => message.id === state.message.id);
+    if (position < 0) return undefined;
+    return state.thread.messages.slice(0, position + 1).filter((message) => message.role === "user").length;
+  });
+}
+
+/**
  * One clock per turn, not one per silence. A turn that reasons, calls a tool,
  * thinks again and then answers spends its whole time thinking, so the count
  * keeps climbing across the gaps and through the trace instead of restarting at
@@ -442,17 +463,14 @@ const ReasoningPart: ReasoningMessagePartComponent = ({ text }) => {
 
 function ToolCard({ name, args, result, defaultOpen, span, totalMs, slowestCallMs }: ToolCardProps): ReactNode {
   const [open, setOpen] = useState(defaultOpen);
+  const slow = span !== undefined && slowestCallMs !== undefined && isStandout(span.ms, slowestCallMs);
 
   return (
     <div className="part-card">
       <button className="part-head" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
-        {/* Inside the head, so the clock behind a call stops where its row does:
-            an opened card shows the request and the result, and the fill has no
-            business running down them. */}
-        <Timeline spans={span ? [span] : []} totalMs={totalMs} slowest={isSlowestCall(span, slowestCallMs)} />
         <span>✓ Used tool <strong>{name}</strong></span>
         {span && isMeasurable(span.ms) && (
-          <span className={isSlowestCall(span, slowestCallMs) ? "row-stat slow" : "row-stat"} title={`${formatSpan(span.ms)} of the ${formatSpan(totalMs)} the turn spent working`}>
+          <span className={slow ? "row-stat slow" : "row-stat"} title={`${formatSpan(span.ms)} of the ${formatSpan(totalMs)} the turn spent working`}>
             {formatSpan(span.ms)}
           </span>
         )}
@@ -481,61 +499,19 @@ function reasoningLabel(stats: TurnStats | undefined, chars: number, ms: number)
 }
 
 /**
- * Whether a call is one of the turn's slow ones. Two calls within a tenth of the
- * longest read as the same length at the resolution the rows print, so a tie is
- * drawn as a tie instead of whichever of them the clock happened to favour.
+ * The answer's own line: what the writing cost and how long it took. The answer
+ * is the turn's output rather than a step of it, so it closes the message instead
+ * of joining the rows — and it is the same figure the runs panel reports.
  */
-function isSlowestCall(span: TurnSpan | undefined, slowestCallMs: number | undefined): boolean {
-  if (!span || slowestCallMs === undefined || !isMeasurable(span.ms)) return false;
-  return span.ms >= slowestCallMs * 0.9;
-}
-
-/**
- * The turn's clock, drawn behind a row: one fill per window, placed by when it
- * started and sized by how long it ran. Only calls are ever marked slowest — a
- * turn that spends itself thinking is the ordinary case — so reasoning reads in
- * the same ink as the rows beside it.
- */
-function Timeline({ spans, totalMs, slowest }: Readonly<{ spans: readonly TurnSpan[]; totalMs: number; slowest?: boolean }>): ReactNode {
-  // A window whose ends landed in one frame has no width to draw; it stays in
-  // the data, where its tokens and its place in the order still count.
-  const drawable = spans.filter((span) => isMeasurable(span.ms));
-  if (drawable.length === 0 || totalMs <= 0) return null;
-  return (
-    <span className="timeline" aria-hidden="true">
-      {drawable.map((span, index) => (
-        <span
-          key={index}
-          className={slowest ? "slowest" : undefined}
-          style={{ left: `${(span.startMs / totalMs) * 100}%`, width: `${(span.ms / totalMs) * 100}%` }}
-        />
-      ))}
-    </span>
-  );
-}
-
-/**
- * The turn, totalled: the steps it took, what it thought, and how long the whole
- * stretch ran. The step count is what the reader is looking at — one row for
- * reasoning however many windows it resumed in, then one row per call.
- */
-function TurnSummary({ stats }: Readonly<{ stats: TurnStats | undefined }>): ReactNode {
-  const spans = stats?.spans ?? [];
-  if (spans.length === 0) return null;
-  const calls = spans.filter((span) => span.kind === "tool").length;
-  const steps = calls + (spans.some((span) => span.kind === "reasoning") ? 1 : 0);
-  const tokens = stats?.usage?.reasoningTokens;
-  // A turn whose parts all arrived in one frame has no measured length; the
-  // steps and the count still stand, and the total is simply not claimed.
-  const totalMs = stats?.totalMs ?? 0;
+function ResponseRow({ stats }: Readonly<{ stats: TurnStats | undefined }>): ReactNode {
+  const ms = stats?.answerMs;
+  const tokens = stats?.usage?.completionTokens;
+  if (tokens === undefined && !isMeasurable(ms ?? 0)) return null;
 
   return (
-    <p className="turn-summary">
-      <span>{steps} {steps === 1 ? "step" : "steps"}</span>
-      {tokens !== undefined && <span>{formatTokens(tokens)} reasoning tok</span>}
-      {/* "of work", not "total": this is the window the rows account for, and the
-          answer's generation — which the message badge measures — is outside it. */}
-      {isMeasurable(totalMs) && <span><strong>{formatSpan(totalMs)}</strong> of work</span>}
+    <p className="response-row">
+      <span>{tokens !== undefined ? `Response · ${formatTokens(tokens)} tok` : "Response"}</span>
+      {isMeasurable(ms ?? 0) && <span className="response-ms">{formatSpan(ms ?? 0)}</span>}
     </p>
   );
 }

@@ -967,34 +967,79 @@ h6 {
 .part-card { margin: 8px 0; overflow: hidden; border: var(--ds-border) solid var(--a-border); border-radius: var(--ds-radius-card); background: var(--a-bg); box-shadow: var(--ds-shadow); }
 .part-head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 12px; border: 0; background: transparent; cursor: pointer; font-size: 13px; text-align: left; }
 .part-detail { padding: 10px 12px; border-top: 1px solid var(--a-border); background: var(--a-chrome); color: var(--a-fg); font-family: var(--font-mono); font-size: 12px; line-height: 1.5; }
-/* The turn's own clock, drawn behind each row of Dev Mode's middle: one fill per
-   window, placed by when it started and sized by how long it ran, against the
-   turn's total. Reasoning draws a fill per window it resumed in, so a turn that
-   thinks, calls, thinks again and calls again shows several bars in its row. The
-   longest window of the turn takes the accent: the step that dominated the wait
-   is the one that reads red. */
-.timeline { position: absolute; inset: 0; pointer-events: none; }
-.timeline > span { position: absolute; inset-block: 0; background: color-mix(in srgb, var(--a-fg) 7%, transparent); }
-.timeline > span.slowest { background: color-mix(in srgb, var(--color-accent) 26%, transparent); }
-/* A fill covers the row it belongs to, not the card it sits in: an opened card
-   shows the trace or a request and its result, and the clock behind the row has
-   no business running down them. A call's fill lives inside its own head; the
-   reasoning row's is pinned to the trigger's line — the card's 8px padding plus
-   the 32px that trigger takes (its `py-1.5` and `text-sm`). */
-.part-head > :not(.timeline) { position: relative; }
-.reasoning-root .timeline { top: 8px; bottom: auto; height: 32px; }
+/* The turn's shape lives in the panel beside the chat, not behind the rows it
+   describes: a fill under a row competes with the words on it, and the same
+   numbers read better as one column that can be scanned. */
 /* The row's own reading, right-aligned: a tool row sits it beside its chevron,
    and the reasoning row hangs it in the card's corner instead, because the
    element's trigger ends at its own label. */
 .row-stat { color: var(--a-muted); font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .part-head .row-stat { margin-left: auto; }
-/* The step that dominated the wait reads red on both ends of it. */
+/* The step that dominated the wait reads red on both ends of it. The house accent
+   rather than the sandbox's own: this mark means "this is where the time went",
+   not "this is the brand", and in a phosphor design the sandbox accent is green. */
 .row-stat.slow { color: var(--color-accent); }
 .reasoning-root .row-stat { position: absolute; top: 8px; right: 12px; display: flex; align-items: center; height: 32px; }
 .part-chevron { flex: none; opacity: .6; }
-/* The turn, totalled, under the rows it just described. */
-.turn-summary { display: flex; justify-content: flex-end; gap: 18px; margin: 10px 0 0; color: var(--a-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
-.turn-summary strong { color: var(--a-fg); font-weight: 600; }
+/* The answer's own line, under the text it describes: what the writing cost and
+   how long it took. It closes the message rather than joining the rows, because
+   the answer is the turn's output rather than a step of it. */
+.response-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 12px 0 0; padding-top: 10px; border-top: var(--ds-border) solid var(--a-border); color: var(--a-muted); font-size: 12.5px; }
+.response-ms { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+/* The turn marker on the chat side. The runs panel lists the same count, so a
+   row there and a label here point at each other; this is what the panel scrolls
+   to when a run is picked. */
+.run-turn { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.run-label { align-self: flex-start; color: var(--a-muted); font-family: var(--font-heading); font-size: 11px; font-weight: var(--ds-label-weight); letter-spacing: var(--ds-label-tracking); text-transform: var(--ds-label-transform); }
+.run-label.active { color: var(--a-fg); }
+
+/* The telemetry plane. A second column inside the frame rather than an overlay:
+   the chat keeps its own measure and the panel takes the rest of the width, so
+   neither has to make room for the other and nothing is left over. Only the
+   thread pattern has the room — the copilot and floating shells do not. */
+.assistant-frame.thread { flex-direction: row; }
+.assistant-frame.thread .messages { min-width: 0; }
+.assistant-frame.thread .message-col { max-width: none; }
+.run-panel {
+  flex: none;
+  /* A share of the frame rather than a fixed rail: the panel and the chat are the
+     two halves of one layout, so a wider stage gives the panel more of the room
+     its bars can use. */
+  width: clamp(320px, 30%, 520px);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  padding: 20px 16px 28px;
+  border-left: var(--ds-border) solid var(--a-border);
+  background: var(--a-bg);
+  color: var(--a-fg);
+  font-size: 12.5px;
+}
+.run-panel-title { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0; color: var(--a-muted); font-family: var(--font-heading); font-size: 11px; font-weight: var(--ds-label-weight); letter-spacing: var(--ds-label-tracking); text-transform: var(--ds-label-transform); }
+.run-detail-ms { color: var(--a-fg); font-family: var(--font-mono); letter-spacing: 0; text-transform: none; }
+.run-list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 11px; }
+.run-list > li { min-width: 0; }
+.run-row { display: flex; align-items: baseline; gap: 10px; width: 100%; padding: 0; border: 0; background: transparent; color: var(--a-muted); cursor: pointer; font: inherit; text-align: left; }
+.run-row:hover, .run-row.active { color: var(--a-fg); }
+.run-index { flex: none; font-family: var(--font-mono); font-size: 11px; }
+.run-prompt { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.run-ms { flex: none; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.run-bar { display: block; height: 2px; margin-top: 6px; background: color-mix(in srgb, var(--a-fg) 8%, transparent); }
+.run-bar > span { display: block; height: 100%; background: color-mix(in srgb, var(--a-fg) 32%, transparent); }
+.run-bar > span.slow { background: var(--color-accent); }
+.run-detail { margin-top: 24px; padding-top: 18px; border-top: var(--ds-border) solid var(--a-border); }
+.run-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 14px 0 0; }
+.run-facts dt { margin: 0; color: var(--a-muted); font-size: 11px; }
+.run-facts dd { margin: 3px 0 0; font-family: var(--font-mono); font-size: 14px; font-variant-numeric: tabular-nums; }
+.run-steps { list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.run-step { display: grid; grid-template-columns: minmax(0, 1fr) 62px 46px; align-items: center; gap: 10px; color: var(--a-muted); }
+.step-name { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: var(--font-mono); font-size: 12px; }
+.step-bar { display: block; height: 9px; background: color-mix(in srgb, var(--a-fg) 6%, transparent); }
+.step-bar > span { display: block; height: 100%; background: color-mix(in srgb, var(--a-fg) 30%, transparent); }
+.step-ms { text-align: right; font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+.run-step.slow .step-name, .run-step.slow .step-ms { color: var(--color-accent); }
+.run-step.slow .step-bar > span { background: var(--color-accent); }
 /* Reasoning, drawn two ways. Dev Mode renders the element as it ships: its
    trigger is the brain and the word "Reasoning", inside the outline the element
    carries, and the sandbox palette reaches it through the data slots the way it

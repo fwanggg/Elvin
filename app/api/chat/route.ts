@@ -119,6 +119,9 @@ type DeltaState = {
   startedAt: number | null;
   /** Where the next window starts — the end of the one before it. */
   cursorAt: number | null;
+  /** The answer's own window, which is not a span: it is the turn's output. */
+  answerStartedAt: number | null;
+  answerEndedAt: number | null;
   /** The window still open, if any. */
   openSpan: OpenSpan | null;
   /** Call keys already on the timeline, so a fragment cannot file a second span. */
@@ -544,6 +547,8 @@ function eventStream(upstream: Response, sessionId: string | null, continueAfter
         spans: [],
         startedAt: null,
         cursorAt: null,
+        answerStartedAt: null,
+        answerEndedAt: null,
         openSpan: null,
         spanned: new Set(),
         usage: null,
@@ -775,9 +780,12 @@ function stamp(state: DeltaState, before: { reasoning: number; text: number; cal
   if (!grewReasoning && !grewText && !grewCalls) return;
   if (grewText) {
     // The answer is the turn's output rather than a window of work: it closes
-    // the run before it and moves the cursor past itself.
+    // the run before it, moves the cursor past itself, and is measured on its
+    // own so a surface can say how long the writing took.
     closeSpan(state, state.openSpan?.lastAt ?? now);
     state.cursorAt = now;
+    state.answerStartedAt ??= now;
+    state.answerEndedAt = now;
   }
 
   if (grewReasoning) {
@@ -836,8 +844,13 @@ function turnStats(state: DeltaState): TurnStats {
   // air at all. The stretches no row claims — a tool running, the provider
   // thinking before its next token — stay gaps inside this window, which is why
   // the bars still do not add up to it.
+  const answerMs =
+    state.answerStartedAt !== null && state.answerEndedAt !== null && state.answerEndedAt > state.answerStartedAt
+      ? state.answerEndedAt - state.answerStartedAt
+      : undefined;
   return {
     spans: state.spans,
+    ...(answerMs !== undefined ? { answerMs } : {}),
     totalMs: state.spans.reduce((end, span) => Math.max(end, span.startMs + span.ms), 0),
     usage: state.usage,
     estimated: state.usage === null,

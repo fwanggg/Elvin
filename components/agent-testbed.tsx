@@ -7,6 +7,8 @@ import { type Segment } from "@/components/assistant-ui/elements/streaming-text"
 import { type AppTheme, type Design, type OpenMode, type Pattern, type Toggle, type ViewMode, type Viewport } from "@/components/sandbox/knobs";
 import { type TurnStats, type UsageTotals } from "@/lib/turn-stats";
 import { AssistantRuntimeMessage, UserRuntimeMessage } from "@/components/sandbox/messages";
+import { RunPanel } from "@/components/sandbox/run-panel";
+import { useRuns } from "@/components/sandbox/runs";
 import {
   AssistantRuntimeProvider,
   ComposerPrimitive,
@@ -697,6 +699,17 @@ function ConnectEmptyState({ baseUrl, apiKey, connecting, error, onBaseUrlChange
 }
 
 function AssistantSandbox({ pattern, modelName, viewMode, emoji, defaultOpen, threadKey }: AssistantSandboxProps): ReactNode {
+  // The panel reads the thread itself; the sandbox only holds which turn is being
+  // looked at, and scrolls the chat to it when the panel asks for one.
+  const runs = useRuns();
+  const [chosenRun, setChosenRun] = useState<number | null>(null);
+  const activeRun = chosenRun ?? runs.at(-1)?.index ?? null;
+
+  function selectRun(index: number): void {
+    setChosenRun(index);
+    document.querySelector(`[data-run="${index}"]`)?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }
+
   return (
     <div className={`assistant-frame ${pattern}`}>
       {pattern !== "thread" && <div className="assistant-header"><span>Acme Support</span><span>×</span></div>}
@@ -712,7 +725,7 @@ function AssistantSandbox({ pattern, modelName, viewMode, emoji, defaultOpen, th
           </AuiIf>
           <ThreadPrimitive.Messages>
             {({ message }) => message.role === "user"
-              ? <UserRuntimeMessage emoji={emoji} />
+              ? <UserRuntimeMessage emoji={emoji} activeRun={activeRun} />
               : <AssistantRuntimeMessage viewMode={viewMode} emoji={emoji} defaultOpen={defaultOpen} />}
           </ThreadPrimitive.Messages>
         </ThreadPrimitive.Viewport>
@@ -734,7 +747,11 @@ function AssistantSandbox({ pattern, modelName, viewMode, emoji, defaultOpen, th
           </ComposerPrimitive.Root>
         </ThreadPrimitive.ViewportFooter>
       </ThreadPrimitive.Root>
-    </div>
+        {/* The turn's own plane, beside the chat it belongs to. The narrow shells —
+            copilot and floating — have no room for a second column, so this is a
+            thread-pattern surface. */}
+        {pattern === "thread" && <RunPanel runs={runs} active={activeRun} onSelect={selectRun} />}
+      </div>
   );
 }
 
@@ -845,7 +862,7 @@ function getStatusLabel(connection: ConnectionState, baseUrl: string, connection
  */
 function getViewModeHint(viewMode: ViewMode): string {
   return viewMode === "dev"
-    ? "Tools and reasoning read as the agent sent them: a card per call, and the trace in its group."
+    ? "Tools and reasoning read as the agent sent them — a card per call, the trace in its group, and the turn's own timings in the runs panel beside the chat."
     : "The same parts written for a person: each call reads as a step in plain language, its argument as a chip, and the raw request and result behind a disclosure.";
 }
 

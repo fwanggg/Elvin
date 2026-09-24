@@ -35,6 +35,8 @@ export type TurnSpan = {
 
 export type TurnStats = {
   spans: TurnSpan[];
+  /** The answer's own window: first token to last. Not a span — it is the output. */
+  answerMs?: number;
   /**
    * The work window the spans are laid out against: where the first window opens
    * to where the last one closes. The answer that follows is not part of it —
@@ -82,4 +84,24 @@ export function isMeasurable(ms: number): boolean {
 /** Token counts read in thousands: "1,284". */
 export function formatTokens(value: number): string {
   return value.toLocaleString("en-US");
+}
+
+/** The same count where the room is narrow: "412", "1.5k". */
+export function formatTokenCount(value: number): string {
+  return value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(value);
+}
+
+/** Run indices read the way both surfaces label them: "01", "02". */
+export function formatRunIndex(index: number): string {
+  return String(index).padStart(2, "0");
+}
+
+/**
+ * Whether a window stands out among others of its kind. Within a tenth of the
+ * longest, two windows are the same length at the resolution either surface
+ * prints, so a tie is drawn as a tie instead of whichever one the clock happened
+ * to favour.
+ */
+export function isStandout(ms: number, longestMs: number): boolean {
+  return isMeasurable(ms) && ms >= longestMs * 0.9;
 }

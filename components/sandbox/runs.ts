@@ -1,0 +1,94 @@
+"use client";
+
+import { useMemo } from "react";
+import { useAuiState } from "@assistant-ui/react";
+import { turnStatsOf, type TurnStats } from "@/lib/turn-stats";
+
+/** One step of a run, ready to draw: what it was, and its window on the clock. */
+export type RunStep = {
+  key: string;
+  /** Which of the two kinds of work it was, for the panel's own rules. */
+  role: "reasoning" | "call";
+  label: string;
+  ms: number;
+};
+
+/**
+ * One turn of the thread: what was asked, what the turn cost, and how it was
+ * spent.
+ */
+export type Run = {
+  /** 1 for the first turn. The chat's own label and the panel count the same way. */
+  index: number;
+  prompt: string;
+  /** The user message the turn starts at, for scrolling back to it. */
+  anchor: string;
+  /** The turn's wall clock, as the message's timing badge measures it. */
+  ms?: number;
+  stats?: TurnStats;
+  /** The thinking runs and the calls, in the order they happened. */
+  steps: RunStep[];
+};
+
+function promptOf(message: { readonly content: readonly { readonly type: string; readonly text?: string }[] }): string {
+  return message.content
+    .filter((part) => part.type === "text")
+    .map((part) => part.text ?? "")
+    .join(" ")
+    .trim();
+}
+
+function stepsOf(stats: TurnStats | undefined, names: Record<string, string>): RunStep[] {
+  if (!stats) return [];
+  return stats.spans.map((span, position) => ({
+    key: `${span.kind}-${span.id ?? position}`,
+    role: span.kind === "reasoning" ? "reasoning" : "call",
+    label: span.kind === "reasoning" ? "reasoning" : names[span.id ?? ""] ?? span.id ?? "call",
+    ms: span.ms,
+  }));
+}
+
+/**
+ * The thread's turns, in order: a user message and the answer that follows it,
+ * which is where that turn's stats and timing live.
+ *
+ * Read off the thread rather than carried here. Every assistant message already
+ * holds the record its own rows drew from, so this is a second reader of the same
+ * record, not a second copy of it — which is also why the panel needs no wiring
+ * of its own and picks up a turn the moment its stats land.
+ */
+export function useRuns(): Run[] {
+  const messages = useAuiState((state) => state.thread.messages);
+
+  return useMemo(() => {
+    const runs: Run[] = [];
+
+    messages.forEach((message, position) => {
+      if (message.role !== "user") return;
+      const answer = messages[position + 1];
+
+      let stats: TurnStats | undefined;
+      let ms: number | undefined;
+      const names: Record<string, string> = {};
+
+      if (answer?.role === "assistant") {
+        stats = turnStatsOf(answer.metadata?.custom);
+        ms = answer.metadata?.timing?.totalStreamTime;
+        for (const part of answer.content) {
+          if (part.type === "tool-call") names[part.toolCallId] = part.toolName;
+        }
+      }
+
+      runs.push({
+        index: runs.length + 1,
+        prompt: promptOf(message),
+        anchor: message.id,
+        ...(ms !== undefined ? { ms } : {}),
+        ...(stats ? { stats } : {}),
+        steps: stepsOf(stats, names),
+      });
+    });
+
+    return runs;
+  }, [messages]);
+}

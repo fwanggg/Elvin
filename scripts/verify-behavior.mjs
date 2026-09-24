@@ -123,6 +123,7 @@ function normalize(event) {
     has: {
       spans: Array.isArray(stats.spans) ? stats.spans.length : 0,
       totalMs: typeof stats.totalMs === "number",
+      answerMs: typeof stats.answerMs === "number",
       usage: stats.usage !== null && stats.usage !== undefined,
       estimated: stats.estimated === true,
     },
