@@ -79,6 +79,12 @@
 .app-shell {
   --color-blue-500: var(--color-accent);
   --color-blue-400: var(--color-accent);
+  /* The elements also mix their own text and surfaces against Tailwind's
+     --foreground and --background. Inside the sandbox those have to be the
+     language's ink and paper, not the house ones: a disclosure panel that reads
+     its label as dark-on-dark is the house ink showing through. */
+  --foreground: var(--a-fg);
+  --background: var(--a-bg);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -973,7 +979,10 @@ h6 {
 .user-bubble.emoji { position: relative; margin-right: 30px; }
 .user-bubble.emoji > .message-emoji { left: 100%; margin-left: 8px; }
 .assistant-text { font-size: var(--ds-body-size); line-height: 1.65; text-wrap: pretty; white-space: pre-wrap; }
-.part-card { overflow: hidden; border: var(--ds-border) solid var(--a-border); border-radius: var(--ds-radius-card); background: var(--a-bg); box-shadow: var(--ds-shadow); }
+/* A turn can call several tools in a row, and the cards then stack: each carries
+   its own gap so a stack reads as separate calls rather than one striped block.
+   The scaffold's .tool-card has always done the same. */
+.part-card { margin: 8px 0; overflow: hidden; border: var(--ds-border) solid var(--a-border); border-radius: var(--ds-radius-card); background: var(--a-bg); box-shadow: var(--ds-shadow); }
 .part-head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 12px; border: 0; background: transparent; cursor: pointer; font-size: 13px; text-align: left; }
 .part-detail { padding: 10px 12px; border-top: 1px solid var(--a-border); background: var(--a-chrome); color: var(--a-fg); font-family: var(--font-mono); font-size: 12px; line-height: 1.5; }
 /* Reasoning (assistant-ui element). Its trigger shimmers while the trace streams
@@ -993,21 +1002,6 @@ h6 {
    whole paragraphs. */
 .reasoning-word { animation: reasoning-word-in .35s cubic-bezier(.23, 1, .32, 1) both; }
 @keyframes reasoning-word-in { from { opacity: 0; } }
-/* Humanized middle steps: one quiet line that opens onto plain-language steps.
-   Takes the sandbox palette and geometry, like every other part renderer. */
-.steps { display: flex; flex-direction: column; }
-.steps-head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 0; border: 0; background: transparent; color: var(--a-muted); cursor: pointer; font-size: 13px; text-align: left; }
-.steps-summary { display: inline-block; }
-.steps-head:hover { color: var(--a-fg); }
-.steps-body { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; padding-left: 12px; border-left: 1px solid var(--a-border); }
-.steps-list { display: flex; flex-direction: column; gap: 6px; }
-.steps-reasoning { font-size: 13px; line-height: 1.5; }
-.step { display: flex; align-items: baseline; gap: 8px; margin: 0; color: var(--a-muted); font-size: 13px; line-height: 1.4; }
-.step-mark { flex: none; width: 6px; height: 6px; border-radius: var(--ds-radius); background: var(--a-border); }
-.step[data-phase="running"] { color: var(--a-fg); }
-.step[data-phase="running"] .step-mark { background: var(--a-accent); animation: send-pulse 1.1s ease-in-out infinite; }
-.step[data-phase="failed"] { color: var(--color-accent-700); }
-.step[data-phase="failed"] .step-mark { background: var(--color-accent-700); }
 /* The composer is its own row in the frame, never an overlay: the viewport above
    it is the only scroller, so thread text cannot pass behind or below it. */
 .composer-wrap { flex: none; padding: 16px 24px 24px; background: var(--a-bg); }
@@ -1040,6 +1034,12 @@ h6 {
    the fade the words arrive on are the element's own — its blue tokens are named
    in the palette above, which is what makes them follow the design language. */
 .streaming-text { max-width: none; min-height: 0; }
+/* A turn can call several tools in a row: the element's rows carry their own
+   padding, but a stack still needs the separation the raw cards get. */
+.tool-call { max-width: none; margin: 6px 0; }
+/* The chip is for a label, and the row withholds it when a call has nothing that
+   reads as one — the element renders the empty pill regardless, so it goes. */
+.tool-call .font-mono:empty { display: none; }
 /* Message actions (assistant-ui action bar + timing). On the sandbox palette,
    with the popovers in the playground's flat register. */
 /* The bar is unmounted while the message is not hovered, so the slot holds its

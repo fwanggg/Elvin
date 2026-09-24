@@ -5,7 +5,7 @@ import { Dropdown } from "@/components/dropdown";
 import { ModelPicker } from "@/components/model-picker";
 import { type Segment } from "@/components/assistant-ui/elements/streaming-text";
 import type { Design } from "@/lib/design-tokens";
-import { type AppTheme, type OpenMode, type PartMode, type Pattern, type StepsMode, type StreamMode, type Toggle, type Viewport } from "@/components/sandbox/knobs";
+import { type AppTheme, type OpenMode, type PartMode, type Pattern, type StreamMode, type Toggle, type ToolsMode, type Viewport } from "@/components/sandbox/knobs";
 import { AssistantRuntimeMessage, UserRuntimeMessage } from "@/components/sandbox/messages";
 import {
   AssistantRuntimeProvider,
@@ -101,9 +101,8 @@ type ControlSidebarProps = Readonly<{
   streamMode: StreamMode;
   viewport: Viewport;
   design: Design;
-  toolsMode: PartMode;
+  toolsMode: ToolsMode;
   reasoningMode: PartMode;
-  stepsMode: StepsMode;
   emoji: Toggle;
   openMode: OpenMode;
   softStream: Toggle;
@@ -112,9 +111,8 @@ type ControlSidebarProps = Readonly<{
   onStreamModeChange: (value: StreamMode) => void;
   onViewportChange: (value: Viewport) => void;
   onDesignChange: (value: Design) => void;
-  onToolsModeChange: (value: PartMode) => void;
+  onToolsModeChange: (value: ToolsMode) => void;
   onReasoningModeChange: (value: PartMode) => void;
-  onStepsModeChange: (value: StepsMode) => void;
   onEmojiChange: (value: Toggle) => void;
   onOpenModeChange: (value: OpenMode) => void;
   onSoftStreamChange: (value: Toggle) => void;
@@ -130,7 +128,6 @@ type PreviewStageProps = Readonly<{
   appTheme: AppTheme;
   viewport: Viewport;
   design: Design;
-  stepsMode: StepsMode;
   emoji: Toggle;
   pattern: Pattern;
   runtime: AssistantRuntime;
@@ -138,7 +135,7 @@ type PreviewStageProps = Readonly<{
   model: string;
   models: string[];
   onModelChange: (value: string) => void;
-  toolsMode: PartMode;
+  toolsMode: ToolsMode;
   reasoningMode: PartMode;
   defaultOpen: boolean;
   softStream: Toggle;
@@ -170,9 +167,8 @@ type ConnectEmptyStateProps = Readonly<{
 type AssistantSandboxProps = Readonly<{
   pattern: Pattern;
   modelName: string;
-  stepsMode: StepsMode;
   emoji: Toggle;
-  toolsMode: PartMode;
+  toolsMode: ToolsMode;
   reasoningMode: PartMode;
   defaultOpen: boolean;
   softStream: Toggle;
@@ -237,7 +233,8 @@ const DESIGN_LABELS: Record<Design, string> = {
 };
 const DESIGN_LANGUAGES: ReadonlyArray<{ value: Design; label: string }> = (Object.keys(DESIGN_LABELS) as Design[]).map((value) => ({ value, label: DESIGN_LABELS[value] }));
 const PART_MODE_LABELS: Record<PartMode, string> = { shown: "Shown", hidden: "Hidden", off: "Off" };
-const STEPS_MODE_LABELS: Record<StepsMode, string> = { raw: "Raw", humanized: "Humanized" };
+/** Tool calls add a rendering the reasoning group has no use for. */
+const TOOLS_MODE_LABELS: Record<ToolsMode, string> = { shown: "Explicit", humanized: "Humanized", off: "Off" };
 const OPEN_MODE_LABELS: Record<OpenMode, string> = { collapsed: "Collapsed", expanded: "Expanded" };
 const STREAM_MODE_LABELS: Record<StreamMode, string> = { true: "True", false: "False" };
 const TOGGLE_LABELS: Record<Toggle, string> = { on: "On", off: "Off" };
@@ -252,9 +249,8 @@ export function AgentTestbed(): ReactNode {
   const [pattern, setPattern] = useState<Pattern>("thread");
   const [appTheme, setAppTheme] = useState<AppTheme>("dark");
   const [design, setDesign] = useState<Design>("swiss");
-  const [toolsMode, setToolsMode] = useState<PartMode>("shown");
+  const [toolsMode, setToolsMode] = useState<ToolsMode>("shown");
   const [reasoningMode, setReasoningMode] = useState<PartMode>("shown");
-  const [stepsMode, setStepsMode] = useState<StepsMode>("raw");
   const [emoji, setEmoji] = useState<Toggle>("off");
   const [openMode, setOpenMode] = useState<OpenMode>("collapsed");
   const [softStream, setSoftStream] = useState<Toggle>("on");
@@ -382,8 +378,8 @@ export function AgentTestbed(): ReactNode {
   const statusColor = STATUS_COLORS[connection];
   const isConnected = connection === "live";
   const sourceParams = useMemo(() => {
-    return buildSourceParams({ pattern, appTheme, design, emoji, stepsMode, toolsMode, reasoningMode, openMode, streamMode, model, capability });
-  }, [appTheme, capability, design, emoji, model, openMode, pattern, reasoningMode, stepsMode, streamMode, toolsMode]);
+    return buildSourceParams({ pattern, appTheme, design, emoji, toolsMode, reasoningMode, openMode, streamMode, model, capability });
+  }, [appTheme, capability, design, emoji, model, openMode, pattern, reasoningMode, streamMode, toolsMode]);
   const sourceUrl = `/api/source?${sourceParams}`;
 
   // The pane reads the bytes the download carries rather than re-rendering them,
@@ -471,7 +467,6 @@ export function AgentTestbed(): ReactNode {
             design={design}
             toolsMode={toolsMode}
             reasoningMode={reasoningMode}
-            stepsMode={stepsMode}
             emoji={emoji}
             openMode={openMode}
             softStream={softStream}
@@ -482,7 +477,6 @@ export function AgentTestbed(): ReactNode {
             onDesignChange={setDesign}
             onToolsModeChange={setToolsMode}
             onReasoningModeChange={setReasoningMode}
-            onStepsModeChange={setStepsMode}
             onEmojiChange={setEmoji}
             onOpenModeChange={setOpenMode}
             onSoftStreamChange={setSoftStream}
@@ -504,7 +498,6 @@ export function AgentTestbed(): ReactNode {
             models={models}
             toolsMode={toolsMode}
             reasoningMode={reasoningMode}
-            stepsMode={stepsMode}
             emoji={emoji}
             defaultOpen={openMode === "expanded"}
             softStream={softStream}
@@ -538,7 +531,6 @@ function ControlSidebar({
   design,
   toolsMode,
   reasoningMode,
-  stepsMode,
   emoji,
   openMode,
   softStream,
@@ -549,7 +541,6 @@ function ControlSidebar({
   onDesignChange,
   onToolsModeChange,
   onReasoningModeChange,
-  onStepsModeChange,
   onEmojiChange,
   onOpenModeChange,
   onSoftStreamChange,
@@ -599,8 +590,8 @@ function ControlSidebar({
           label="Tool calls"
           name="tools"
           value={toolsMode}
-          options={["shown", "hidden", "off"]}
-          labels={PART_MODE_LABELS}
+          options={["shown", "humanized", "off"]}
+          labels={TOOLS_MODE_LABELS}
           onChange={onToolsModeChange}
           hint={getToolsModeHint(toolsMode)}
         />
@@ -612,15 +603,6 @@ function ControlSidebar({
           labels={PART_MODE_LABELS}
           onChange={onReasoningModeChange}
           hint={getReasoningModeHint(reasoningMode)}
-        />
-        <SegmentedControlBlock
-          label="Middle steps"
-          name="steps"
-          value={stepsMode}
-          options={["raw", "humanized"]}
-          labels={STEPS_MODE_LABELS}
-          onChange={onStepsModeChange}
-          hint={getStepsModeHint(stepsMode)}
         />
         <SegmentedControlBlock
           label="Default state"
@@ -676,7 +658,6 @@ function PreviewStage({
   appTheme,
   viewport,
   design,
-  stepsMode,
   emoji,
   pattern,
   runtime,
@@ -750,7 +731,7 @@ function PreviewStage({
               {pattern !== "thread" && <MockApplication />}
               {pattern === "modal" && <div className="modal-launcher">⌄</div>}
               <AssistantRuntimeProvider runtime={runtime}>
-                <AssistantSandbox pattern={pattern} modelName={modelName} toolsMode={toolsMode} reasoningMode={reasoningMode} stepsMode={stepsMode} emoji={emoji} defaultOpen={defaultOpen} softStream={softStream} responseStatus={responseStatus} />
+                <AssistantSandbox pattern={pattern} modelName={modelName} toolsMode={toolsMode} reasoningMode={reasoningMode} emoji={emoji} defaultOpen={defaultOpen} softStream={softStream} responseStatus={responseStatus} />
               </AssistantRuntimeProvider>
             </>
           ) : (
@@ -899,7 +880,7 @@ function ConnectEmptyState({ baseUrl, apiKey, connecting, error, onBaseUrlChange
   );
 }
 
-function AssistantSandbox({ pattern, modelName, toolsMode, reasoningMode, stepsMode, emoji, defaultOpen, softStream, responseStatus }: AssistantSandboxProps): ReactNode {
+function AssistantSandbox({ pattern, modelName, toolsMode, reasoningMode, emoji, defaultOpen, softStream, responseStatus }: AssistantSandboxProps): ReactNode {
   const aui = useAui();
   const config = AuiConfig({
     suggestions: Suggestions([
@@ -941,7 +922,7 @@ function AssistantSandbox({ pattern, modelName, toolsMode, reasoningMode, stepsM
             <ThreadPrimitive.Messages>
               {({ message }) => message.role === "user"
                 ? <UserRuntimeMessage emoji={emoji} />
-                : <AssistantRuntimeMessage toolsMode={toolsMode} reasoningMode={reasoningMode} stepsMode={stepsMode} emoji={emoji} defaultOpen={defaultOpen} softStream={softStream} responseStatus={responseStatus} />}
+                : <AssistantRuntimeMessage toolsMode={toolsMode} reasoningMode={reasoningMode} emoji={emoji} defaultOpen={defaultOpen} softStream={softStream} responseStatus={responseStatus} />}
             </ThreadPrimitive.Messages>
           </ThreadPrimitive.Viewport>
           {/* Its own row, outside the scroller: the thread scrolls above the
@@ -1073,14 +1054,14 @@ function getStatusLabel(connection: ConnectionState, baseUrl: string, connection
   }
 }
 
-function getToolsModeHint(toolsMode: PartMode): string {
+function getToolsModeHint(toolsMode: ToolsMode): string {
   switch (toolsMode) {
     case "off":
       return "No tools are sent to the model.";
-    case "hidden":
-      return "Tools are sent; call cards are hidden.";
+    case "humanized":
+      return "Each call renders the way assistant-ui draws one: the step in plain language, its argument as a chip, and the raw request and result behind a disclosure.";
     case "shown":
-      return "Tools are sent and rendered as cards.";
+      return "Tools are sent and rendered as explicit call cards.";
   }
 }
 
@@ -1101,15 +1082,6 @@ function getEmojiHint(emoji: Toggle): string {
       return "Each turn carries a role emoji beside the message.";
     case "off":
       return "Messages render without an emoji marker.";
-  }
-}
-
-function getStepsModeHint(stepsMode: StepsMode): string {
-  switch (stepsMode) {
-    case "raw":
-      return "Tool calls and reasoning arrive as they are, arguments included.";
-    case "humanized":
-      return "Tool calls become plain language: “Searching the web for …”.";
   }
 }
 
@@ -1134,8 +1106,8 @@ function getResponseStatusHint(responseStatus: Toggle): string {
     : "No actions or timing are rendered.";
 }
 
-function buildSourceParams({ pattern, appTheme, design, emoji, stepsMode, toolsMode, reasoningMode, openMode, streamMode, model, capability }: Readonly<{ pattern: Pattern; appTheme: AppTheme; design: Design; emoji: Toggle; stepsMode: StepsMode; toolsMode: PartMode; reasoningMode: PartMode; openMode: OpenMode; streamMode: StreamMode; model: string; capability: string }>): string {
-  const params = new URLSearchParams({ pattern, theme: appTheme, design, emoji, steps: stepsMode, tools: toolsMode, reasoning: reasoningMode, open: openMode, stream: streamMode });
+function buildSourceParams({ pattern, appTheme, design, emoji, toolsMode, reasoningMode, openMode, streamMode, model, capability }: Readonly<{ pattern: Pattern; appTheme: AppTheme; design: Design; emoji: Toggle; toolsMode: ToolsMode; reasoningMode: PartMode; openMode: OpenMode; streamMode: StreamMode; model: string; capability: string }>): string {
+  const params = new URLSearchParams({ pattern, theme: appTheme, design, emoji, tools: toolsMode, reasoning: reasoningMode, open: openMode, stream: streamMode });
   if (model.trim()) params.set("model", model.trim());
   if (capability) params.set("capability", capability);
   return params.toString();
@@ -1195,7 +1167,7 @@ function fromResponse(toolCalls: ToolCall[] | undefined): Map<string, ToolCallPa
   return map;
 }
 
-function assembleContent({ toolsMode, reasoningMode, text, reasoning, toolCalls }: Readonly<{ toolsMode: PartMode; reasoningMode: PartMode; text: string; reasoning: string; toolCalls: Map<string, ToolCallPart> }>): RenderedPart[] {
+function assembleContent({ toolsMode, reasoningMode, text, reasoning, toolCalls }: Readonly<{ toolsMode: ToolsMode; reasoningMode: PartMode; text: string; reasoning: string; toolCalls: Map<string, ToolCallPart> }>): RenderedPart[] {
   return [
     ...(reasoningMode !== "off" && reasoning.length > 0 ? [{ type: "reasoning" as const, text: reasoning }] : []),
     ...(toolsMode !== "off" ? [...toolCalls.values()] : []),

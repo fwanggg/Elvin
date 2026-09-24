@@ -5,7 +5,8 @@
 export type Pattern = "thread" | "sidebar" | "modal";
 export type AppTheme = "dark" | "light";
 export type PartMode = "shown" | "hidden" | "off";
-export type StepsMode = "raw" | "humanized";
+/** Tool calls keep a third rendering: the assistant-ui tool-call element. */
+export type ToolsMode = "shown" | "humanized" | "off";
 export type OpenMode = "collapsed" | "expanded";
 export type StreamMode = "true" | "false";
 /** How the sandbox is framed on the canvas, not something the app itself changes. */

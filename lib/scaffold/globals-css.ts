@@ -40,25 +40,6 @@ const REASONING_RULES = [
   "",
 ].join("\n");
 
-/** Humanized middle steps: one quiet line opening onto plain-language steps. */
-const STEPS_RULES = [
-  ".steps{display:flex;flex-direction:column;margin:8px 0}",
-  ".steps-head{display:flex;align-items:center;gap:8px;width:100%;padding:0;border:0;background:transparent;color:var(--a-muted);cursor:pointer;font-size:13px;text-align:left}",
-  ".steps-head:hover{color:var(--a-fg)}",
-  ".steps-body{display:flex;flex-direction:column;gap:8px;margin-top:10px;padding-left:12px;border-left:var(--border-width) solid var(--a-border)}",
-  ".steps-list{display:flex;flex-direction:column;gap:6px}",
-  ".steps-reasoning{font-size:13px;line-height:1.5;opacity:.75}",
-  ".step{display:flex;align-items:baseline;gap:8px;margin:0;color:var(--a-muted);font-size:13px;line-height:1.4}",
-  ".step-mark{flex:none;width:6px;height:6px;border-radius:var(--radius);background:var(--a-border)}",
-  ".step[data-phase=running]{color:var(--a-fg)}",
-  ".step[data-phase=running] .step-mark{background:var(--a-accent);animation:step-pulse 1.1s ease-in-out infinite}",
-  "@keyframes step-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.35)}}",
-  ".step[data-phase=failed]{color:var(--danger)}",
-  ".step[data-phase=failed] .step-mark{background:var(--danger)}",
-  "@media (prefers-reduced-motion:reduce){.step[data-phase=running] .step-mark{animation:none}}",
-  "",
-].join("\n");
-
 /** Turn markers: a small animated emoji in a gutter beside the message. */
 const EMOJI_RULES = [
   ".message-emoji{position:absolute;top:1px;width:22px;height:22px;font-size:18px;line-height:22px;object-fit:contain;user-select:none}",
@@ -75,6 +56,19 @@ const TOOL_RULES = [
   ".tool-card-name{font-size:13px;font-weight:var(--label-weight)}",
   ".tool-card-content{padding:0 12px 12px}",
   ".tool-card-content pre{margin:0;font-family:var(--font-mono);font-size:12px;overflow:auto}",
+  ".tool-call{margin:6px 0}",
+  ".tool-call .font-mono:empty{display:none}",
+  ".tool-call-trigger{display:flex;width:100%;gap:8px;align-items:center;padding:4px 0;border:0;background:transparent;color:var(--a-muted);cursor:pointer;font:inherit;font-size:13.5px;text-align:left}",
+  ".tool-call-trigger:hover{color:var(--a-fg)}",
+  ".tool-call-chevron{opacity:.6}",
+  ".tool-call-label[data-active]{background-image:linear-gradient(90deg,color-mix(in oklab,currentColor 35%,transparent) 40%,currentColor 50%,color-mix(in oklab,currentColor 35%,transparent) 60%);background-size:250% 100%;background-repeat:no-repeat;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:reasoning-shimmer 1.8s linear infinite}",
+  ".tool-call-chip{background:color-mix(in srgb,currentColor 8%,transparent);border-radius:6px;font-family:var(--font-mono);font-size:11px;padding:2px 6px}",
+  ".tool-call-check{color:var(--color-ok,#1c6b3f);margin-left:auto}",
+  ".tool-call-panel{background:color-mix(in srgb,currentColor 5%,transparent);border-radius:14px;margin-top:8px;padding:10px 14px}",
+  ".tool-call-field{margin:0 0 4px;color:var(--a-muted);font-family:var(--font-mono);font-size:11px}",
+  ".tool-call-request{margin:0;font-family:var(--font-mono);font-size:12px;white-space:pre-wrap}",
+  ".tool-call-result{margin:0;font-size:13px;white-space:pre-wrap}",
+  ".tool-call-divider{height:1px;margin:8px -14px;background:color-mix(in srgb,currentColor 8%,transparent)}",
   "",
 ].join("\n");
 
@@ -93,8 +87,7 @@ export function globalsSource(config: SourceConfig): string {
     `:root{${root}}\n`,
     SCAFFOLD_RULES,
     config.reasoning === "shown" && REASONING_RULES,
-    config.tools === "shown" && TOOL_RULES,
-    config.steps === "humanized" && STEPS_RULES,
+    config.tools !== "off" && TOOL_RULES,
     config.emoji === "on" && EMOJI_RULES,
   ], "");
 }

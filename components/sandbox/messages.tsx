@@ -6,10 +6,10 @@ import { MessageTiming } from "@/components/assistant-ui/elements/message-timing
 import { ReasoningContent, ReasoningRoot, ReasoningText, ReasoningTrigger } from "@/components/assistant-ui/elements/reasoning";
 import { StreamingText, type Segment } from "@/components/assistant-ui/elements/streaming-text";
 import { ThinkingIndicator } from "@/components/assistant-ui/elements/thinking-indicator";
+import { ToolCall } from "@/components/assistant-ui/elements/tool-call";
 import { TooltipIconButton } from "@/components/assistant-ui/elements/tooltip-icon-button";
-import { ShimmerLabel } from "@/components/assistant-ui/elements/surfaces";
-import { describeStep, type StepPhase } from "@/lib/step-labels";
-import { type PartMode, type StepsMode, type Toggle } from "@/components/sandbox/knobs";
+import { chipOf, describeResult, describeStep } from "@/lib/step-labels";
+import { type PartMode, type Toggle, type ToolsMode } from "@/components/sandbox/knobs";
 import {
   AuiIf,
   ActionBarMorePrimitive,
@@ -25,18 +25,12 @@ import {
 /** The sandbox's part renderers: what a turn looks like as it streams. */
 
 type AssistantRuntimeMessageProps = Readonly<{
-  toolsMode: PartMode;
+  toolsMode: ToolsMode;
   reasoningMode: PartMode;
-  stepsMode: StepsMode;
   emoji: Toggle;
   defaultOpen: boolean;
   softStream: Toggle;
   responseStatus: Toggle;
-}>;
-
-type DisclosureProps = Readonly<{
-  defaultOpen: boolean;
-  children: ReactNode;
 }>;
 
 type ToolCardProps = Readonly<{
@@ -45,12 +39,13 @@ type ToolCardProps = Readonly<{
   result: unknown;
   defaultOpen: boolean;
 }>;
-
-type StepLineProps = Readonly<{
+type ToolCallRowProps = Readonly<{
   name: string;
   args: unknown;
+  argsText: string | undefined;
   result: unknown;
   isError?: boolean;
+  defaultOpen: boolean;
 }>;
 
 /**
@@ -101,9 +96,12 @@ export function UserRuntimeMessage({ emoji }: Readonly<{ emoji: Toggle }>): Reac
   );
 }
 
-export function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, emoji, defaultOpen, softStream, responseStatus }: AssistantRuntimeMessageProps): ReactNode {
-  const humanized = stepsMode === "humanized";
-  const stepsShown = humanized && toolsMode === "shown";
+export function AssistantRuntimeMessage({ toolsMode, reasoningMode, emoji, defaultOpen, softStream, responseStatus }: AssistantRuntimeMessageProps): ReactNode {
+  const reasoningShown = reasoningMode === "shown";
+  // Most agents run tools and answer without ever streaming their thinking, so
+  // the line may only claim the work: "Thought for 40s" would be a claim about
+  // a trace that never arrived.
+  const reasoningArrived = useAuiState((state) => state.message.parts.some((part) => part.type === "reasoning" && part.text.trim().length > 0));
   const running = useAuiState((state) => state.message.status?.type === "running");
   // The turn is answering while the newest part is text. A tool call that lands
   // after some text ends that, so the clock starts again rather than falling
@@ -113,24 +111,23 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, e
     return last?.type === "text" && last.text.trim().length > 0;
   });
   const clockRunning = running && !answering;
-  const thinkingSeconds = useThinkingSeconds(clockRunning);
-  const thinkingLabel = useThinkingLabel(stepsShown);
+  const thinkingSeconds = useThinkingSeconds(clockRunning && reasoningShown);
+  const thinkingLabel = useThinkingLabel(reasoningShown);
   const elapsed = clockRunning && thinkingSeconds !== undefined && thinkingSeconds >= 1 ? `${thinkingSeconds}s` : undefined;
   // The reading the clock took, put in the place the live line took: once the
   // clock stops, the two swap in place rather than one leaving and the other
-  // arriving somewhere else. Humanized mode shows its own step summary instead.
-  const reading = !humanized && !clockRunning && thinkingSeconds !== undefined && thinkingSeconds >= 1;
+  // arriving somewhere else. It only claims a trace when one actually arrived.
+  const reading = reasoningShown && !clockRunning && thinkingSeconds !== undefined && thinkingSeconds >= 1;
   const thinking = reading
-    ? <p className="thinking-settled">Thought for {thinkingSeconds}s</p>
+    ? <p className="thinking-settled">{reasoningArrived ? `Thought for ${thinkingSeconds}s` : `Worked for ${thinkingSeconds}s`}</p>
     : clockRunning && thinkingLabel !== undefined
       ? <ThinkingIndicator className="thinking-indicator" label={thinkingLabel} elapsed={elapsed} />
       : null;
-  // Humanized mode puts reasoning and tool calls in one group, so the middle of
-  // the turn collapses into a single block of plain-language steps.
-  const groupBy = useMemo(() => groupPartByType({
-    ...(reasoningMode === "shown" ? { reasoning: humanized ? ["group-steps", "group-reasoning"] : ["group-reasoning"] } : {}),
-    ...(stepsShown ? { "tool-call": ["group-steps", "group-tool"] } : {}),
-  }), [humanized, reasoningMode, stepsShown]);
+  // The trace is one group however it runs, so a turn that reasons either side of
+  // a tool call still reads as a single disclosure.
+  const groupBy = useMemo(() => groupPartByType(
+    reasoningMode === "shown" ? { reasoning: ["group-reasoning"] } : {},
+  ), [reasoningMode]);
 
   return (
     <MessagePrimitive.Root asChild>
@@ -145,14 +142,11 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, e
             it settles into takes the place the live line took. The slot holds its
             height for as long as the turn runs, so the label changing state in it
             cannot move the conversation either. */}
-        {(thinking !== null || (running && !humanized)) && <div className="thinking-slot">{thinking}</div>}
+        {(thinking !== null || (running && reasoningShown)) && <div className="thinking-slot">{thinking}</div>}
         <MessagePrimitive.GroupedParts groupBy={groupBy}>
           {({ part, children }) => {
             switch (part.type) {
-              case "group-steps":
-                return <StepList key={`steps-${part.indices[0]}-${defaultOpen}`} defaultOpen={defaultOpen}>{children}</StepList>;
               case "group-reasoning": {
-                if (humanized) return <div className="steps-reasoning" key={`reasoning-${part.indices[0]}`}>{children}</div>;
                 // The element holds itself open as a live, bottom-pinned preview
                 // while the trace streams — its trigger shimmers for exactly that
                 // window — then settles to the state the sidebar asks for.
@@ -166,15 +160,12 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, e
                   </ReasoningRoot>
                 );
               }
-              case "group-tool":
-                return <div className="steps-list" key={`tools-${part.indices[0]}`}>{children}</div>;
               case "reasoning":
                 return reasoningMode === "shown" ? <ReasoningPart {...part} /> : <></>;
               case "tool-call":
-                if (toolsMode !== "shown") return <></>;
-                return humanized
-                  ? <StepLine key={part.toolCallId} name={part.toolName} args={part.args} result={part.result} isError={part.isError} />
-                  : <ToolCard key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} result={part.result} defaultOpen={defaultOpen} />;
+                if (toolsMode === "off") return <></>;
+                if (toolsMode === "humanized") return <ToolCallRow key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} argsText={part.argsText} result={part.result} isError={part.isError} defaultOpen={defaultOpen} />;
+                return <ToolCard key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} result={part.result} defaultOpen={defaultOpen} />;
               case "text":
                 return softStream === "on"
                   ? <StreamingTextPart type="text" text={part.text} status={part.status} />
@@ -193,69 +184,22 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, e
   );
 }
 
-/**
- * The disciplined middle of a turn: one quiet line naming the work in flight,
- * opening onto the steps themselves when asked for.
- */
-function StepList({ defaultOpen, children }: DisclosureProps): ReactNode {
-  const [open, setOpen] = useState(defaultOpen);
-  const summary = useStepsSummary();
-  const running = useAuiState((state) => state.message.status?.type === "running");
-
-  return (
-    <div className="steps">
-      <button className="steps-head" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
-        {/* Keyed on the text, so every change replays the shimmer the way
-            the element's own trigger does rather than hard-swapping. */}
-        <ShimmerLabel key={summary} active={running} className="steps-summary">{summary}</ShimmerLabel>
-        <span aria-hidden="true" style={{ marginLeft: "auto" }}>{open ? "⌄" : "›"}</span>
-      </button>
-      {open && <div className="steps-body">{children}</div>}
-    </div>
-  );
-}
-
 /** Our adapter does not set `isError`, so an error-shaped result counts too. */
+
 function resultFailed(result: unknown): boolean {
   return result !== null && typeof result === "object" && "error" in (result as Record<string, unknown>);
-}
-
-/** One tool call in plain language: no arguments, no payload. */
-function StepLine({ name, args, result, isError }: StepLineProps): ReactNode {
-  const running = useAuiState((state) => state.message.status?.type === "running");
-  const failed = isError === true || resultFailed(result);
-  const phase: StepPhase = failed ? "failed" : running && result === undefined ? "running" : "complete";
-
-  return (
-    <p className="step" data-phase={phase}>
-      <span className="step-mark" aria-hidden="true" />
-      <span>{describeStep(name, args, phase)}</span>
-    </p>
-  );
-}
-
-/** The work in flight, or a count of it once the turn settles. */
-function useStepsSummary(): string {
-  return useAuiState((state) => {
-    const calls = state.message.parts.filter((part) => part.type === "tool-call");
-
-    if (state.message.status?.type === "running") {
-      const pending = calls.find((part) => part.result === undefined);
-      return pending?.type === "tool-call" ? describeStep(pending.toolName, pending.args, "running") : "Thinking";
-    }
-    if (calls.length === 0) return "Thought";
-    return calls.length === 1 ? "1 step" : `${calls.length} steps`;
-  });
 }
 
 /**
  * Names what the turn is doing from the moment it starts, and keeps naming it:
  * the line is not a gap filler, so a running trace does not silence it and the
- * callers decide when it hands over to the reading it leaves behind.
+ * callers decide when it hands over to the reading it leaves behind. It belongs
+ * to the reasoning group's knob, though: the trace hidden, the line that stands
+ * for it goes with it, and so does the slot that was holding its place.
  */
-function useThinkingLabel(stepListShows: boolean): string | undefined {
+function useThinkingLabel(reasoningShown: boolean): string | undefined {
   return useAuiState((state) => {
-    if (stepListShows) return undefined;
+    if (!reasoningShown) return undefined;
     if (state.message.status?.type !== "running") return undefined;
     const parts = state.message.parts;
     const pending = parts.find((part) => part.type === "tool-call" && part.result === undefined);
@@ -364,5 +308,30 @@ function ToolCard({ name, args, result, defaultOpen }: ToolCardProps): ReactNode
       <button className="part-head" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}><span>✓ Used tool <strong>{name}</strong></span><span style={{ marginLeft: "auto" }}>{open ? "⌄" : "›"}</span></button>
       {open && <div className="part-detail">{`Arguments\n${JSON.stringify(args ?? {}, null, 2)}\n\nResult\n${JSON.stringify(result ?? {}, null, 2)}`}</div>}
     </div>
+  );
+}
+
+/**
+ * The same call, handed to assistant-ui's tool-call element: a chevron, the step
+ * in plain language, its primary argument as a chip, a checkmark once it settles,
+ * and the raw request and result behind the disclosure. The labels come from the
+ * vocabulary the humanized steps use, so the two readings agree.
+ */
+function ToolCallRow({ name, args, argsText, result, isError, defaultOpen }: ToolCallRowProps): ReactNode {
+  const [open, setOpen] = useState(defaultOpen);
+  const failed = isError === true || resultFailed(result);
+
+  return (
+    <ToolCall
+      className="tool-call"
+      label={describeStep(name, args, failed ? "failed" : "complete")}
+      activeLabel={describeStep(name, args, "running")}
+      query={chipOf(args)}
+      request={argsText !== undefined && argsText.length > 0 ? argsText : JSON.stringify(args ?? {}, null, 2)}
+      result={describeResult(result)}
+      running={result === undefined}
+      open={open}
+      onOpenChange={setOpen}
+    />
   );
 }
