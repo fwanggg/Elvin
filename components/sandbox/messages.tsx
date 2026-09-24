@@ -114,6 +114,10 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, e
   const humanized = stepsMode === "humanized";
   const stepsShown = humanized && toolsMode === "shown";
   const reasoningShown = reasoningMode === "shown";
+  // Most agents run tools and answer without ever streaming their thinking, so
+  // the line may only claim the work: "Thought for 40s" would be a claim about
+  // a trace that never arrived.
+  const reasoningArrived = useAuiState((state) => state.message.parts.some((part) => part.type === "reasoning" && part.text.trim().length > 0));
   const running = useAuiState((state) => state.message.status?.type === "running");
   // The turn is answering while the newest part is text. A tool call that lands
   // after some text ends that, so the clock starts again rather than falling
@@ -131,7 +135,7 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, e
   // arriving somewhere else. Humanized mode shows its own step summary instead.
   const reading = reasoningShown && !humanized && !clockRunning && thinkingSeconds !== undefined && thinkingSeconds >= 1;
   const thinking = reading
-    ? <p className="thinking-settled">Thought for {thinkingSeconds}s</p>
+    ? <p className="thinking-settled">{reasoningArrived ? `Thought for ${thinkingSeconds}s` : `Worked for ${thinkingSeconds}s`}</p>
     : clockRunning && thinkingLabel !== undefined
       ? <ThinkingIndicator className="thinking-indicator" label={thinkingLabel} elapsed={elapsed} />
       : null;
