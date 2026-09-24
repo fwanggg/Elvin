@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { unreachableProviderError } from "@/lib/provider-errors";
+import type { SpanKind, TurnSpan, TurnStats, UsageTotals } from "@/lib/turn-stats";
 
 type IncomingMessage = {
   role: "user" | "assistant" | "system";
@@ -103,38 +104,7 @@ type ToolState = {
   status: string;
 };
 
-type UsageTotals = {
-  promptTokens: number;
-  completionTokens: number;
-  totalTokens: number;
-  /** Present only where the provider splits thinking out of the completion count. */
-  reasoningTokens?: number;
-};
-
-type ToolTiming = {
-  /** From the round's start to the moment the model named the call. */
-  modelMs: number;
-  /** From the call to the first delta of the round that followed it. */
-  roundTripMs?: number;
-};
-
-/**
- * When each part of a turn was in flight, measured here rather than in the
- * browser: the proxy sees the provider's own chunks, so a window is the time the
- * wire spent on that part rather than the time the renderer spent drawing it.
- * Tokens come from the provider's `usage`, which only exists where it reports
- * one — hence the flag rather than a silent zero.
- */
-type TurnStats = {
-  reasoningMs?: number;
-  answerMs?: number;
-  tools: Record<string, ToolTiming>;
-  usage: UsageTotals | null;
-  /** True while no usage has arrived: any token figure is an estimate. */
-  estimated: boolean;
-};
-
-type ToolClock = { calledAt: number; modelMs: number; settledAt?: number; answeredAt?: number };
+type OpenSpan = { kind: SpanKind; id?: string; startedAt: number; lastAt: number };
 
 type DeltaState = {
   text: string;
@@ -142,14 +112,19 @@ type DeltaState = {
   /** Which channel supplied the reasoning, so a mirrored copy is not appended twice. */
   reasoningSource: "details" | "field" | null;
   toolCalls: Map<string, ToolState>;
-  /** Clocks, in epoch ms. */
+  /** The timeline, in epoch ms. */
   roundStartedAt: number;
-  roundWithDelta: number | null;
-  reasoningStartedAt: number | null;
-  reasoningEndedAt: number | null;
-  answerStartedAt: number | null;
-  answerEndedAt: number | null;
-  toolTimes: Map<string, ToolClock>;
+  spans: TurnSpan[];
+  /** Epoch of the turn's first activity: the timeline's zero. */
+  startedAt: number | null;
+  /** Epoch of its last activity, whatever kind it was: the timeline's end. */
+  lastAt: number | null;
+  /** Where the next window starts — the end of the one before it. */
+  cursorAt: number | null;
+  /** The window still open, if any. */
+  openSpan: OpenSpan | null;
+  /** Call keys already on the timeline, so a fragment cannot file a second span. */
+  spanned: Set<string>;
   usage: UsageTotals | null;
 };
 
@@ -545,10 +520,10 @@ async function consumeStream(upstream: Response, round: number, state: DeltaStat
   for (const [key, call] of state.toolCalls) {
     if (key.startsWith(`round-${round}-`)) state.toolCalls.set(key, { ...call, status: "completed" });
   }
-  const settledAt = Date.now();
-  for (const clock of state.toolTimes.values()) {
-    if (clock.settledAt === undefined) clock.settledAt = settledAt;
-  }
+  // This round's stream is over, so a run it left open ended with its own last
+  // delta. The next round opens a new one, which is what gives the reasoning row
+  // more than one bar.
+  closeSpan(state, state.openSpan?.lastAt ?? Date.now());
   emit();
   return roundToolCalls(state, round);
 }
@@ -568,12 +543,12 @@ function eventStream(upstream: Response, sessionId: string | null, continueAfter
         reasoningSource: null,
         toolCalls: new Map(),
         roundStartedAt: Date.now(),
-        roundWithDelta: null,
-        reasoningStartedAt: null,
-        reasoningEndedAt: null,
-        answerStartedAt: null,
-        answerEndedAt: null,
-        toolTimes: new Map(),
+        spans: [],
+        startedAt: null,
+        lastAt: null,
+        cursorAt: null,
+        openSpan: null,
+        spanned: new Set(),
         usage: null,
       };
       const emit = () => {
@@ -786,63 +761,87 @@ function snapshotOf(state: DeltaState) {
 }
 
 /**
- * Stamps what the wire just touched. Comparing sizes instead of reading every
- * provider shape keeps this in one place: the OpenAI delta path, the named-event
- * path and the one-shot response all end up here.
+ * Files what the wire just did onto the turn's timeline. Comparing sizes instead
+ * of reading every provider shape keeps this in one place: the OpenAI delta path,
+ * the named-event path and the one-shot response all end up here.
+ *
+ * Windows tile the work instead of overlapping it — a reasoning run ends where
+ * its own last delta landed, and the call that follows is measured from there —
+ * so a turn that thinks, calls, thinks again and calls again files four windows
+ * in order. That is what lets the reasoning row draw more than one bar.
  */
 function stamp(state: DeltaState, before: { reasoning: number; text: number; calls: number }, round: number) {
-  const changed = state.reasoning.length > before.reasoning || state.text.length > before.text || state.toolCalls.size > before.calls;
-  if (!changed) return;
   const now = Date.now();
+  const grewReasoning = state.reasoning.length > before.reasoning;
+  const grewText = state.text.length > before.text;
+  const grewCalls = state.toolCalls.size > before.calls;
+  if (!grewReasoning && !grewText && !grewCalls) return;
+  state.lastAt = now;
 
-  // The first delta of a later round is what a settled call was waiting for.
-  if (state.roundWithDelta !== round) {
-    for (const clock of state.toolTimes.values()) {
-      if (clock.settledAt !== undefined && clock.answeredAt === undefined) clock.answeredAt = now;
-    }
-    state.roundWithDelta = round;
+  if (grewText) {
+    // The answer is the turn's output rather than a window of work: it closes
+    // the run before it and moves the cursor past itself.
+    closeSpan(state, state.openSpan?.lastAt ?? now);
+    state.cursorAt = now;
   }
 
-  if (state.reasoning.length > before.reasoning) {
-    state.reasoningStartedAt ??= now;
-    state.reasoningEndedAt = now;
-  }
-  if (state.text.length > before.text) {
-    state.answerStartedAt ??= now;
-    state.answerEndedAt = now;
-  }
-  if (state.toolCalls.size > before.calls) {
-    for (const [key] of state.toolCalls) {
-      if (state.toolTimes.has(key)) continue;
-      state.toolTimes.set(key, { calledAt: now, modelMs: Math.max(0, now - state.roundStartedAt) });
+  if (grewReasoning) {
+    if (state.openSpan?.kind !== "reasoning") {
+      closeSpan(state, now);
+      state.openSpan = { kind: "reasoning", startedAt: now, lastAt: now };
+    } else {
+      state.openSpan.lastAt = now;
     }
+  }
+
+  if (!grewCalls) return;
+  for (const [key, call] of state.toolCalls) {
+    if (state.spanned.has(key)) continue;
+    state.spanned.add(key);
+    // Whatever ran before the call ended where it last spoke; the call owns the
+    // stretch from there to the moment it was named.
+    closeSpan(state, state.openSpan?.lastAt ?? now);
+    pushSpan(state, { kind: "tool", id: call.id, startedAt: state.cursorAt ?? state.roundStartedAt, endedAt: now });
+    state.cursorAt = now;
   }
 }
 
-/** A part's window, or nothing when the one frame that carried it was all of it. */
-function windowMs(startedAt: number | null, endedAt: number | null): number | undefined {
-  if (startedAt === null || endedAt === null || endedAt <= startedAt) return undefined;
-  return endedAt - startedAt;
+/** Files the open window, ending it at `at`, and moves the cursor there. */
+function closeSpan(state: DeltaState, at: number) {
+  const open = state.openSpan;
+  if (!open) return;
+  pushSpan(state, {
+    kind: open.kind,
+    ...(open.id !== undefined ? { id: open.id } : {}),
+    startedAt: open.startedAt,
+    endedAt: at,
+  });
+  state.cursorAt = at;
+  state.openSpan = null;
 }
+
+function pushSpan(state: DeltaState, span: { kind: SpanKind; id?: string; startedAt: number; endedAt: number }) {
+  if (state.startedAt === null) state.startedAt = span.startedAt;
+  // Every window is filed, including one whose two ends landed in the same
+  // millisecond: dropping those here would make the count depend on the clock,
+  // and a row that cannot claim a length simply draws no bar. See `Timeline`.
+  state.spans.push({
+    kind: span.kind,
+    ...(span.id !== undefined ? { id: span.id } : {}),
+    startMs: Math.max(0, span.startedAt - state.startedAt),
+    ms: Math.max(0, span.endedAt - span.startedAt),
+  });
+}
+
 function turnStats(state: DeltaState): TurnStats {
-  const tools: Record<string, ToolTiming> = {};
-  for (const [key, clock] of state.toolTimes) {
-    const call = state.toolCalls.get(key);
-    if (!call) continue;
-    tools[call.id] = {
-      modelMs: clock.modelMs,
-      ...(clock.answeredAt !== undefined ? { roundTripMs: Math.max(0, clock.answeredAt - clock.calledAt) } : {}),
-    };
-  }
-  // A window needs two ends: a response that arrived whole, in one frame, has
-  // no window to report, and a zero would read as an instant rather than as
-  // "this provider does not stream".
-  const reasoningMs = windowMs(state.reasoningStartedAt, state.reasoningEndedAt);
-  const answerMs = windowMs(state.answerStartedAt, state.answerEndedAt);
+  // The window the rows are laid out against is the turn's own: first activity to
+  // last, including the stretches no row claims — a tool running, the provider
+  // thinking before its first token. That is why the bars do not add up to it.
+  const endOfSpans = state.spans.reduce((end, span) => Math.max(end, span.startMs + span.ms), 0);
+  const whole = state.startedAt !== null && state.lastAt !== null ? state.lastAt - state.startedAt : 0;
   return {
-    ...(reasoningMs !== undefined ? { reasoningMs } : {}),
-    ...(answerMs !== undefined ? { answerMs } : {}),
-    tools,
+    spans: state.spans,
+    totalMs: Math.max(whole, endOfSpans),
     usage: state.usage,
     estimated: state.usage === null,
   };

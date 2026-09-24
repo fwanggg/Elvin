@@ -259,13 +259,13 @@ export function AgentTestbed(): ReactNode {
         const data = (await response.json()) as ChatResponse;
         const text = data.error ?? data.content;
         const usage = data.usage ?? null;
-        // One shot, so there is no window to measure: the turn's own latency is
-        // the only clock the shape offers.
+        // One shot: a response that arrived whole has no windows to place on a
+        // timeline, so the rows carry no fills and the badge carries the turn.
         const stats: TurnStats = {
-          tools: {},
+          spans: [],
+          totalMs: 0,
           usage,
           estimated: usage === null,
-          ...(data.latencyMs !== undefined ? { answerMs: data.latencyMs } : {}),
         };
         yield {
           content: assembleContent({ text, reasoning: data.reasoning ?? "", toolCalls: fromResponse(data.toolCalls) }),
