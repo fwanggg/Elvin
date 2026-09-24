@@ -110,7 +110,7 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen, softStre
   });
   const clockRunning = running && !answering;
   const thinkingSeconds = useThinkingSeconds(clockRunning);
-  const thinkingLabel = useThinkingLabel();
+  const thinkingLabel = useThinkingLabel(viewMode);
   // The badge stands down with the label, and for the same reason: while a trace
   // is on screen the panel's trigger is already carrying the clock, and two 8s
   // side by side say nothing the one of them does not. What the line keeps is the
@@ -243,19 +243,21 @@ function resultFailed(result: unknown): boolean {
 
 /**
  * Names what the turn is doing from the moment it starts, and keeps naming it:
- * the line is not a gap filler, so a tool still running keeps it on screen even
- * once a trace has arrived. The trace is the reasoning panel's own trigger,
- * though, so the line leaves that window to it rather than saying "Thinking"
- * twice, and the callers decide when it hands over to the reading it leaves
- * behind. It belongs to the reasoning group's knob, too: the trace hidden, the
- * line that stands for it goes with it, and so does the slot.
+ * the line is not a gap filler, so it stays on screen while the turn works. What
+ * it may say depends on the mode, though. Dev Mode draws a card per call, and the
+ * card names the call itself, so the line leaves that fact to it and keeps the
+ * phase it precedes; User Mode has no card until a call has finished, so there
+ * the line is the only thing that can say one is still running. Either way the
+ * panel's trigger carries the trace, so the line leaves that window to it.
  */
-function useThinkingLabel(): string | undefined {
+function useThinkingLabel(viewMode: ViewMode): string | undefined {
   return useAuiState((state) => {
     if (state.message.status?.type !== "running") return undefined;
     const parts = state.message.parts;
-    const pending = parts.find((part) => part.type === "tool-call" && part.result === undefined);
-    if (pending?.type === "tool-call") return `Running ${pending.toolName}`;
+    if (viewMode === "user") {
+      const pending = parts.find((part) => part.type === "tool-call" && part.result === undefined);
+      if (pending?.type === "tool-call") return `Running ${pending.toolName}`;
+    }
     // The panel's trigger carries this window: it shimmers for exactly as long
     // as the trace is running, so the line leaves the phase to it.
     if (parts.some((part) => part.type === "reasoning" && part.text.trim().length > 0)) return undefined;
