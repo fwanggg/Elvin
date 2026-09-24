@@ -988,10 +988,9 @@ h6 {
 /* Reasoning, drawn two ways. Dev Mode renders the element as it ships: its
    trigger is the brain and the word "Reasoning", inside the outline the element
    carries, and the sandbox palette reaches it through the data slots the way it
-   reaches the other vendored elements. User Mode renders the panel, which is
-   Tailwind-classed and brings no card of its own; those two rules are fit, not
-   restyle — the chat column is wider than the element's standalone default, and
-   the accent this app draws its live states in is not Tailwind's blue. */
+   reaches the other vendored elements. User Mode draws the middle of a turn the
+   way Claude does — one row that names the phase, then the trace and the calls
+   beneath it, divided by hairlines rather than by a box around every call. */
 .reasoning-root { padding: 8px 12px; border: var(--ds-border) solid var(--a-border); border-radius: var(--ds-radius-card); background: var(--a-bg); box-shadow: var(--ds-shadow); }
 .reasoning-root [data-slot="reasoning-trigger"] { max-width: none; color: var(--a-muted); font-size: 13px; }
 .reasoning-root [data-slot="reasoning-trigger"]:hover { color: var(--a-fg); }
@@ -999,9 +998,21 @@ h6 {
 .reasoning-root [data-slot="reasoning-text"] { max-height: 260px; padding-inline-start: 12px; border-inline-start: 1px solid var(--a-border); color: var(--a-fg); font-size: 13px; line-height: 1.5; }
 .reasoning-root [data-slot="reasoning-fade"]:first-child { background: linear-gradient(to bottom, var(--a-bg), transparent); }
 .reasoning-root [data-slot="reasoning-fade"]:last-child { background: linear-gradient(to top, var(--a-bg), transparent); }
-.reasoning-panel { max-width: none; }
-[data-slot="reasoning-panel"] .animate-pulse { background: var(--a-accent); }
 .reasoning-line { margin: 0; white-space: pre-wrap; }
+/* The row is the thinking indicator the sandbox already uses, so its dot, its
+   shimmer and its count need no restyling — only the chevron beside them. The
+   row hands the element the turn's own state, so where it rests is decided where
+   the element is built: the sweep is drawn on a pseudo-element the `shimmer`
+   class owns, and undoing that from here is what once left a settled label
+   glowing — the element's own `active` is the thing that has to say so. */
+.thought-group { margin: 8px 0; }
+.thought-trigger { display: flex; align-items: center; gap: 6px; width: 100%; padding: 0; border: 0; background: transparent; color: var(--a-fg); cursor: pointer; text-align: left; }
+.thought-chevron { opacity: .45; font-size: 11px; }
+.thought-content { padding: 10px 0 0 14px; }
+.thought-trace { margin: 0; max-height: 320px; overflow: auto; color: var(--a-muted); font-size: 13.5px; line-height: 1.6; }
+.thought-tools { display: flex; flex-direction: column; margin-top: 10px; }
+.thought-tools > * { padding: 4px 0; border-top: 1px solid var(--a-border); }
+.thought-tools > *:first-child { border-top: 0; }
 /* Reasoning arrives as one growing string, so each word gets the entrance the
    answer text's words get — that is what keeps a long trace from appearing in
    whole paragraphs. */
@@ -1043,9 +1054,16 @@ h6 {
    the fade the words arrive on are the element's own — its blue tokens are named
    in the palette above, which is what makes them follow the design language. */
 .streaming-text { max-width: none; min-height: 0; }
-/* A turn can call several tools in a row: the element's rows carry their own
-   padding, but a stack still needs the separation the raw cards get. */
-.tool-call { max-width: none; margin: 6px 0; }
+/* A turn's calls, stacked under the row that named the phase. The step reads in
+   that row's own register — 13px on muted ink — and it has to be said from here:
+   `button { font: inherit }` is unlayered, so the size and the tint the element
+   carries as utilities never land on its trigger, and the step would come out in
+   the message body's register, reading as a second answer rather than as a record
+   of the work. The stack's separation is the hairline above each call, so the
+   element's own margin would open that gap a second time. */
+.tool-call { max-width: none; margin: 0; }
+.tool-call button[data-slot="collapsible-trigger"] { color: var(--a-muted); font-size: 13px; }
+.tool-call button[data-slot="collapsible-trigger"]:hover { color: var(--a-fg); }
 /* The chip is for a label, and the row withholds it when a call has nothing that
    reads as one — the element renders the empty pill regardless, so it goes. */
 .tool-call .font-mono:empty { display: none; }

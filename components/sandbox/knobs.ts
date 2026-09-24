@@ -11,7 +11,6 @@ export type AppTheme = "dark" | "light";
  */
 export type ViewMode = "dev" | "user";
 export type OpenMode = "collapsed" | "expanded";
-export type StreamMode = "true" | "false";
 /** How the sandbox is framed on the canvas, not something the app itself changes. */
 export type Viewport = "desktop" | "mobile";
 export type Toggle = "on" | "off";

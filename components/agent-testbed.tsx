@@ -5,7 +5,7 @@ import { Dropdown } from "@/components/dropdown";
 import { ModelPicker } from "@/components/model-picker";
 import { type Segment } from "@/components/assistant-ui/elements/streaming-text";
 import type { Design } from "@/lib/design-tokens";
-import { type AppTheme, type OpenMode, type Pattern, type StreamMode, type Toggle, type ViewMode, type Viewport } from "@/components/sandbox/knobs";
+import { type AppTheme, type OpenMode, type Pattern, type Toggle, type ViewMode, type Viewport } from "@/components/sandbox/knobs";
 import { AssistantRuntimeMessage, UserRuntimeMessage } from "@/components/sandbox/messages";
 import {
   AssistantRuntimeProvider,
@@ -98,23 +98,17 @@ type FileTreeRow = { label: string; depth: number; dir: boolean; path: string };
 
 type ControlSidebarProps = Readonly<{
   pattern: Pattern;
-  streamMode: StreamMode;
   viewport: Viewport;
   design: Design;
   viewMode: ViewMode;
   emoji: Toggle;
   openMode: OpenMode;
-  softStream: Toggle;
-  responseStatus: Toggle;
   onPatternChange: (value: Pattern) => void;
-  onStreamModeChange: (value: StreamMode) => void;
   onViewportChange: (value: Viewport) => void;
   onDesignChange: (value: Design) => void;
   onViewModeChange: (value: ViewMode) => void;
   onEmojiChange: (value: Toggle) => void;
   onOpenModeChange: (value: OpenMode) => void;
-  onSoftStreamChange: (value: Toggle) => void;
-  onResponseStatusChange: (value: Toggle) => void;
   onOpenExport: () => void;
 }>;
 
@@ -135,8 +129,6 @@ type PreviewStageProps = Readonly<{
   onModelChange: (value: string) => void;
   viewMode: ViewMode;
   defaultOpen: boolean;
-  softStream: Toggle;
-  responseStatus: Toggle;
   baseUrl: string;
   apiKey: string;
   connecting: boolean;
@@ -167,8 +159,6 @@ type AssistantSandboxProps = Readonly<{
   emoji: Toggle;
   viewMode: ViewMode;
   defaultOpen: boolean;
-  softStream: Toggle;
-  responseStatus: Toggle;
 }>;
 
 
@@ -231,7 +221,6 @@ const DESIGN_LANGUAGES: ReadonlyArray<{ value: Design; label: string }> = (Objec
 /** Who the parts render for. Both always render; only the writing changes. */
 const VIEW_MODE_LABELS: Record<ViewMode, string> = { dev: "Dev Mode", user: "User Mode" };
 const OPEN_MODE_LABELS: Record<OpenMode, string> = { collapsed: "Collapsed", expanded: "Expanded" };
-const STREAM_MODE_LABELS: Record<StreamMode, string> = { true: "True", false: "False" };
 const TOGGLE_LABELS: Record<Toggle, string> = { on: "On", off: "Off" };
 const STATUS_COLORS: Record<ConnectionState, string> = {
   demo: "var(--color-accent)",
@@ -247,15 +236,12 @@ export function AgentTestbed(): ReactNode {
   const [viewMode, setViewMode] = useState<ViewMode>("dev");
   const [emoji, setEmoji] = useState<Toggle>("off");
   const [openMode, setOpenMode] = useState<OpenMode>("collapsed");
-  const [softStream, setSoftStream] = useState<Toggle>("on");
-  const [responseStatus, setResponseStatus] = useState<Toggle>("on");
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [baseUrl, setBaseUrl] = useState("");
   const [model, setModel] = useState("");
   const [models, setModels] = useState<string[]>([]);
   const [capabilities, setCapabilities] = useState<string[]>([]);
   const [capability, setCapability] = useState("");
-  const [streamMode, setStreamMode] = useState<StreamMode>("true");
   const [apiKey, setApiKey] = useState("");
   const [connection, setConnection] = useState<ConnectionState>("demo");
   const [connectionError, setConnectionError] = useState("");
@@ -279,7 +265,7 @@ export function AgentTestbed(): ReactNode {
           baseUrl,
           model,
           apiKey,
-          stream: streamMode === "true",
+          stream: true,
           capability: capability || undefined,
           threadId: sessionId || undefined,
           messages: messages.map((message) => ({ role: message.role, content: readableMessageContent(message) })),
@@ -352,7 +338,7 @@ export function AgentTestbed(): ReactNode {
 
       yield { content: assembleContent({ text, reasoning, toolCalls }), metadata: { timing } };
     },
-  }), [apiKey, baseUrl, capability, model, streamMode]);
+  }), [apiKey, baseUrl, capability, model]);
   const runtime = useLocalRuntime(modelAdapter);
 
   /**
@@ -370,8 +356,8 @@ export function AgentTestbed(): ReactNode {
   const statusColor = STATUS_COLORS[connection];
   const isConnected = connection === "live";
   const sourceParams = useMemo(() => {
-    return buildSourceParams({ pattern, appTheme, design, emoji, viewMode, openMode, streamMode, model, capability });
-  }, [appTheme, capability, design, emoji, model, openMode, pattern, streamMode, viewMode]);
+    return buildSourceParams({ pattern, appTheme, design, emoji, viewMode, openMode, model, capability });
+  }, [appTheme, capability, design, emoji, model, openMode, pattern, viewMode]);
   const sourceUrl = `/api/source?${sourceParams}`;
 
   // The pane reads the bytes the download carries rather than re-rendering them,
@@ -454,23 +440,17 @@ export function AgentTestbed(): ReactNode {
         <div className="main-grid">
           <ControlSidebar
             pattern={pattern}
-            streamMode={streamMode}
             viewport={viewport}
             design={design}
             viewMode={viewMode}
             emoji={emoji}
             openMode={openMode}
-            softStream={softStream}
-            responseStatus={responseStatus}
             onPatternChange={setPattern}
-            onStreamModeChange={setStreamMode}
             onViewportChange={setViewport}
             onDesignChange={setDesign}
             onViewModeChange={setViewMode}
             onEmojiChange={setEmoji}
             onOpenModeChange={setOpenMode}
-            onSoftStreamChange={setSoftStream}
-            onResponseStatusChange={setResponseStatus}
             onOpenExport={() => setShowExportPanel(true)}
           />
           <PreviewStage
@@ -489,8 +469,6 @@ export function AgentTestbed(): ReactNode {
             viewMode={viewMode}
             emoji={emoji}
             defaultOpen={openMode === "expanded"}
-            softStream={softStream}
-            responseStatus={responseStatus}
             baseUrl={baseUrl}
             apiKey={apiKey}
             connecting={connection === "connecting"}
@@ -515,23 +493,17 @@ export function AgentTestbed(): ReactNode {
 
 function ControlSidebar({
   pattern,
-  streamMode,
   viewport,
   design,
   viewMode,
   emoji,
   openMode,
-  softStream,
-  responseStatus,
   onPatternChange,
-  onStreamModeChange,
   onViewportChange,
   onDesignChange,
   onViewModeChange,
   onEmojiChange,
   onOpenModeChange,
-  onSoftStreamChange,
-  onResponseStatusChange,
   onOpenExport,
 }: ControlSidebarProps): ReactNode {
   return (
@@ -551,15 +523,6 @@ function ControlSidebar({
       >
         <p className="hint">Switches the assistant-ui sandbox shell without changing your agent runtime.</p>
       </SegmentedPanel>
-      <div className="section-rule" />
-      <SegmentedPanel
-        title="Stream"
-        name="stream"
-        value={streamMode}
-        options={["true", "false"]}
-        labels={STREAM_MODE_LABELS}
-        onChange={onStreamModeChange}
-      />
       <div className="section-rule" />
       <SegmentedPanel
         title="Viewport"
@@ -602,27 +565,6 @@ function ControlSidebar({
         />
       </PanelSection>
       <div className="section-rule" />
-      <PanelSection title="Response">
-        <SegmentedControlBlock
-          label="Soft stream"
-          name="soft-stream"
-          value={softStream}
-          options={["on", "off"]}
-          labels={TOGGLE_LABELS}
-          onChange={onSoftStreamChange}
-          hint={getSoftStreamHint(softStream)}
-        />
-        <SegmentedControlBlock
-          label="Response status"
-          name="response-status"
-          value={responseStatus}
-          options={["on", "off"]}
-          labels={TOGGLE_LABELS}
-          onChange={onResponseStatusChange}
-          hint={getResponseStatusHint(responseStatus)}
-        />
-      </PanelSection>
-      <div className="section-rule" />
       <ExportSuggestionLink onOpenExport={onOpenExport} />
     </aside>
   );
@@ -644,8 +586,6 @@ function PreviewStage({
   models,
   viewMode,
   defaultOpen,
-  softStream,
-  responseStatus,
   baseUrl,
   apiKey,
   connecting,
@@ -708,7 +648,7 @@ function PreviewStage({
               {pattern !== "thread" && <MockApplication />}
               {pattern === "modal" && <div className="modal-launcher">⌄</div>}
               <AssistantRuntimeProvider runtime={runtime}>
-                <AssistantSandbox pattern={pattern} modelName={modelName} viewMode={viewMode} emoji={emoji} defaultOpen={defaultOpen} softStream={softStream} responseStatus={responseStatus} />
+                <AssistantSandbox pattern={pattern} modelName={modelName} viewMode={viewMode} emoji={emoji} defaultOpen={defaultOpen} />
               </AssistantRuntimeProvider>
             </>
           ) : (
@@ -857,7 +797,7 @@ function ConnectEmptyState({ baseUrl, apiKey, connecting, error, onBaseUrlChange
   );
 }
 
-function AssistantSandbox({ pattern, modelName, viewMode, emoji, defaultOpen, softStream, responseStatus }: AssistantSandboxProps): ReactNode {
+function AssistantSandbox({ pattern, modelName, viewMode, emoji, defaultOpen }: AssistantSandboxProps): ReactNode {
   const aui = useAui();
   const config = AuiConfig({
     suggestions: Suggestions([
@@ -899,7 +839,7 @@ function AssistantSandbox({ pattern, modelName, viewMode, emoji, defaultOpen, so
             <ThreadPrimitive.Messages>
               {({ message }) => message.role === "user"
                 ? <UserRuntimeMessage emoji={emoji} />
-                : <AssistantRuntimeMessage viewMode={viewMode} emoji={emoji} defaultOpen={defaultOpen} softStream={softStream} responseStatus={responseStatus} />}
+                : <AssistantRuntimeMessage viewMode={viewMode} emoji={emoji} defaultOpen={defaultOpen} />}
             </ThreadPrimitive.Messages>
           </ThreadPrimitive.Viewport>
           {/* Its own row, outside the scroller: the thread scrolls above the
@@ -1059,20 +999,8 @@ function getOpenModeHint(openMode: OpenMode): string {
   }
 }
 
-function getSoftStreamHint(softStream: Toggle): string {
-  return softStream === "on"
-    ? "Words arrive tinted, with a caret, and settle into ink."
-    : "Text lands as plain streamed text.";
-}
-
-function getResponseStatusHint(responseStatus: Toggle): string {
-  return responseStatus === "on"
-    ? "Copy, rate, speak, regenerate, and timing on hover."
-    : "No actions or timing are rendered.";
-}
-
-function buildSourceParams({ pattern, appTheme, design, emoji, viewMode, openMode, streamMode, model, capability }: Readonly<{ pattern: Pattern; appTheme: AppTheme; design: Design; emoji: Toggle; viewMode: ViewMode; openMode: OpenMode; streamMode: StreamMode; model: string; capability: string }>): string {
-  const params = new URLSearchParams({ pattern, theme: appTheme, design, emoji, view: viewMode, open: openMode, stream: streamMode });
+function buildSourceParams({ pattern, appTheme, design, emoji, viewMode, openMode, model, capability }: Readonly<{ pattern: Pattern; appTheme: AppTheme; design: Design; emoji: Toggle; viewMode: ViewMode; openMode: OpenMode; model: string; capability: string }>): string {
+  const params = new URLSearchParams({ pattern, theme: appTheme, design, emoji, view: viewMode, open: openMode });
   if (model.trim()) params.set("model", model.trim());
   if (capability) params.set("capability", capability);
   return params.toString();
