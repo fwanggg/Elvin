@@ -6,6 +6,7 @@ import { ModelPicker } from "@/components/model-picker";
 import { type Segment } from "@/components/assistant-ui/elements/streaming-text";
 import type { Design } from "@/lib/design-tokens";
 import { type AppTheme, type OpenMode, type Pattern, type Toggle, type ViewMode, type Viewport } from "@/components/sandbox/knobs";
+import { type TurnStats, type UsageTotals } from "@/lib/turn-stats";
 import { AssistantRuntimeMessage, UserRuntimeMessage } from "@/components/sandbox/messages";
 import {
   AssistantRuntimeProvider,
@@ -49,6 +50,7 @@ type ChatResponse = {
   toolCalls?: ToolCall[];
   latencyMs?: number;
   error?: string;
+  usage?: UsageTotals | null;
 };
 type JsonValue = string | number | boolean | null | JsonValue[] | { readonly [key: string]: JsonValue };
 type JsonObject = { readonly [key: string]: JsonValue };
@@ -66,6 +68,7 @@ type StreamEvent =
   | { type: "text"; text: string }
   | { type: "reasoning"; text: string }
   | { type: "tool-call"; toolCallId: string; toolName: string; args: unknown; status?: string }
+  | { type: "stats"; stats: TurnStats }
   | { type: "error"; error: string }
   | { type: "done"; sessionId?: string };
 
@@ -88,6 +91,7 @@ type ThemeVariableName =
   | "--a-accent"
   | "--a-accent-fg";
 type RenderedPart = { type: "reasoning"; text: string } | ToolCallPart | { type: "text"; text: string };
+
 type SourceFile = Readonly<{ name: string; content: string }>;
 type FileTreeRow = { label: string; depth: number; dir: boolean; path: string };
 
@@ -274,9 +278,18 @@ export function AgentTestbed(): ReactNode {
       if (!(response.headers.get("Content-Type") ?? "").includes("text/event-stream")) {
         const data = (await response.json()) as ChatResponse;
         const text = data.error ?? data.content;
+        const usage = data.usage ?? null;
+        // One shot, so there is no window to measure: the turn's own latency is
+        // the only clock the shape offers.
+        const stats: TurnStats = {
+          tools: {},
+          usage,
+          estimated: usage === null,
+          ...(data.latencyMs !== undefined ? { answerMs: data.latencyMs } : {}),
+        };
         yield {
           content: assembleContent({ text, reasoning: data.reasoning ?? "", toolCalls: fromResponse(data.toolCalls) }),
-          metadata: { timing: streamTiming({ streamStartTime, firstTokenTime: Date.now() - streamStartTime, totalChunks: 1, toolCallCount: data.toolCalls?.length ?? 0, text }) },
+          metadata: { timing: streamTiming({ streamStartTime, firstTokenTime: Date.now() - streamStartTime, totalChunks: 1, toolCallCount: data.toolCalls?.length ?? 0, text, usage }), custom: { stats } },
         };
         return;
       }
@@ -290,6 +303,7 @@ export function AgentTestbed(): ReactNode {
       let reasoning = "";
       let firstTokenTime: number | undefined;
       let totalChunks = 0;
+      let stats: TurnStats | undefined;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -311,6 +325,7 @@ export function AgentTestbed(): ReactNode {
           if (event.type === "text") text = event.text;
           else if (event.type === "reasoning") reasoning = event.text;
           else if (event.type === "error") text = event.error;
+          else if (event.type === "stats") stats = event.stats;
           else if (event.type === "tool-call") {
             const args = toJsonObject(event.args);
             toolCalls.set(event.toolCallId, {
@@ -323,18 +338,18 @@ export function AgentTestbed(): ReactNode {
             });
           }
 
-          yield { content: assembleContent({ text, reasoning, toolCalls }) };
+          yield { content: assembleContent({ text, reasoning, toolCalls }), ...(stats ? { metadata: { custom: { stats } } } : {}) };
         }
       }
 
-      const timing = streamTiming({ streamStartTime, firstTokenTime, totalChunks, toolCallCount: toolCalls.size, text: text.length > 0 ? text : reasoning });
+      const timing = streamTiming({ streamStartTime, firstTokenTime, totalChunks, toolCallCount: toolCalls.size, text: text.length > 0 ? text : reasoning, usage: stats?.usage ?? null });
 
       if (text.length === 0 && reasoning.length === 0 && toolCalls.size === 0) {
-        yield { content: [{ type: "text" as const, text: "The agent streamed nothing Elvin could render. Check the provider's response shape." }], metadata: { timing } };
+        yield { content: [{ type: "text" as const, text: "The agent streamed nothing Elvin could render. Check the provider's response shape." }], metadata: { timing, ...(stats ? { custom: { stats } } : {}) } };
         return;
       }
 
-      yield { content: assembleContent({ text, reasoning, toolCalls }), metadata: { timing } };
+      yield { content: assembleContent({ text, reasoning, toolCalls }), metadata: { timing, ...(stats ? { custom: { stats } } : {}) } };
     },
   }), [apiKey, baseUrl, capability, model]);
   const runtime = useLocalRuntime(modelAdapter);
@@ -856,15 +871,19 @@ function AssistantSandbox({ pattern, modelName, viewMode, emoji, defaultOpen, th
  * (`ChatModelRunResult.metadata.timing`), so the adapter records it: the same
  * arithmetic assistant-stream's TimingTracker applies to a streamed message.
  */
-function streamTiming({ streamStartTime, firstTokenTime, totalChunks, toolCallCount, text }: Readonly<{
+function streamTiming({ streamStartTime, firstTokenTime, totalChunks, toolCallCount, text, usage }: Readonly<{
   streamStartTime: number;
   firstTokenTime: number | undefined;
   totalChunks: number;
   toolCallCount: number;
   text: string;
+  usage?: UsageTotals | null;
 }>): StreamTiming {
   const totalStreamTime = Date.now() - streamStartTime;
-  const tokenCount = text.length > 0 ? Math.ceil(text.length / 4) : undefined;
+  // The provider's own count when it reported one, otherwise a characters-over-
+  // four estimate — which the popover marks as an estimate rather than passing
+  // off as a measurement.
+  const tokenCount = usage?.completionTokens ?? (text.length > 0 ? Math.ceil(text.length / 4) : undefined);
 
   return {
     streamStartTime,

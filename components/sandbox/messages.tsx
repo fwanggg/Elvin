@@ -10,6 +10,7 @@ import { ThinkingIndicator } from "@/components/assistant-ui/elements/thinking-i
 import { ToolCall } from "@/components/assistant-ui/elements/tool-call";
 import { TooltipIconButton } from "@/components/assistant-ui/elements/tooltip-icon-button";
 import { chipOf, describeResult, describeStep } from "@/lib/step-labels";
+import { formatMs, turnStatsOf, type ToolTiming, type TurnStats } from "@/lib/turn-stats";
 import { type Toggle, type ViewMode } from "@/components/sandbox/knobs";
 import {
   AuiIf,
@@ -36,6 +37,8 @@ type ToolCardProps = Readonly<{
   args: unknown;
   result: unknown;
   defaultOpen: boolean;
+  /** The wire's own clock for this call, when the proxy measured one. */
+  stat?: ToolTiming;
 }>;
 type ToolCallRowProps = Readonly<{
   name: string;
@@ -100,6 +103,10 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen }: Assist
   // a trace that never arrived.
   const reasoningArrived = useAuiState((state) => state.message.parts.some((part) => part.type === "reasoning" && part.text.trim().length > 0));
   const thoughtStarted = useThoughtStarted();
+  const turnStats = useTurnStats();
+  // Only the fallback path needs this: a provider that reports no usage leaves
+  // the estimate as the only reading of how much thinking there was.
+  const reasoningChars = useAuiState((state) => state.message.parts.reduce((total, part) => (part.type === "reasoning" ? total + part.text.length : total), 0));
   const running = useAuiState((state) => state.message.status?.type === "running");
   // The turn is answering while the newest part is text. A tool call that lands
   // after some text ends that, so the clock starts again rather than falling
@@ -180,8 +187,9 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen }: Assist
                 const streaming = part.status.type === "running";
                 return (
                   <ReasoningRoot key={`${part.indices[0]}-${defaultOpen}`} className="reasoning-root" streaming={streaming} defaultOpen={defaultOpen}>
-                    <ReasoningTrigger className="reasoning-trigger" active={streaming} />
+                    <ReasoningTrigger className="reasoning-trigger" active={streaming} duration={turnStats?.reasoningMs !== undefined ? Math.round(turnStats.reasoningMs / 100) / 10 : undefined} />
                     <ReasoningContent aria-busy={streaming}>
+                      <ReasoningStats stats={turnStats} chars={reasoningChars} />
                       <ReasoningText className="reasoning-text">{children}</ReasoningText>
                     </ReasoningContent>
                   </ReasoningRoot>
@@ -202,7 +210,7 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen }: Assist
               // prompt say, instead of folding into the run of steps.
               case "tool-call":
                 if (viewMode === "user") return <ToolCallRow key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} argsText={part.argsText} result={part.result} isError={part.isError} defaultOpen={defaultOpen} />;
-                return <ToolCard key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} result={part.result} defaultOpen={defaultOpen} />;
+                return <ToolCard key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} result={part.result} defaultOpen={defaultOpen} stat={turnStats?.tools[part.toolCallId]} />;
               case "text":
                 return <StreamingTextPart type="text" text={part.text} status={part.status} />;
               default:
@@ -309,6 +317,13 @@ function useThinkingLabel(viewMode: ViewMode): string | undefined {
 function useThoughtStarted(): boolean {
   return useAuiState((state) => state.message.parts.some((part) => part.type === "reasoning" || part.type === "tool-call"));
 }
+/**
+ * What the proxy measured for this turn's parts, read off the message rather
+ * than handed down: every renderer of that message then sees the same numbers.
+ */
+function useTurnStats(): TurnStats | undefined {
+  return useAuiState((state) => turnStatsOf(state.message.metadata?.custom));
+}
 
 /**
  * One clock per turn, not one per silence. A turn that reasons, calls a tool,
@@ -402,14 +417,46 @@ const ReasoningPart: ReasoningMessagePartComponent = ({ text }) => {
   );
 };
 
-function ToolCard({ name, args, result, defaultOpen }: ToolCardProps): ReactNode {
+function ToolCard({ name, args, result, defaultOpen, stat }: ToolCardProps): ReactNode {
   const [open, setOpen] = useState(defaultOpen);
 
   return (
     <div className="part-card">
-      <button className="part-head" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}><span>✓ Used tool <strong>{name}</strong></span><span style={{ marginLeft: "auto" }}>{open ? "⌄" : "›"}</span></button>
+      <button className="part-head" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+        <span>✓ Used tool <strong>{name}</strong></span>
+        {stat && (
+          <span className="part-stat" title={`${formatMs(stat.modelMs)} to name the call${stat.roundTripMs !== undefined ? `, then ${formatMs(stat.roundTripMs)} to the next token after the result` : ""}`}>
+            {stat.roundTripMs !== undefined ? `${formatMs(stat.modelMs)} + ${formatMs(stat.roundTripMs)}` : formatMs(stat.modelMs)}
+          </span>
+        )}
+        <span style={{ marginLeft: "auto" }}>{open ? "⌄" : "›"}</span>
+      </button>
       {open && <div className="part-detail">{`Arguments\n${JSON.stringify(args ?? {}, null, 2)}\n\nResult\n${JSON.stringify(result ?? {}, null, 2)}`}</div>}
     </div>
+  );
+}
+
+/**
+ * The reasoning window, and the tokens the provider counted for it. Without a
+ * provider split there is no thinking count — the completion total covers the
+ * answer as well — so the line falls back to a characters-over-four estimate and
+ * marks it rather than passing it off as measured.
+ */
+function ReasoningStats({ stats, chars }: Readonly<{ stats: TurnStats | undefined; chars: number }>): ReactNode {
+  const windowMs = stats?.reasoningMs;
+  if (windowMs === undefined) return null;
+
+  const measured = stats?.usage?.reasoningTokens;
+  const estimated = measured === undefined && chars > 0 ? Math.ceil(chars / 4) : undefined;
+  const tokens = measured ?? estimated;
+  const speed = tokens !== undefined && windowMs > 0 ? (tokens / windowMs) * 1000 : undefined;
+
+  return (
+    <p className="reasoning-stats">
+      <span>{formatMs(windowMs)}</span>
+      {tokens !== undefined && <span>{estimated !== undefined ? `≈${tokens} tok` : `${tokens} tok`}</span>}
+      {speed !== undefined && <span>{`${speed.toFixed(1)} tok/s${estimated !== undefined ? " est." : ""}`}</span>}
+    </p>
   );
 }
 

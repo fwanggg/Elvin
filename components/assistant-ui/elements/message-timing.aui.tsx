@@ -1,6 +1,7 @@
 "use client";
 
-import { useMessageTiming } from "@assistant-ui/react";
+import { useAuiState, useMessageTiming } from "@assistant-ui/react";
+import { turnStatsOf } from "@/lib/turn-stats";
 import {
   Tooltip,
   TooltipContent,
@@ -41,6 +42,10 @@ export const MessageTiming: FC<{
   side?: "top" | "right" | "bottom" | "left";
 }> = ({ className, side = "right" }) => {
   const timing = useMessageTiming();
+  // A provider that reported no usage leaves the estimate in the speed row, so
+  // the reader is told which of the two they are looking at. Read before the
+  // early return: hooks cannot be conditional.
+  const estimated = useAuiState((state) => turnStatsOf(state.message.metadata?.custom)?.estimated ?? false);
   if (timing?.totalStreamTime === undefined) return null;
 
   return (
@@ -84,7 +89,7 @@ export const MessageTiming: FC<{
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">Speed</span>
                 <span className="font-mono tabular-nums">
-                  {timing.tokensPerSecond.toFixed(1)} tok/s
+                  {timing.tokensPerSecond.toFixed(1)} tok/s{estimated ? " est." : ""}
                 </span>
               </div>
             )}
