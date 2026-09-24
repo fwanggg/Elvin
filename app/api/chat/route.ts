@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { unreachableProviderError } from "@/lib/provider-errors";
 
 type IncomingMessage = {
   role: "user" | "assistant" | "system";
@@ -157,8 +158,7 @@ export async function POST(request: Request) {
   try {
     call = await callProvider(conversation);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown provider failure.";
-    return NextResponse.json({ error: message }, { status: 502 });
+    return NextResponse.json({ error: unreachableProviderError(endpoint, error) }, { status: 502 });
   }
 
   if (!call.ok) {
