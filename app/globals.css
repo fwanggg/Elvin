@@ -1011,7 +1011,7 @@ h6 {
 .thought-content { padding: 10px 0 0 14px; }
 .thought-trace { margin: 0; max-height: 320px; overflow: auto; color: var(--a-muted); font-size: 13.5px; line-height: 1.6; }
 .thought-tools { display: flex; flex-direction: column; margin-top: 10px; }
-.thought-tools > * { padding: 9px 0; border-top: 1px solid var(--a-border); }
+.thought-tools > * { padding: 4px 0; border-top: 1px solid var(--a-border); }
 .thought-tools > *:first-child { border-top: 0; }
 /* Reasoning arrives as one growing string, so each word gets the entrance the
    answer text's words get — that is what keeps a long trace from appearing in
@@ -1054,9 +1054,16 @@ h6 {
    the fade the words arrive on are the element's own — its blue tokens are named
    in the palette above, which is what makes them follow the design language. */
 .streaming-text { max-width: none; min-height: 0; }
-/* A turn can call several tools in a row: the element's rows carry their own
-   padding, but a stack still needs the separation the raw cards get. */
-.tool-call { max-width: none; margin: 6px 0; }
+/* A turn's calls, stacked under the row that named the phase. The step reads in
+   that row's own register — 13px on muted ink — and it has to be said from here:
+   `button { font: inherit }` is unlayered, so the size and the tint the element
+   carries as utilities never land on its trigger, and the step would come out in
+   the message body's register, reading as a second answer rather than as a record
+   of the work. The stack's separation is the hairline above each call, so the
+   element's own margin would open that gap a second time. */
+.tool-call { max-width: none; margin: 0; }
+.tool-call button[data-slot="collapsible-trigger"] { color: var(--a-muted); font-size: 13px; }
+.tool-call button[data-slot="collapsible-trigger"]:hover { color: var(--a-fg); }
 /* The chip is for a label, and the row withholds it when a call has nothing that
    reads as one — the element renders the empty pill regardless, so it goes. */
 .tool-call .font-mono:empty { display: none; }
