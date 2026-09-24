@@ -113,7 +113,11 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, emoji, defau
   const clockRunning = running && !answering;
   const thinkingSeconds = useThinkingSeconds(clockRunning && reasoningShown);
   const thinkingLabel = useThinkingLabel(reasoningShown);
-  const elapsed = clockRunning && thinkingSeconds !== undefined && thinkingSeconds >= 1 ? `${thinkingSeconds}s` : undefined;
+  // The badge stands down with the label, and for the same reason: while a trace
+  // is on screen the panel's trigger is already carrying the clock, and two 8s
+  // side by side say nothing the one of them does not. What the line keeps is the
+  // fact the panel cannot state — which tool the turn is waiting on.
+  const elapsed = clockRunning && !reasoningArrived && thinkingSeconds !== undefined && thinkingSeconds >= 1 ? `${thinkingSeconds}s` : undefined;
   // The reading the clock took, put in the place the live line took: once the
   // clock stops, the two swap in place rather than one leaving and the other
   // arriving somewhere else. It is for the turn the panel cannot speak for,
