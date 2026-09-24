@@ -15,7 +15,7 @@ export function configSource(config: SourceConfig): string {
     "  toolCalls: {",
     `    send: ${config.tools !== "off"},`,
     `    render: ${config.tools !== "off"},`,
-    `    style: ${JSON.stringify(config.tools === "humanized" ? "humanized" : "card")},`,
+    `    style: ${JSON.stringify(config.tools === "humanized" ? "humanized" : "card")} as "card" | "humanized",`,
     `    defaultOpen: ${config.open === "expanded"},`,
     "  },",
     "  reasoning: {",
