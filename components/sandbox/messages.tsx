@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { CheckIcon, CopyIcon, DownloadIcon, EllipsisIcon, RefreshCwIcon, ThumbsDownIcon, ThumbsUpIcon, Volume2Icon } from "lucide-react";
 import { MessageTiming } from "@/components/assistant-ui/elements/message-timing.aui";
+import { ReasoningContent, ReasoningRoot, ReasoningText, ReasoningTrigger } from "@/components/assistant-ui/elements/reasoning";
 import { ReasoningPanel, type ReasoningStep } from "@/components/assistant-ui/elements/reasoning-panel";
 import { StreamingText, type Segment } from "@/components/assistant-ui/elements/streaming-text";
 import { ThinkingIndicator } from "@/components/assistant-ui/elements/thinking-indicator";
 import { ToolCall } from "@/components/assistant-ui/elements/tool-call";
 import { TooltipIconButton } from "@/components/assistant-ui/elements/tooltip-icon-button";
 import { chipOf, describeResult, describeStep } from "@/lib/step-labels";
-import { type PartMode, type Toggle, type ToolsMode } from "@/components/sandbox/knobs";
+import { type Toggle, type ViewMode } from "@/components/sandbox/knobs";
 import {
   AuiIf,
   ActionBarMorePrimitive,
@@ -25,8 +26,7 @@ import {
 /** The sandbox's part renderers: what a turn looks like as it streams. */
 
 type AssistantRuntimeMessageProps = Readonly<{
-  toolsMode: ToolsMode;
-  reasoningMode: PartMode;
+  viewMode: ViewMode;
   emoji: Toggle;
   defaultOpen: boolean;
   softStream: Toggle;
@@ -96,8 +96,7 @@ export function UserRuntimeMessage({ emoji }: Readonly<{ emoji: Toggle }>): Reac
   );
 }
 
-export function AssistantRuntimeMessage({ toolsMode, reasoningMode, emoji, defaultOpen, softStream, responseStatus }: AssistantRuntimeMessageProps): ReactNode {
-  const reasoningShown = reasoningMode === "shown";
+export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen, softStream, responseStatus }: AssistantRuntimeMessageProps): ReactNode {
   // Most agents run tools and answer without ever streaming their thinking, so
   // the line may only claim the work: "Thought for 40s" would be a claim about
   // a trace that never arrived.
@@ -111,8 +110,8 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, emoji, defau
     return last?.type === "text" && last.text.trim().length > 0;
   });
   const clockRunning = running && !answering;
-  const thinkingSeconds = useThinkingSeconds(clockRunning && reasoningShown);
-  const thinkingLabel = useThinkingLabel(reasoningShown);
+  const thinkingSeconds = useThinkingSeconds(clockRunning);
+  const thinkingLabel = useThinkingLabel(viewMode);
   // The badge stands down with the label, and for the same reason: while a trace
   // is on screen the panel's trigger is already carrying the clock, and two 8s
   // side by side say nothing the one of them does not. What the line keeps is the
@@ -123,7 +122,7 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, emoji, defau
   // arriving somewhere else. It is for the turn the panel cannot speak for,
   // though — a trace that arrived rests on its own label inside the panel — so
   // the line only ever hands over to "Worked for …".
-  const reading = reasoningShown && !reasoningArrived && !clockRunning && thinkingSeconds !== undefined && thinkingSeconds >= 1;
+  const reading = !reasoningArrived && !clockRunning && thinkingSeconds !== undefined && thinkingSeconds >= 1;
   const thinking = reading
     ? <p className="thinking-settled">{`Worked for ${thinkingSeconds}s`}</p>
     : clockRunning && thinkingLabel !== undefined
@@ -131,9 +130,7 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, emoji, defau
       : null;
   // The trace is one group however it runs, so a turn that reasons either side of
   // a tool call still reads as a single disclosure.
-  const groupBy = useMemo(() => groupPartByType(
-    reasoningMode === "shown" ? { reasoning: ["group-reasoning"] } : {},
-  ), [reasoningMode]);
+  const groupBy = useMemo(() => groupPartByType({ reasoning: ["group-reasoning"] }), []);
 
   return (
     <MessagePrimitive.Root asChild>
@@ -142,33 +139,48 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, emoji, defau
         <MessagePrimitive.Error>
           <p className="error-note"><ErrorPrimitive.Message /></p>
         </MessagePrimitive.Error>
-        {/* The line names the phase that comes first in a turn, so it opens the
-            message and stays there: the trace, the tool cards and the answer all
-            stream in below it, nothing is ever inserted over it, and the reading
-            it settles into takes the place the live line took. The slot holds its
-            height for as long as the turn runs, so the label changing state in it
-            cannot move the conversation either. */}
-        {(thinking !== null || (running && reasoningShown)) && <div className="thinking-slot">{thinking}</div>}
+        {/* The line belongs to User Mode. There it names the phase that comes
+            first in a turn, so it opens the message and stays there: the trace,
+            the tool cards and the answer all stream in below it, nothing is ever
+            inserted over it, and the reading it settles into takes the place the
+            live line took. The slot holds its height for as long as the turn
+            runs, so the label changing state in it cannot move the conversation
+            either. Dev Mode draws the agent's own shapes and leaves the phase to
+            them: its reasoning box shimmers for the window the line would have
+            named, and its tool cards name their calls. So the line — and the
+            slot it was holding open — do not render there at all. */}
+        {viewMode === "user" && (thinking !== null || running) && <div className="thinking-slot">{thinking}</div>}
         <MessagePrimitive.GroupedParts groupBy={groupBy}>
-          {({ part }) => {
+          {({ part, children }) => {
             switch (part.type) {
-              case "group-reasoning":
-                // The panel element draws the whole disclosure: its trigger is
-                // the live line, a shimmering "Thinking" carrying the running
-                // clock, settling onto the reading the clock took, and the trace
-                // opens underneath it as a step list. Its parts are read inside
-                // rather than rendered as children — the panel is props-driven.
+              case "group-reasoning": {
+                // The trace is rendered two ways, because the two modes want
+                // different things from it. Dev Mode draws the agent's own
+                // shapes, so it is the reasoning element as it ships — the brain,
+                // the word "Reasoning", and the outline the element carries — and
+                // its parts render as children. User Mode writes the same trace
+                // for a person: the panel's step list, which is props-driven, so
+                // its parts are read rather than rendered.
+                const streaming = part.status.type === "running";
+                if (viewMode === "user") {
+                  return (
+                    <ReasoningSteps key={`${part.indices[0]}-${defaultOpen}`} indices={part.indices} streaming={streaming} defaultOpen={defaultOpen} seconds={thinkingSeconds} />
+                  );
+                }
+                // The element holds itself open as a live, bottom-pinned preview
+                // while the trace streams — its trigger shimmers for exactly that
+                // window — then settles to the state the sidebar asks for.
                 return (
-                  <ReasoningSteps
-                    key={`${part.indices[0]}-${defaultOpen}`}
-                    indices={part.indices}
-                    streaming={part.status.type === "running"}
-                    defaultOpen={defaultOpen}
-                    seconds={thinkingSeconds}
-                  />
+                  <ReasoningRoot key={`${part.indices[0]}-${defaultOpen}`} className="reasoning-root" streaming={streaming} defaultOpen={defaultOpen}>
+                    <ReasoningTrigger className="reasoning-trigger" active={streaming} />
+                    <ReasoningContent aria-busy={streaming}>
+                      <ReasoningText className="reasoning-text">{children}</ReasoningText>
+                    </ReasoningContent>
+                  </ReasoningRoot>
                 );
+              }
               case "reasoning":
-                return reasoningMode === "shown" ? <ReasoningPart {...part} /> : <></>;
+                return <ReasoningPart {...part} />;
               // Every call renders inline here: the sandbox registers no tool UIs, so
               // there is nothing for the primitive's "standalone-tool-call" group key
               // to lift out of the trace — nor for a tool's `display: "standalone"`,
@@ -176,8 +188,7 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, emoji, defau
               // reach for the first time a call has to stand on its own, an approval
               // prompt say, instead of folding into the run of steps.
               case "tool-call":
-                if (toolsMode === "off") return <></>;
-                if (toolsMode === "humanized") return <ToolCallRow key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} argsText={part.argsText} result={part.result} isError={part.isError} defaultOpen={defaultOpen} />;
+                if (viewMode === "user") return <ToolCallRow key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} argsText={part.argsText} result={part.result} isError={part.isError} defaultOpen={defaultOpen} />;
                 return <ToolCard key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} result={part.result} defaultOpen={defaultOpen} />;
               case "text":
                 return softStream === "on"
@@ -254,20 +265,21 @@ function resultFailed(result: unknown): boolean {
 
 /**
  * Names what the turn is doing from the moment it starts, and keeps naming it:
- * the line is not a gap filler, so a tool still running keeps it on screen even
- * once a trace has arrived. The trace is the reasoning panel's own trigger,
- * though, so the line leaves that window to it rather than saying "Thinking"
- * twice, and the callers decide when it hands over to the reading it leaves
- * behind. It belongs to the reasoning group's knob, too: the trace hidden, the
- * line that stands for it goes with it, and so does the slot.
+ * the line is not a gap filler, so it stays on screen while the turn works. What
+ * it may say depends on the mode, though. Dev Mode draws a card per call, and the
+ * card names the call itself, so the line leaves that fact to it and keeps the
+ * phase it precedes; User Mode has no card until a call has finished, so there
+ * the line is the only thing that can say one is still running. Either way the
+ * panel's trigger carries the trace, so the line leaves that window to it.
  */
-function useThinkingLabel(reasoningShown: boolean): string | undefined {
+function useThinkingLabel(viewMode: ViewMode): string | undefined {
   return useAuiState((state) => {
-    if (!reasoningShown) return undefined;
     if (state.message.status?.type !== "running") return undefined;
     const parts = state.message.parts;
-    const pending = parts.find((part) => part.type === "tool-call" && part.result === undefined);
-    if (pending?.type === "tool-call") return `Running ${pending.toolName}`;
+    if (viewMode === "user") {
+      const pending = parts.find((part) => part.type === "tool-call" && part.result === undefined);
+      if (pending?.type === "tool-call") return `Running ${pending.toolName}`;
+    }
     // The panel's trigger carries this window: it shimmers for exactly as long
     // as the trace is running, so the line leaves the phase to it.
     if (parts.some((part) => part.type === "reasoning" && part.text.trim().length > 0)) return undefined;

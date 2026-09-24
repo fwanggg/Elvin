@@ -18,7 +18,7 @@ import {
 } from "@assistant-ui/react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { elvinConfig } from "../../elvin.config";
-import { ReasoningGroup, ReasoningText, type ReasoningStep } from "./reasoning-group";
+import { ReasoningGroup, ReasoningPanel, ReasoningText, type ReasoningStep } from "./reasoning-group";
 import { ToolCallRow } from "./tool-call-row";
 import { ToolCard } from "./tool-card";
 
@@ -200,17 +200,16 @@ function AssistantMessage() {
         <p className="assistant-error"><ErrorPrimitive.Message /></p>
       </MessagePrimitive.Error>
       <MessagePrimitive.GroupedParts groupBy={groupBy}>
-        {({ part }) => {
+        {({ part, children }) => {
           switch (part.type) {
             case "group-reasoning":
-              return elvinConfig.reasoning.render
+              return elvinConfig.view === "user"
                 ? <ReasoningSteps indices={part.indices} defaultOpen={elvinConfig.reasoning.defaultOpen} streaming={part.status.type === "running"} />
-                : <></>;
+                : <ReasoningGroup defaultOpen={elvinConfig.reasoning.defaultOpen} streaming={part.status.type === "running"}>{children}</ReasoningGroup>;
             case "reasoning":
-              return elvinConfig.reasoning.render ? <ReasoningText text={part.text} /> : <></>;
+              return <ReasoningText text={part.text} />;
             case "tool-call":
-              if (!elvinConfig.toolCalls.render) return <></>;
-              if (elvinConfig.toolCalls.style === "humanized") return <ToolCallRow name={part.toolName} args={part.args} result={part.result} defaultOpen={elvinConfig.toolCalls.defaultOpen} />;
+              if (elvinConfig.view === "user") return <ToolCallRow name={part.toolName} args={part.args} result={part.result} defaultOpen={elvinConfig.toolCalls.defaultOpen} />;
               // A tool UI that must stand on its own — an approval prompt, say — is
               // marked display: "standalone" in the toolkit. Add the primitive's
               // "standalone-tool-call" key to groupBy and it renders here as a leaf
@@ -228,8 +227,8 @@ function AssistantMessage() {
 }
 
 /**
- * The panel takes the trace as steps rather than as rendered children, so the
- * group's own part is read here: one step for the group, since a provider
+ * User Mode's panel takes the trace as steps rather than as rendered children, so
+ * the group's own part is read here: one step for the group, since a provider
  * streams its thinking as a single growing string, titled the way the element's
  * docs fall back when no summary is shipped.
  */
@@ -247,7 +246,7 @@ function ReasoningSteps({ indices, defaultOpen, streaming }: { indices: readonly
     [summary, trace],
   );
 
-  return <ReasoningGroup steps={steps} defaultOpen={defaultOpen} streaming={streaming} />;
+  return <ReasoningPanel steps={steps} defaultOpen={defaultOpen} streaming={streaming} />;
 }
 
 function collectToolCalls(value: Array<{ toolCallId?: string; name: string; arguments?: unknown; result?: unknown }> | undefined) {
@@ -294,23 +293,45 @@ function readableMessageContent(message: ThreadMessage) {
 export function reasoningGroupSource(): string {
   return `"use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type PropsWithChildren } from "react";
 
 export type ReasoningStep = { title: string; body: string };
 
 /**
- * The same shape the sandbox shows: no card, a trigger row that shimmers while
- * the trace streams and names the phase once it settles, and the trace under it
- * as steps. Open while the model is still working, then settle to the configured
- * default; a manual toggle sticks, so reading the trace never fights the stream.
+ * Dev Mode's pass: the group as its own box, with the trace rendered as children
+ * by the caller. Open while the model is still working, then settle to the
+ * configured default; a manual toggle sticks, so reading the trace never fights
+ * the stream.
  */
-export function ReasoningGroup({ steps, defaultOpen, streaming }: { steps: ReasoningStep[]; defaultOpen: boolean; streaming: boolean }) {
+export function ReasoningGroup({ defaultOpen, streaming, children }: PropsWithChildren<{ defaultOpen: boolean; streaming: boolean }>) {
   const [initialOpen] = useState(defaultOpen);
   const [userOpen, setUserOpen] = useState<boolean | null>(null);
   const open = userOpen ?? (streaming || initialOpen);
 
   return (
     <div className="reasoning">
+      <button className="reasoning-trigger" type="button" aria-expanded={open} onClick={() => setUserOpen(!open)}>
+        <span className="reasoning-trigger-label" data-active={streaming || undefined}>Reasoning</span>
+        <span aria-hidden>{open ? "⌄" : "›"}</span>
+      </button>
+      {open && <div className="reasoning-content">{children}</div>}
+    </div>
+  );
+}
+
+/**
+ * User Mode's pass: the same trace with no card of its own — a trigger row that
+ * shimmers while the trace streams and names the phase once it settles, over the
+ * trace as steps. It takes the trace as steps rather than as children, so the
+ * caller reads the group's own part.
+ */
+export function ReasoningPanel({ steps, defaultOpen, streaming }: { steps: ReasoningStep[]; defaultOpen: boolean; streaming: boolean }) {
+  const [initialOpen] = useState(defaultOpen);
+  const [userOpen, setUserOpen] = useState<boolean | null>(null);
+  const open = userOpen ?? (streaming || initialOpen);
+
+  return (
+    <div className="reasoning-panel">
       <button className="reasoning-trigger" type="button" aria-expanded={open} onClick={() => setUserOpen(!open)}>
         <span className="reasoning-trigger-label" data-active={streaming || undefined}>{streaming ? "Thinking" : "Thought"}</span>
         <span aria-hidden>{open ? "⌄" : "›"}</span>

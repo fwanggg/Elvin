@@ -10,8 +10,6 @@ type RequestBody = {
   baseUrl?: string;
   apiKey?: string;
   model?: string;
-  toolsMode?: "shown" | "humanized" | "off";
-  reasoningMode?: "shown" | "hidden" | "off";
   messages?: IncomingMessage[];
   stream?: boolean;
   capability?: string;
@@ -46,8 +44,6 @@ type ChatRequest = {
   body: RequestBody;
   messages: IncomingMessage[];
   latestUserMessage: string;
-  toolsMode: NonNullable<RequestBody["toolsMode"]>;
-  reasoningMode: NonNullable<RequestBody["reasoningMode"]>;
   baseUrl: string;
 };
 
@@ -141,14 +137,13 @@ export async function POST(request: Request) {
 
   const endpoint = chatCompletionsEndpoint(chatRequest.baseUrl);
   const model = chatRequest.body.model?.trim() || "gpt-4o-mini";
-  const tools: ProviderTool[] | null = chatRequest.toolsMode === "off" ? null : [sampleOrderTool()];
-  const conversation = buildConversation(chatRequest.messages, chatRequest.toolsMode, chatRequest.reasoningMode);
+  const tools: ProviderTool[] = [sampleOrderTool()];
+  const conversation = buildConversation(chatRequest.messages);
   const callProvider = createProviderCaller({
     body: chatRequest.body,
     endpoint,
     headers: providerHeaders(chatRequest.body),
     model,
-    reasoningEnabled: chatRequest.reasoningMode !== "off",
     signal: request.signal,
     tools,
   });
@@ -167,17 +162,15 @@ export async function POST(request: Request) {
 
   const sessionId = sessionIdOf(call.response, chatRequest.body.threadId);
   if (chatRequest.body.stream) {
-    return eventStream(call.response, chatRequest.reasoningMode, chatRequest.toolsMode, sessionId, tools ? continueAfterTools : null);
+    return eventStream(call.response, sessionId, continueAfterTools);
   }
 
   return nonStreamingResponse({
     continueAfterTools,
     initialResponse: call.response,
-    reasoningMode: chatRequest.reasoningMode,
     sessionId,
     startedAt,
     tools,
-    toolsMode: chatRequest.toolsMode,
   });
 }
 
@@ -197,17 +190,15 @@ function normalizeChatRequest(body: RequestBody): ChatRequest {
     body,
     messages,
     latestUserMessage,
-    toolsMode: body.toolsMode ?? "shown",
-    reasoningMode: body.reasoningMode ?? "shown",
     baseUrl: body.baseUrl?.trim() ?? "",
   };
 }
 
 function demoResponse(chatRequest: ChatRequest, startedAt: number) {
   return NextResponse.json({
-    content: demoAnswer(chatRequest.latestUserMessage, chatRequest.toolsMode),
-    reasoning: chatRequest.reasoningMode === "off" ? null : "Classify the request, check whether a tool can answer it, then respond with the shortest useful status update.",
-    toolCalls: chatRequest.toolsMode === "off" ? [] : [{
+    content: demoAnswer(chatRequest.latestUserMessage),
+    reasoning: "Classify the request, check whether a tool can answer it, then respond with the shortest useful status update.",
+    toolCalls: [{
       name: "get_order_status",
       arguments: { order_id: chatRequest.latestUserMessage.match(/#?(\d{3,})/)?.[1] ?? "4821" },
       result: { status: "in_transit", carrier: "UPS", eta: "2026-09-24" },
@@ -217,14 +208,14 @@ function demoResponse(chatRequest: ChatRequest, startedAt: number) {
   });
 }
 
-function buildConversation(messages: IncomingMessage[], toolsMode: ChatRequest["toolsMode"], reasoningMode: ChatRequest["reasoningMode"]): OpenAIMessage[] {
+function buildConversation(messages: IncomingMessage[]): OpenAIMessage[] {
   return [
     {
       role: "system",
       content: [
         "You are being tested inside Elvin, an agent UX playground.",
-        toolsMode === "off" ? "Do not call tools; answer from the visible conversation only." : "Use tools when they materially improve the answer.",
-        reasoningMode === "off" ? "Do not include hidden reasoning fields." : "If your provider supports a reasoning field, keep it concise.",
+        "Use tools when they materially improve the answer.",
+        "If your provider supports a reasoning field, keep it concise.",
       ].join(" "),
     },
     ...messages.map((message) => ({
@@ -247,9 +238,8 @@ function createProviderCaller(options: {
   endpoint: string;
   headers: Record<string, string>;
   model: string;
-  reasoningEnabled: boolean;
   signal: AbortSignal;
-  tools: ProviderTool[] | null;
+  tools: ProviderTool[];
 }): ProviderCaller {
   const cacheKey = `${options.endpoint}|${options.model}`;
 
@@ -284,7 +274,6 @@ function fetchProvider(
   options: {
     endpoint: string;
     headers: Record<string, string>;
-    reasoningEnabled: boolean;
     signal: AbortSignal;
   },
   payload: Record<string, unknown>,
@@ -293,7 +282,7 @@ function fetchProvider(
   return fetch(options.endpoint, {
     method: "POST",
     headers: options.headers,
-    body: JSON.stringify(includeReasoning ? { ...payload, reasoning: { enabled: options.reasoningEnabled } } : payload),
+    body: JSON.stringify(includeReasoning ? { ...payload, reasoning: { enabled: true } } : payload),
     signal: options.signal,
   });
 }
@@ -327,11 +316,9 @@ function appendToolResults(conversation: OpenAIMessage[], calls: ToolCallSummary
 async function nonStreamingResponse(options: {
   continueAfterTools: ContinueAfterTools;
   initialResponse: Response;
-  reasoningMode: ChatRequest["reasoningMode"];
   sessionId: string | null;
   startedAt: number;
-  tools: ProviderTool[] | null;
-  toolsMode: ChatRequest["toolsMode"];
+  tools: ProviderTool[];
 }) {
   let response = options.initialResponse;
 
@@ -341,11 +328,11 @@ async function nonStreamingResponse(options: {
     const pending = toToolCallSummaries(choice.tool_calls);
     const content = textContent(choice);
 
-    if (pending.length === 0 || !options.tools) {
+    if (pending.length === 0) {
       return NextResponse.json({
         content: content || toolOnlyFallback(choice.tool_calls),
-        reasoning: options.reasoningMode !== "off" ? reasoningContent(choice, data) : null,
-        toolCalls: options.toolsMode !== "off" ? normalizeToolCalls(choice.tool_calls) : [],
+        reasoning: reasoningContent(choice, data),
+        toolCalls: normalizeToolCalls(choice.tool_calls),
         sessionId: options.sessionId,
         latencyMs: Date.now() - options.startedAt,
       });
@@ -485,14 +472,14 @@ async function consumeStream(upstream: Response, round: number, state: DeltaStat
  * Normalizes any provider response into one event per update, so the client
  * adapter only has to accumulate snapshots instead of parsing provider deltas.
  */
-function eventStream(upstream: Response, reasoningMode: RequestBody["reasoningMode"], toolsMode: RequestBody["toolsMode"], sessionId: string | null, continueAfterTools: ContinueAfterTools | null) {
+function eventStream(upstream: Response, sessionId: string | null, continueAfterTools: ContinueAfterTools) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
       const send = (event: StreamEvent) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
       const state: DeltaState = { text: "", reasoning: "", reasoningSource: null, toolCalls: new Map() };
       const emit = () => {
-        for (const event of snapshotEvents(state, reasoningMode, toolsMode)) send(event);
+        for (const event of snapshotEvents(state)) send(event);
       };
 
       try {
@@ -678,16 +665,14 @@ function toolCallEvent(call: ToolState): StreamEvent {
   return { type: "tool-call", toolCallId: call.id, toolName: call.name, args: visibleToolArgs(call), status: call.status };
 }
 
-function snapshotEvents(state: DeltaState, reasoningMode: RequestBody["reasoningMode"], toolsMode: RequestBody["toolsMode"]): StreamEvent[] {
+function snapshotEvents(state: DeltaState): StreamEvent[] {
   const events: StreamEvent[] = [];
-  if (reasoningMode !== "off" && state.reasoning.length > 0) {
+  if (state.reasoning.length > 0) {
     events.push({ type: "reasoning", text: state.reasoning });
   }
-  if (toolsMode !== "off") {
-    for (const call of state.toolCalls.values()) {
-      if (call.name.length === 0) continue;
-      events.push(toolCallEvent(call));
-    }
+  for (const call of state.toolCalls.values()) {
+    if (call.name.length === 0) continue;
+    events.push(toolCallEvent(call));
   }
   if (state.text.length > 0) {
     events.push({ type: "text", text: state.text });
@@ -807,10 +792,7 @@ function providerError(data: unknown, status: number) {
   return record?.error?.message ?? record?.message ?? record?.raw ?? `Provider returned HTTP ${status}.`;
 }
 
-function demoAnswer(prompt: string, toolsMode: string) {
+function demoAnswer(prompt: string) {
   const orderId = prompt.match(/#?(\d{3,})/)?.[1] ?? "4821";
-  if (toolsMode === "off") {
-    return `I can answer from the conversation, but tool calls are disabled. For order #${orderId}, open your Orders page or use the tracking link in the confirmation email.`;
-  }
   return `Order #${orderId} is in transit with UPS. It was held at the Memphis hub, so the new delivery estimate is Thursday, September 24. Want me to send you the tracking link?`;
 }
