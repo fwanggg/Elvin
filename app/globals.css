@@ -1006,6 +1006,11 @@ h6 {
 .thought-trigger { display: flex; align-items: center; gap: 6px; width: 100%; padding: 0; border: 0; background: transparent; color: var(--a-fg); cursor: pointer; text-align: left; }
 .thought-chevron { opacity: .45; font-size: 11px; }
 .thought-group[data-resting] [data-slot="thinking-indicator"] > span:first-child { animation: none; opacity: .3; }
+/* Settled, the row is a record rather than a live thing, so the label stops
+   sweeping too. The element's label carries the sweep in a `shimmer` class, so
+   undoing it means undoing what that class sets: the animation, and the clipped
+   gradient that carries it. */
+.thought-group[data-resting] [data-slot="thinking-indicator"] .shimmer { animation: none; background-image: none; -webkit-text-fill-color: currentColor; }
 .thought-content { padding: 10px 0 0 14px; }
 .thought-trace { margin: 0; max-height: 320px; overflow: auto; color: var(--a-muted); font-size: 13.5px; line-height: 1.6; }
 .thought-tools { display: flex; flex-direction: column; margin-top: 10px; }

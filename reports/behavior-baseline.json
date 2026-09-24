@@ -333,7 +333,7 @@
   "source": {
     "pattern=thread&theme=dark&view=dev&open=collapsed&stream=true&model=mock-model": {
       "status": 200,
-      "digest": "dc024eb23c197467",
+      "digest": "e6bf033c38f2dfcd",
       "files": [
         "package.json",
         "tsconfig.json",
@@ -353,7 +353,7 @@
     },
     "pattern=sidebar&theme=light&view=user&open=expanded&stream=false&model=mock-model&capability=x": {
       "status": 200,
-      "digest": "9540010667aec165",
+      "digest": "6c7cc721f2944e02",
       "files": [
         "package.json",
         "tsconfig.json",
@@ -373,7 +373,7 @@
     },
     "pattern=modal&theme=dark&view=dev&open=collapsed&stream=true&model=mock-model": {
       "status": 200,
-      "digest": "fac944bf3940f058",
+      "digest": "55e45b3719dab363",
       "files": [
         "package.json",
         "tsconfig.json",

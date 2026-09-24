@@ -242,7 +242,10 @@ type ThoughtGroupProps = Readonly<{
 function ThoughtGroup({ label, seconds, running, defaultOpen, children }: ThoughtGroupProps): ReactNode {
   const [initialOpen] = useState(defaultOpen);
   const [userOpen, setUserOpen] = useState<boolean | null>(null);
-  const open = userOpen ?? (running || initialOpen);
+  // The row rests where the sidebar puts it. A turn in flight does not open it:
+  // what it is doing is on the row itself, and the reader opens it when they want
+  // the detail — which is also the only thing that keeps it open afterwards.
+  const open = userOpen ?? initialOpen;
   const counted = seconds !== undefined && seconds >= 1;
 
   return (
@@ -291,8 +294,13 @@ function useThinkingLabel(viewMode: ViewMode): string | undefined {
   return useAuiState((state) => {
     if (viewMode !== "user") return undefined;
     if (state.message.status?.type !== "running") return undefined;
-    const pending = state.message.parts.find((part) => part.type === "tool-call" && part.result === undefined);
-    if (pending?.type === "tool-call") return describeStep(pending.toolName, pending.args, "running");
+    // The row names the last call the turn made, not only a running one. A call
+    // that has just finished is still what the turn has been doing, so its label
+    // stays until the next call replaces it rather than falling back to the verb.
+    const latest = state.message.parts.filter((part) => part.type === "tool-call").at(-1);
+    if (latest?.type === "tool-call") {
+      return describeStep(latest.toolName, latest.args, latest.result === undefined ? "running" : "complete");
+    }
     return verb;
   });
 }

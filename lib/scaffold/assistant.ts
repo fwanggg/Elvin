@@ -192,14 +192,18 @@ function EmojiMark({ role }: { role: keyof typeof EMOJI_MARKS }) {
 function AssistantMessage() {
   const running = useAuiState((state) => state.message.status?.type === "running");
   const reasoningArrived = useAuiState((state) => state.message.parts.some((part) => part.type === "reasoning" && part.text.trim().length > 0));
-  const pending = useAuiState((state) => state.message.parts.find((part) => part.type === "tool-call" && part.result === undefined));
+  const latestCall = useAuiState((state) => state.message.parts.filter((part) => part.type === "tool-call").at(-1));
   const verb = useThinkingVerb();
-  // What User Mode's row says. While the turn works it names the phase — the call
-  // that is still running, in its own verb form, or the verb a turn that is only
-  // reading gets — and once it settles it claims a trace only if one arrived.
+  // What User Mode's row says. While the turn works it names the last call it made
+  // — a running one in its own verb form, a finished one in its past form, so the
+  // label does not fall back to the verb between calls — and a turn that has only
+  // been reading is named with the verb. Once it settles the row claims a trace
+  // only if one arrived.
   const thoughtLabel = !running
     ? reasoningArrived ? "Thought" : "Worked"
-    : pending?.type === "tool-call" ? describeStep(pending.toolName, pending.args, "running") : verb;
+    : latestCall?.type === "tool-call"
+      ? describeStep(latestCall.toolName, latestCall.args, latestCall.result === undefined ? "running" : "complete")
+      : verb;
   // Only User Mode folds the whole middle of a turn into one row. Dev Mode groups
   // the trace alone and leaves every call its own card.
   const groupBy = useMemo(() => (elvinConfig.view === "user"
@@ -277,7 +281,8 @@ function useThinkingVerb(): string {
 function ThoughtGroup({ label, running, defaultOpen, children }: PropsWithChildren<{ label: string; running: boolean; defaultOpen: boolean }>) {
   const [initialOpen] = useState(defaultOpen);
   const [userOpen, setUserOpen] = useState<boolean | null>(null);
-  const open = userOpen ?? (running || initialOpen);
+  // The row rests where the config puts it; a turn in flight does not open it.
+  const open = userOpen ?? initialOpen;
 
   return (
     <div className="thought-group" data-resting={running ? undefined : true}>
