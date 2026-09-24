@@ -819,6 +819,11 @@ function stamp(state: DeltaState, before: { reasoning: number; text: number; cal
   }
 }
 
+/** A part's window, or nothing when the one frame that carried it was all of it. */
+function windowMs(startedAt: number | null, endedAt: number | null): number | undefined {
+  if (startedAt === null || endedAt === null || endedAt <= startedAt) return undefined;
+  return endedAt - startedAt;
+}
 function turnStats(state: DeltaState): TurnStats {
   const tools: Record<string, ToolTiming> = {};
   for (const [key, clock] of state.toolTimes) {
@@ -829,9 +834,14 @@ function turnStats(state: DeltaState): TurnStats {
       ...(clock.answeredAt !== undefined ? { roundTripMs: Math.max(0, clock.answeredAt - clock.calledAt) } : {}),
     };
   }
+  // A window needs two ends: a response that arrived whole, in one frame, has
+  // no window to report, and a zero would read as an instant rather than as
+  // "this provider does not stream".
+  const reasoningMs = windowMs(state.reasoningStartedAt, state.reasoningEndedAt);
+  const answerMs = windowMs(state.answerStartedAt, state.answerEndedAt);
   return {
-    ...(state.reasoningStartedAt !== null && state.reasoningEndedAt !== null ? { reasoningMs: state.reasoningEndedAt - state.reasoningStartedAt } : {}),
-    ...(state.answerStartedAt !== null && state.answerEndedAt !== null ? { answerMs: state.answerEndedAt - state.answerStartedAt } : {}),
+    ...(reasoningMs !== undefined ? { reasoningMs } : {}),
+    ...(answerMs !== undefined ? { answerMs } : {}),
     tools,
     usage: state.usage,
     estimated: state.usage === null,

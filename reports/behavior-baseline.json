@@ -88,7 +88,7 @@
           "type": "stats",
           "has": {
             "reasoningMs": false,
-            "answerMs": true,
+            "answerMs": false,
             "tools": 1,
             "usage": false,
             "estimated": true
@@ -111,7 +111,7 @@
           "type": "stats",
           "has": {
             "reasoningMs": false,
-            "answerMs": true,
+            "answerMs": false,
             "tools": 1,
             "usage": false,
             "estimated": true
@@ -134,7 +134,7 @@
           "type": "stats",
           "has": {
             "reasoningMs": false,
-            "answerMs": true,
+            "answerMs": false,
             "tools": 1,
             "usage": false,
             "estimated": true
@@ -234,7 +234,7 @@
           "type": "stats",
           "has": {
             "reasoningMs": false,
-            "answerMs": true,
+            "answerMs": false,
             "tools": 1,
             "usage": false,
             "estimated": true
@@ -257,7 +257,7 @@
           "type": "stats",
           "has": {
             "reasoningMs": false,
-            "answerMs": true,
+            "answerMs": false,
             "tools": 1,
             "usage": false,
             "estimated": true
@@ -280,7 +280,7 @@
           "type": "stats",
           "has": {
             "reasoningMs": false,
-            "answerMs": true,
+            "answerMs": false,
             "tools": 1,
             "usage": false,
             "estimated": true
@@ -380,7 +380,7 @@
           "type": "stats",
           "has": {
             "reasoningMs": false,
-            "answerMs": true,
+            "answerMs": false,
             "tools": 1,
             "usage": false,
             "estimated": true
@@ -403,7 +403,7 @@
           "type": "stats",
           "has": {
             "reasoningMs": false,
-            "answerMs": true,
+            "answerMs": false,
             "tools": 1,
             "usage": false,
             "estimated": true
@@ -426,7 +426,7 @@
           "type": "stats",
           "has": {
             "reasoningMs": false,
-            "answerMs": true,
+            "answerMs": false,
             "tools": 1,
             "usage": false,
             "estimated": true
@@ -525,7 +525,7 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": true,
+            "reasoningMs": false,
             "answerMs": false,
             "tools": 1,
             "usage": false,
@@ -552,8 +552,8 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": true,
-            "answerMs": true,
+            "reasoningMs": false,
+            "answerMs": false,
             "tools": 1,
             "usage": false,
             "estimated": true
@@ -579,8 +579,8 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": true,
-            "answerMs": true,
+            "reasoningMs": false,
+            "answerMs": false,
             "tools": 1,
             "usage": false,
             "estimated": true
@@ -606,8 +606,8 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": true,
-            "answerMs": true,
+            "reasoningMs": false,
+            "answerMs": false,
             "tools": 1,
             "usage": false,
             "estimated": true
