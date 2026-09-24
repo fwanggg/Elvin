@@ -113,6 +113,7 @@ export function UserRuntimeMessage({ emoji }: Readonly<{ emoji: Toggle }>): Reac
 export function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, emoji, defaultOpen, softStream, responseStatus }: AssistantRuntimeMessageProps): ReactNode {
   const humanized = stepsMode === "humanized";
   const stepsShown = humanized && toolsMode === "shown";
+  const reasoningShown = reasoningMode === "shown";
   const running = useAuiState((state) => state.message.status?.type === "running");
   // The turn is answering while the newest part is text. A tool call that lands
   // after some text ends that, so the clock starts again rather than falling
@@ -122,13 +123,13 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, e
     return last?.type === "text" && last.text.trim().length > 0;
   });
   const clockRunning = running && !answering;
-  const thinkingSeconds = useThinkingSeconds(clockRunning);
-  const thinkingLabel = useThinkingLabel(stepsShown);
+  const thinkingSeconds = useThinkingSeconds(clockRunning && reasoningShown);
+  const thinkingLabel = useThinkingLabel(stepsShown, reasoningShown);
   const elapsed = clockRunning && thinkingSeconds !== undefined && thinkingSeconds >= 1 ? `${thinkingSeconds}s` : undefined;
   // The reading the clock took, put in the place the live line took: once the
   // clock stops, the two swap in place rather than one leaving and the other
   // arriving somewhere else. Humanized mode shows its own step summary instead.
-  const reading = !humanized && !clockRunning && thinkingSeconds !== undefined && thinkingSeconds >= 1;
+  const reading = reasoningShown && !humanized && !clockRunning && thinkingSeconds !== undefined && thinkingSeconds >= 1;
   const thinking = reading
     ? <p className="thinking-settled">Thought for {thinkingSeconds}s</p>
     : clockRunning && thinkingLabel !== undefined
@@ -154,7 +155,7 @@ export function AssistantRuntimeMessage({ toolsMode, reasoningMode, stepsMode, e
             it settles into takes the place the live line took. The slot holds its
             height for as long as the turn runs, so the label changing state in it
             cannot move the conversation either. */}
-        {(thinking !== null || (running && !humanized)) && <div className="thinking-slot">{thinking}</div>}
+        {(thinking !== null || (running && !humanized && reasoningShown)) && <div className="thinking-slot">{thinking}</div>}
         <MessagePrimitive.GroupedParts groupBy={groupBy}>
           {({ part, children }) => {
             switch (part.type) {
@@ -261,11 +262,13 @@ function useStepsSummary(): string {
 /**
  * Names what the turn is doing from the moment it starts, and keeps naming it:
  * the line is not a gap filler, so a running trace does not silence it and the
- * callers decide when it hands over to the reading it leaves behind.
+ * callers decide when it hands over to the reading it leaves behind. It belongs
+ * to the reasoning group's knob, though: the trace hidden, the line that stands
+ * for it goes with it, and so does the slot that was holding its place.
  */
-function useThinkingLabel(stepListShows: boolean): string | undefined {
+function useThinkingLabel(stepListShows: boolean, reasoningShown: boolean): string | undefined {
   return useAuiState((state) => {
-    if (stepListShows) return undefined;
+    if (stepListShows || !reasoningShown) return undefined;
     if (state.message.status?.type !== "running") return undefined;
     const parts = state.message.parts;
     const pending = parts.find((part) => part.type === "tool-call" && part.result === undefined);
