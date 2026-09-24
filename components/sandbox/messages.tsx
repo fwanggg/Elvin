@@ -139,13 +139,17 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen, softStre
         <MessagePrimitive.Error>
           <p className="error-note"><ErrorPrimitive.Message /></p>
         </MessagePrimitive.Error>
-        {/* The line names the phase that comes first in a turn, so it opens the
-            message and stays there: the trace, the tool cards and the answer all
-            stream in below it, nothing is ever inserted over it, and the reading
-            it settles into takes the place the live line took. The slot holds its
-            height for as long as the turn runs, so the label changing state in it
-            cannot move the conversation either. */}
-        {(thinking !== null || running) && <div className="thinking-slot">{thinking}</div>}
+        {/* The line belongs to User Mode. There it names the phase that comes
+            first in a turn, so it opens the message and stays there: the trace,
+            the tool cards and the answer all stream in below it, nothing is ever
+            inserted over it, and the reading it settles into takes the place the
+            live line took. The slot holds its height for as long as the turn
+            runs, so the label changing state in it cannot move the conversation
+            either. Dev Mode draws the agent's own shapes and leaves the phase to
+            them: its reasoning box shimmers for the window the line would have
+            named, and its tool cards name their calls. So the line — and the
+            slot it was holding open — do not render there at all. */}
+        {viewMode === "user" && (thinking !== null || running) && <div className="thinking-slot">{thinking}</div>}
         <MessagePrimitive.GroupedParts groupBy={groupBy}>
           {({ part, children }) => {
             switch (part.type) {
