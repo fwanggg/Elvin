@@ -118,11 +118,11 @@ function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
           <dd ref={total} />
         </div>
         <div>
-          <dt>Token in</dt>
+          <dt title="Provider prompt_tokens/input_tokens. Includes system prompt, history, tools, and provider session context.">Prompt ctx</dt>
           <dd>{usage === null ? "—" : <span ref={asked} />}</dd>
         </div>
         <div>
-          <dt>Token out</dt>
+          <dt title="Provider completion_tokens/output_tokens for the assistant answer.">Output tok</dt>
           <dd>{usage === null ? "—" : <span ref={answered} />}</dd>
         </div>
       </dl>

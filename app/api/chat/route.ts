@@ -132,6 +132,9 @@ type DeltaState = {
   /** What each round reported for its thinking, for the window that was already
    *  filed by the time the number arrived. */
   roundTokens: Map<number, number>;
+  /** Provider usage reported per response round. Latest wins because some
+   *  streaming providers repeat cumulative usage before the final chunk. */
+  roundUsage: Map<number, UsageTotals>;
   /** Call keys already on the timeline, so a fragment cannot file a second span. */
   spanned: Set<string>;
   usage: UsageTotals | null;
@@ -560,6 +563,7 @@ function eventStream(upstream: Response, sessionId: string | null, continueAfter
         openSpan: null,
         reasoningWindow: new Map(),
         roundTokens: new Map(),
+        roundUsage: new Map(),
         spanned: new Set(),
         usage: null,
       };
@@ -924,7 +928,8 @@ function usageOf(payload: unknown): UsageTotals | null {
 function recordUsage(state: DeltaState, payload: unknown, round: number): boolean {
   const usage = usageOf(payload);
   if (!usage) return false;
-  state.usage = state.usage ? addUsage(state.usage, usage) : usage;
+  state.roundUsage.set(round, usage);
+  state.usage = [...state.roundUsage.values()].reduce<UsageTotals | null>((total, item) => (total ? addUsage(total, item) : item), null);
   // Kept per round as well as in the turn's total: a thinking window is what the
   // count belongs to, and the window may already have been filed.
   if (usage.reasoningTokens !== undefined) state.roundTokens.set(round, usage.reasoningTokens);
