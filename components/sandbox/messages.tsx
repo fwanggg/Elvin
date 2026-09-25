@@ -490,21 +490,28 @@ const ReasoningPart: ReasoningMessagePartComponent = ({ text }) => {
 function ToolCard({ name, args, result, defaultOpen, run, span, totalMs, slowestCallMs }: ToolCardProps): ReactNode {
   const [open, setOpen] = useState(defaultOpen);
   const link = useStepLink();
-  const slow = span !== undefined && slowestCallMs !== undefined && isStandout(span.ms, slowestCallMs);
+  // A call with no result has not settled, and the check and the duration belong to a call that
+  // is over: a provider that names a call before running it would otherwise be shown as finished
+  // the moment it was asked for. This is the signal the User Mode rows already read, so both
+  // readings of one turn agree about which calls are still out.
+  const running = result === undefined;
+  const slow = !running && span !== undefined && slowestCallMs !== undefined && isStandout(span.ms, slowestCallMs);
   const keys = span !== undefined ? spanKey(run, span) : "";
 
   return (
     <div className={pointed("part-card", keys, link)} data-steps={keys.length > 0 ? keys : undefined}>
       <button className="part-head" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
-        <span>✓ Used tool <strong>{name}</strong></span>
-        {span && isMeasurable(span.ms) && (
+        {running
+          ? <span className="part-running">Running tool <strong>{name}</strong></span>
+          : <span>✓ Used tool <strong>{name}</strong></span>}
+        {!running && span && isMeasurable(span.ms) && (
           <span className={slow ? "row-stat slow" : "row-stat"} title={`${formatSpan(span.ms)} of the ${formatSpan(totalMs)} the turn spent working`}>
             {formatSpan(span.ms)}
           </span>
         )}
         <span className="part-chevron">{open ? "⌄" : "›"}</span>
       </button>
-      {open && <div className="part-detail">{`Arguments\n${JSON.stringify(args ?? {}, null, 2)}\n\nResult\n${JSON.stringify(result ?? {}, null, 2)}`}</div>}
+      {open && <div className="part-detail">{`Arguments\n${JSON.stringify(args ?? {}, null, 2)}\n\nResult\n${running ? "not returned yet" : JSON.stringify(result, null, 2)}`}</div>}
     </div>
   );
 }
