@@ -174,7 +174,6 @@ type SegmentProps<T extends string> = Readonly<{
   options: T[];
   labels: Record<T, string>;
   onChange: (value: T) => void;
-  disabled?: boolean;
 }>;
 
 type SegmentedPanelProps<T extends string> = SegmentProps<T> & Readonly<{
@@ -523,30 +522,32 @@ function ControlSidebar({
           hint="Switches between dark and light."
         />
       </PanelSection>
-      <div className="section-rule" />
-      <SegmentedPanel
-        title="UI pattern"
-        name="pattern"
-        value={viewMode === "dev" ? "thread" : pattern}
-        options={["thread", "sidebar", "modal"]}
-        labels={PATTERN_SEGMENT_LABELS}
-        onChange={onPatternChange}
-        disabled={viewMode === "dev"}
-      >
-        <p className="hint">{viewMode === "dev" ? "Fixed to Thread in Dev Mode." : "Changes the assistant shell."}</p>
-      </SegmentedPanel>
-      <div className="section-rule" />
-      <SegmentedPanel
-        title="Viewport"
-        name="viewport"
-        value={viewMode === "dev" ? "desktop" : viewport}
-        options={["desktop", "mobile"]}
-        labels={VIEWPORT_LABELS}
-        onChange={onViewportChange}
-        disabled={viewMode === "dev"}
-      >
-        <p className="hint">{viewMode === "dev" ? "Fixed to Desktop in Dev Mode." : "Frames desktop or phone."}</p>
-      </SegmentedPanel>
+      {viewMode === "user" && (
+        <>
+          <div className="section-rule" />
+          <SegmentedPanel
+            title="UI pattern"
+            name="pattern"
+            value={pattern}
+            options={["thread", "sidebar", "modal"]}
+            labels={PATTERN_SEGMENT_LABELS}
+            onChange={onPatternChange}
+          >
+            <p className="hint">Changes the assistant shell.</p>
+          </SegmentedPanel>
+          <div className="section-rule" />
+          <SegmentedPanel
+            title="Viewport"
+            name="viewport"
+            value={viewport}
+            options={["desktop", "mobile"]}
+            labels={VIEWPORT_LABELS}
+            onChange={onViewportChange}
+          >
+            <p className="hint">Frames desktop or phone.</p>
+          </SegmentedPanel>
+        </>
+      )}
       <div className="section-rule" />
       <PanelSection title="Message parts">
         <SegmentedControlBlock
@@ -895,12 +896,12 @@ function ControlBlock({ label, children }: ControlBlockProps): ReactNode {
   return <div style={{ display: "flex", flexDirection: "column", gap: 6 }}><span className="top-label" style={{ paddingLeft: 0 }}>{label}</span>{children}</div>;
 }
 
-function Segment<T extends string>({ name, value, options, labels, onChange, disabled = false }: SegmentProps<T>): ReactNode {
+function Segment<T extends string>({ name, value, options, labels, onChange }: SegmentProps<T>): ReactNode {
   return (
-    <div className="seg" data-muted={disabled ? "true" : undefined}>
+    <div className="seg">
       {options.map((option) => (
         <label className="seg-opt" key={option}>
-          <input type="radio" name={name} checked={value === option} disabled={disabled} onChange={() => onChange(option)} />
+          <input type="radio" name={name} checked={value === option} onChange={() => onChange(option)} />
           {labels[option]}
         </label>
       ))}
@@ -908,10 +909,10 @@ function Segment<T extends string>({ name, value, options, labels, onChange, dis
   );
 }
 
-function SegmentedPanel<T extends string>({ title, children, name, value, options, labels, onChange, disabled }: SegmentedPanelProps<T>): ReactNode {
+function SegmentedPanel<T extends string>({ title, children, name, value, options, labels, onChange }: SegmentedPanelProps<T>): ReactNode {
   return (
     <PanelSection title={title}>
-      <Segment name={name} value={value} options={options} labels={labels} onChange={onChange} disabled={disabled} />
+      <Segment name={name} value={value} options={options} labels={labels} onChange={onChange} />
       {children}
     </PanelSection>
   );
@@ -965,7 +966,7 @@ function getStatusLabel(connection: ConnectionState, baseUrl: string, connection
  */
 function getViewModeHint(viewMode: ViewMode): string {
   return viewMode === "dev"
-    ? "Shows raw parts and stats."
+    ? "Shows stats; hides layout knobs."
     : "Shows product-style messages.";
 }
 

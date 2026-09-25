@@ -674,15 +674,6 @@ h6 {
 .seg-opt input { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; }
 .seg-opt:has(input:checked) { border-color: var(--color-accent); background: var(--color-accent); color: var(--color-bg); }
 .seg-opt:not(:has(input:checked)):hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
-.seg[data-muted="true"] {
-  opacity: .42;
-}
-.seg[data-muted="true"] .seg-opt {
-  cursor: not-allowed;
-}
-.seg-opt:has(input:disabled):hover {
-  background: transparent;
-}
 /* Select control for the app's own chrome: a bordered value box over a square
    menu. House tokens only — the sandboxed renderer's language never reaches it. */
 .dropdown { width: 100%; }
