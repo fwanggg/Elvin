@@ -1040,8 +1040,8 @@ h6 {
 .run-list > li { min-width: 0; }
 .run-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: baseline; gap: 12px; width: 100%; padding: 12px 16px; border: 0; background: transparent; color: color-mix(in srgb, var(--a-fg) 56%, transparent); cursor: pointer; font: inherit; text-align: left; transition: background-color .16s ease, color .16s ease; }
 .run-row:hover { background: color-mix(in srgb, var(--a-fg) 5%, transparent); color: color-mix(in srgb, var(--a-fg) 82%, transparent); }
-.run-row.active { background: color-mix(in srgb, var(--a-fg) 10%, #2f2829 90%); color: var(--a-fg); box-shadow: inset 0 -2px 0 var(--color-accent); }
-.run-row.active .run-index { color: var(--color-accent); }
+.run-row.active { background: #2f2829; color: #fffdf5; box-shadow: inset 0 -2px 0 var(--color-accent); }
+.run-row.active .run-index { color: inherit; }
 .run-index { flex: none; font-family: var(--font-mono); font-size: 12px; font-weight: 800; color: color-mix(in srgb, currentColor 82%, transparent); }
 .run-prompt { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: var(--font-body); font-size: var(--ds-body-size); font-weight: 700; letter-spacing: -.02em; }
 .run-ms { flex: none; font-family: var(--font-mono); font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
