@@ -682,8 +682,11 @@ h6 {
   font: inherit;
   text-align: left;
 }
-.session:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
-.session.is-live { background: var(--color-neutral-100); cursor: default; }
+.session:not(.is-live):hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+/* The conversation being looked at, inverted: the chrome's own text color as the fill and its
+   page color as the type, which is the strongest pair it has. A list needs exactly one row to
+   read as current, and nothing else in the rail is a filled block. */
+.session.is-live { background: var(--color-text); color: var(--color-bg); cursor: default; }
 .session:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
 .session-line { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .session-mark { flex: none; width: 7px; height: 7px; background: var(--color-accent); border-radius: var(--ds-radius); }
@@ -707,6 +710,7 @@ h6 {
   letter-spacing: var(--ds-label-tracking);
 }
 .session.is-live .session-when { color: var(--color-accent); }
+.session.is-live .session-meta { color: color-mix(in srgb, var(--color-bg) 62%, transparent); }
 .session-meta {
   overflow: hidden;
   font-size: 12px;
