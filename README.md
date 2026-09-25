@@ -49,6 +49,7 @@ components/
 lib/
   step-labels.ts        #   tool calls as plain-language steps
   turn-stats.ts         #   what the proxy measured, shared with the renderers
+  gateway-prompt.ts     #   the prompt the connect screen hands out
 scripts/                # gateway, behaviour baseline, provider probe
 reports/                # baselines and screenshots
 ```
