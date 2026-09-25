@@ -7,6 +7,7 @@ import { ModelPicker } from "@/components/model-picker";
 import { type AppTheme, type Design, type Pattern, type Toggle, type ViewMode, type Viewport } from "@/components/sandbox/knobs";
 import { type TurnStats, type UsageTotals } from "@/lib/turn-stats";
 import { GATEWAY_PROMPT } from "@/lib/gateway-prompt";
+import { localHistory, readApiKey, readConnection, writeApiKey, writeConnection } from "@/lib/session-store";
 import { DevModeAssistantMessage, DevModeUserMessage, UserModeAssistantMessage, UserModeUserMessage } from "@/components/sandbox/messages";
 import { RunPanel } from "@/components/sandbox/run-panel";
 import { useRuns } from "@/components/sandbox/runs";
@@ -255,6 +256,29 @@ export function AgentTestbed(): ReactNode {
     if (sessionRef.current.length === 0) sessionRef.current = storedThreadId();
   }, []);
 
+  /**
+   * Reconnect to whatever was live when this browser was last here, so the transcript the history
+   * adapter is about to load has a provider to belong to. This is the only place these fields come
+   * from storage; after it, the form owns them. A connection that fails now leaves the connect
+   * screen with its reason, which is where the reader would have been anyway.
+   */
+  useEffect(() => {
+    const stored = readConnection();
+    const key = readApiKey();
+    if (!stored || key.trim().length === 0) return;
+    setBaseUrl(stored.baseUrl);
+    setApiKey(key);
+    setModel(stored.model);
+    void checkConnection(stored.baseUrl, key, stored.model);
+  }, []);
+
+  /** Whatever is live is what a reload comes back to. */
+  useEffect(() => {
+    if (connection !== "live") return;
+    writeConnection({ baseUrl, model });
+    writeApiKey(apiKey);
+  }, [connection, baseUrl, model, apiKey]);
+
   const modelAdapter = useMemo<ChatModelAdapter>(() => ({
     async *run({ messages, abortSignal, unstable_threadId }) {
       const sessionId = sessionRef.current || unstable_threadId;
@@ -353,7 +377,14 @@ export function AgentTestbed(): ReactNode {
       yield { content: assembleContent({ text, reasoning, toolCalls }), metadata: { timing, ...(stats ? { custom: { stats } } : {}) } };
     },
   }), [apiKey, baseUrl, capability, model, owner]);
-  const runtime = useLocalRuntime(modelAdapter);
+  /**
+   * The conversation is kept in the browser, under the same id the session is keyed on: the
+   * endpoint has no history to ask for, so a reload with an empty transcript renders nothing even
+   * when the provider remembers the thread. The adapter loads it when a thread opens and appends
+   * as messages land.
+   */
+  const history = useMemo(() => localHistory(storedThreadId), []);
+  const runtime = useLocalRuntime(modelAdapter, { adapters: { history } });
 
   /**
    * A new thread on the connection that is already open: a fresh session id for
@@ -387,8 +418,8 @@ export function AgentTestbed(): ReactNode {
     forgetProvider();
   }
 
-  async function checkConnection(): Promise<void> {
-    const trimmedUrl = baseUrl.trim();
+  async function checkConnection(url = baseUrl, key = apiKey, wanted = model): Promise<void> {
+    const trimmedUrl = url.trim();
     if (trimmedUrl.length === 0) {
       setConnection("demo");
       setConnectionError("Paste an OpenAI-compatible URL to render the sandbox.");
@@ -402,7 +433,7 @@ export function AgentTestbed(): ReactNode {
       const response = await fetch("/api/check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ baseUrl: trimmedUrl, apiKey, model }),
+        body: JSON.stringify({ baseUrl: trimmedUrl, apiKey: key, model: wanted }),
       });
       const data = (await response.json()) as CheckResponse;
       if (!response.ok || !data.ok) {
