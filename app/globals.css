@@ -1032,7 +1032,7 @@ h6 {
 .e2e-span { display: block; position: absolute; inset-block: 0; padding: 0; border: 0; transform-origin: left center; background: color-mix(in srgb, var(--a-fg) 32%, transparent); color: inherit; cursor: pointer; font: inherit; animation: span-in .5s cubic-bezier(.23, 1, .32, 1) both; transition: inset-inline-start .24s linear, inline-size .24s linear; }
 .e2e-span[data-role="call"] { background: color-mix(in srgb, var(--a-fg) 58%, transparent); }
 .e2e-span.slow { background: var(--color-accent); }
-.e2e-span.is-linked, .e2e-span.is-pointed { outline: 2px solid var(--a-accent); outline-offset: 1px; }
+.e2e-span.is-linked, .e2e-span.is-pointed { outline: 2px solid var(--color-accent); outline-offset: 1px; }
 @keyframes span-in { from { transform: scaleX(0); } }
 /* The hatching's own word, and its figure: what the run spent while the request was in
    flight, which is the run less everything its windows measured. */
@@ -1053,7 +1053,7 @@ h6 {
 /* The row that is chosen, banded the same way and held until it is chosen again or
    another takes its place: the reader can see which row the card across the chat
    belongs to without going back to the pointer. */
-.step-row.is-pointed { outline: 2px solid var(--a-accent); outline-offset: 3px; }
+.step-row.is-pointed { outline: 2px solid var(--color-accent); outline-offset: 3px; }
 .step-row.is-pointed .step-name { color: var(--a-fg); }
 .step-row.slow .step-name, .step-row.slow .step-ms { color: var(--color-accent); }
 /* Reasoning, drawn two ways. Dev Mode renders the element as it ships: its
@@ -1096,7 +1096,7 @@ h6 {
    so nothing reflows when it appears. User Mode's single row answers to every step
    of the turn, so a hover there bands the row that holds it. */
 [data-steps].is-linked,
-[data-steps].is-pointed { outline: 2px solid var(--a-accent); outline-offset: -2px; }
+[data-steps].is-pointed { outline: 2px solid var(--color-accent); outline-offset: -2px; }
 /* A thinking step points at one block of a trace that holds every window of the
    turn. The band stands off the words it is about, rather than being drawn inside
    their box the way it is on a card, so it reads as a mark on a passage. */
