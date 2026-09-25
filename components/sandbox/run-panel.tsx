@@ -117,12 +117,10 @@ function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
           <dt title="Provider prompt_tokens/input_tokens: everything the model was sent, which is the system prompt, the history, the tools, and any session context.">Input</dt>
           <dd>{usage === null ? "—" : <span ref={asked} />}</dd>
         </div>
-        {usage?.cachedTokens !== undefined && (
-          <div>
-            <dt title="The part of the input the provider served from its own cache, as it reported it. Absent where a provider reports no caching at all.">Cached</dt>
-            <dd><span ref={cached} /></dd>
-          </div>
-        )}
+        <div>
+          <dt title="The part of the input the provider served from its own cache, in whichever shape it sent it: prompt_tokens_details.cached_tokens, prompt_cache_hit_tokens, or cache_read_input_tokens. A dash means this provider reported none.">Cached</dt>
+          <dd>{usage?.cachedTokens === undefined ? "—" : <span ref={cached} />}</dd>
+        </div>
         <div>
           <dt title="Provider completion_tokens/output_tokens for the assistant answer.">Output tok</dt>
           <dd>{usage === null ? "—" : <span ref={answered} />}</dd>
