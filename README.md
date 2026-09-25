@@ -32,7 +32,7 @@ Every control changes the sandbox live. There is no build step between a decisio
 | **UI pattern** | `Thread` · `Copilot` (docked sidebar) · `Floating` (modal launcher) |
 | **App theme** | `Dark` · `Light` |
 | **Design language** | Swiss Grid · Neo-Brutalism · Biophilic · Minimalist · Organic / Anti-grid · Skeuomorphism · Cyberpunk/Terminal |
-| **View mode** | `Dev Mode` · `User Mode` — who the parts render for. Tools and reasoning always render: Dev Mode shows them as the agent sent them (a card per call, and the trace in its group), User Mode writes them for a person (each call a step in plain language, its argument a chip, and its raw request and result behind a disclosure) |
+| **View mode** | `Dev Mode` · `User Mode` — who the parts render for. Tools and reasoning always render: Dev Mode shows them as the agent sent them, with a card per call, the trace in its group and the turn's timings in the runs panel beside the chat; User Mode writes them for a person (each call a step in plain language, its argument a chip, and its raw request and result behind a disclosure) |
 | **Default state** | `Collapsed` · `Expanded` — how the trace and tool cards rest |
 | **Emoji** | `On` · `Off` — turn markers beside each message |
 ## Project layout
@@ -49,7 +49,7 @@ components/
 lib/
   step-labels.ts        #   tool calls as plain-language steps
   turn-stats.ts         #   what the proxy measured, shared with the renderers
-scripts/                # gateway, behaviour baseline, provider probe
+scripts/                # gateways (local providers; a terminal session as one), behaviour baseline, provider probe
 reports/                # baselines and screenshots
 ```
 

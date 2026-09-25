@@ -121,9 +121,10 @@ function normalize(event) {
   return {
     type: "stats",
     has: {
-      reasoningMs: typeof stats.reasoningMs === "number",
+      spans: Array.isArray(stats.spans) ? stats.spans.length : 0,
+      totalMs: typeof stats.totalMs === "number",
       answerMs: typeof stats.answerMs === "number",
-      tools: Object.keys(stats.tools ?? {}).length,
+      leadMs: typeof stats.leadMs === "number",
       usage: stats.usage !== null && stats.usage !== undefined,
       estimated: stats.estimated === true,
     },

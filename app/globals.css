@@ -591,16 +591,19 @@ a { color: inherit; }
 .nav {
   display: flex;
   align-items: stretch;
-  gap: 16px;
-  padding: var(--ds-space-bar);
+  gap: 0;
+  padding: 0;
   border-bottom: var(--ds-border) solid var(--ds-edge-soft);
   background: var(--color-bg);
 }
 .nav-brand {
+  flex: 0 0 264px;
   display: flex;
   align-items: center;
+  padding: 0 14px;
+  border-right: var(--ds-border) solid var(--ds-edge-soft);
   font-family: var(--font-heading);
-  font-size: 30px;
+  font-size: 22px;
   font-weight: 800;
   letter-spacing: -.03em;
   line-height: 1;
@@ -783,13 +786,14 @@ h6 {
 /* Stage header. Ruled cells — the agent, the model the sandbox will call, and
    the two stage actions — so the renderer's own inputs sit on the line above
    it instead of in the control column. */
-.metric-bar { display: flex; align-items: stretch; border-bottom: var(--ds-border) solid var(--ds-edge); background: var(--color-bg); }
-.metric-cell { display: flex; flex-direction: column; justify-content: center; gap: var(--ds-space-gap); min-width: 0; padding: var(--ds-space-cell); }
+.metric-bar { flex: 1; min-width: 0; display: flex; align-items: stretch; background: var(--color-bg); }
+.metric-cell { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 12px; min-width: 0; padding: 8px 16px; }
 .metric-cell + .metric-cell { border-left: var(--ds-border) solid var(--ds-edge); }
 .metric-agent, .metric-model { flex: 1 1 0; }
-.metric-cell-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; color: var(--color-neutral-600); font-family: var(--font-heading); font-size: 11px; font-weight: var(--ds-label-weight); letter-spacing: var(--ds-label-tracking); text-transform: var(--ds-label-transform); }
-.metric-icon { font-size: 15px; }
-.metric-value { display: flex; align-items: center; min-width: 0; overflow: hidden; font-family: var(--font-heading); font-size: 15px; font-weight: 800; white-space: nowrap; }
+.metric-cell-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; color: var(--color-neutral-600); font-family: var(--font-heading); font-size: 10px; font-weight: var(--ds-label-weight); letter-spacing: var(--ds-label-tracking); text-transform: var(--ds-label-transform); white-space: nowrap; }
+.metric-icon { font-size: 14px; }
+.metric-value { display: flex; align-items: center; min-width: 0; overflow: hidden; font-family: var(--font-heading); font-size: 14px; font-weight: 800; white-space: nowrap; }
+.metric-agent .metric-value, .metric-model .model-picker { flex: 1 1 auto; }
 .metric-swatch { flex: none; width: 11px; height: 11px; margin-right: 9px; }
 .metric-host { overflow: hidden; text-overflow: ellipsis; }
 .metric-state { overflow: hidden; font-weight: 400; color: var(--color-neutral-600); text-overflow: ellipsis; }
@@ -802,10 +806,9 @@ h6 {
    the finger, and the click leaves a wash of the accent fading back out while
    the plus turns a quarter — a quarter leaves the glyph a plus, so the mark has
    a beginning and a settled end instead of a jump. */
-.thread-new { position: relative; overflow: hidden; }
-.thread-new:active { background: color-mix(in srgb, var(--color-text) 12%, transparent); }
-.thread-wash { position: absolute; inset: 0; pointer-events: none; background: var(--color-accent); animation: thread-wash .45s ease-out both; }
-.thread-plus { display: inline-block; animation: thread-plus-turn .45s cubic-bezier(.23,1,.32,1) both; }
+.thread-new { position: relative; overflow: hidden; background: var(--color-accent); color: var(--color-bg); }
+.thread-new:hover { background: var(--color-accent-600); }
+.thread-new:active { background: var(--color-accent-700); }
 @keyframes thread-wash { from { opacity: .3; } to { opacity: 0; } }
 @keyframes thread-plus-turn { from { transform: rotate(0deg); } to { transform: rotate(90deg); } }
 @media (prefers-reduced-motion: reduce) { .thread-wash, .thread-plus { animation: none; } }
@@ -834,12 +837,6 @@ h6 {
      given rather than the browser window. */
   container-type: inline-size;
 }
-/* The app theme control rides the renderer's top-right corner. It keeps the
-   sidebar's segmented styling, but carries its own surface: it sits on top of
-   the app, not on the chrome's flat background. */
-.canvas-theme { position: absolute; z-index: 1; top: calc(var(--ds-space-canvas) + 10px); right: calc(var(--ds-space-canvas) + 10px); display: flex; }
-.canvas-theme .seg { background: var(--color-bg); }
-.canvas-theme .seg-opt { flex: none; padding: 6px 12px; }
 
 /* Mobile: the same shell, framed as a phone. Only this frame is a named
    container, so only the phone answers the narrow rules at the foot of this
@@ -950,6 +947,8 @@ h6 {
    the sticky footer needs that same scrollport to hold against. */
 .messages { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .message-col { flex: 1; min-height: 0; overflow: auto; width: 100%; max-width: 680px; margin: 0 auto; padding: 32px 24px; display: flex; flex-direction: column; gap: 18px; }
+.message-col { scrollbar-width: none; }
+.message-col::-webkit-scrollbar { width: 0; height: 0; }
 .assistant-frame.sidebar .message-col, .assistant-frame.modal .message-col { max-width: none; padding: 16px; }
 .user-bubble { align-self: flex-end; max-width: 80%; padding: 10px 16px; border: var(--ds-border) solid var(--a-border); border-radius: var(--ds-radius-card); background: var(--a-surface); font-size: var(--ds-body-size); line-height: 1.5; }
 /* Turn markers. LobeChat renders a message's avatar as an emoji beside it; we
@@ -967,9 +966,132 @@ h6 {
 .part-card { margin: 8px 0; overflow: hidden; border: var(--ds-border) solid var(--a-border); border-radius: var(--ds-radius-card); background: var(--a-bg); box-shadow: var(--ds-shadow); }
 .part-head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 12px; border: 0; background: transparent; cursor: pointer; font-size: 13px; text-align: left; }
 .part-detail { padding: 10px 12px; border-top: 1px solid var(--a-border); background: var(--a-chrome); color: var(--a-fg); font-family: var(--font-mono); font-size: 12px; line-height: 1.5; }
-/* The call's own clock, beside its name: the model's time to get to the call,
-   then the agent's time to carry on once the result went back. */
-.part-stat { flex: none; color: var(--a-muted); font-family: var(--font-mono); font-size: 11.5px; }
+/* The turn's shape lives in the panel beside the chat, not behind the rows it
+   describes: a fill under a row competes with the words on it, and the same
+   numbers read better as one column that can be scanned. */
+/* The row's own reading, right-aligned: a tool row sits it beside its chevron,
+   and the reasoning row hangs it in the card's corner instead, because the
+   element's trigger ends at its own label. */
+.row-stat { color: var(--a-muted); font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.part-head .row-stat { margin-left: auto; }
+/* The step that dominated the wait reads red on both ends of it. The house accent
+   rather than the sandbox's own: this mark means "this is where the time went",
+   not "this is the brand", and in a phosphor design the sandbox accent is green. */
+.row-stat.slow { color: var(--color-accent); }
+.reasoning-root .row-stat { position: absolute; top: 8px; right: 12px; display: flex; align-items: center; height: 32px; }
+.part-chevron { flex: none; opacity: .6; }
+/* The answer's own line, under the text it describes: what the writing cost and
+   how long it took. It closes the message rather than joining the rows, because
+   the answer is the turn's output rather than a step of it. */
+.response-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 12px 0 0; padding-top: 10px; border-top: var(--ds-border) solid var(--a-border); color: var(--a-muted); font-size: 12.5px; }
+.response-ms { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+/* The turn marker on the chat side. The runs panel lists the same count, so a
+   row there and a label here point at each other; this is what the panel scrolls
+   to when a run is picked. */
+.run-turn { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.run-label { align-self: flex-start; color: var(--a-muted); font-family: var(--font-heading); font-size: 11px; font-weight: var(--ds-label-weight); letter-spacing: var(--ds-label-tracking); text-transform: var(--ds-label-transform); }
+.run-label.active { color: var(--a-fg); }
+
+/* The telemetry plane. A second column inside the frame rather than an overlay:
+   the chat keeps its own measure and the panel takes the rest of the width, so
+   neither has to make room for the other and nothing is left over. Only the
+   thread pattern has the room — the copilot and floating shells do not. */
+.assistant-frame.thread { flex-direction: row; }
+.assistant-frame.thread .messages { flex: 1 1 0; min-width: 280px; }
+.assistant-frame.thread .message-col { max-width: none; }
+.run-resizer {
+  flex: none;
+  position: relative;
+  z-index: 2;
+  width: 10px;
+  margin-inline: -5px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.run-resizer::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 50%;
+  width: var(--ds-border);
+  transform: translateX(-50%);
+  background: color-mix(in srgb, var(--a-fg) 18%, transparent);
+}
+.run-resizer:hover::before,
+.run-resizer:focus-visible::before { width: 3px; background: var(--color-accent); }
+.run-resizer:focus-visible { outline: 0; }
+.run-panel {
+  flex: none;
+  width: var(--run-panel-width, clamp(340px, 30%, 480px));
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  padding: 18px 0 24px;
+  background: color-mix(in srgb, var(--a-bg) 92%, #2b2626 8%);
+  color: var(--a-fg);
+  font-family: var(--font-body);
+  font-size: var(--ds-body-size);
+}
+.run-panel { scrollbar-width: none; }
+.run-panel::-webkit-scrollbar { width: 0; height: 0; }
+.run-panel-title { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0 16px; color: color-mix(in srgb, var(--a-fg) 54%, transparent); font-family: var(--font-heading); font-size: 10px; font-weight: var(--ds-label-weight); letter-spacing: .15em; text-transform: var(--ds-label-transform); }
+.run-list { list-style: none; margin: 18px 0 0; padding: 0 0 16px; display: flex; flex-direction: column; gap: 0; border-block: var(--ds-border) solid color-mix(in srgb, var(--a-fg) 10%, transparent); }
+.run-list > li { min-width: 0; }
+.run-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: baseline; gap: 12px; width: 100%; padding: 12px 16px; border: 0; background: transparent; color: color-mix(in srgb, var(--a-fg) 56%, transparent); cursor: pointer; font: inherit; text-align: left; transition: background-color .16s ease, color .16s ease; }
+.run-row:hover { background: color-mix(in srgb, var(--a-fg) 5%, transparent); color: color-mix(in srgb, var(--a-fg) 82%, transparent); }
+.run-row.active { background: #2f2829; color: #fffdf5; box-shadow: inset 0 -2px 0 var(--color-accent); }
+.run-row.active .run-index { color: inherit; }
+.run-index { flex: none; font-family: var(--font-mono); font-size: 12px; font-weight: 800; color: color-mix(in srgb, currentColor 82%, transparent); }
+.run-prompt { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: var(--font-body); font-size: var(--ds-body-size); font-weight: 700; letter-spacing: -.02em; }
+.run-ms { flex: none; font-family: var(--font-mono); font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.run-bar { display: none; }
+.run-detail { position: relative; margin: 24px 16px 0; padding: 0; border: 0; }
+.run-detail .run-panel-title { margin: 0; padding: 0; }
+/* The run's own span, end to end: the turn as its badge measures it — request to last
+   token, the wait for that token and the answer it wrote included — with every window
+   drawn where it sat on that one clock. What the windows do not cover is the request
+   in flight: hatched, because it is the time around the steps rather than a reading of
+   one, and named under the span. The windows sweep in one after the other, so a run
+   arrives as a shape rather than as blocks that were always there. */
+.run-e2e { position: relative; height: 12px; margin: 18px 0 0; background-color: color-mix(in srgb, var(--a-fg) 4%, transparent); background-image: repeating-linear-gradient(135deg, color-mix(in srgb, var(--a-fg) 13%, transparent) 0 3px, transparent 3px 7px); }
+.e2e-span { display: block; position: absolute; inset-block: 0; padding: 0; border: 0; transform-origin: left center; background: color-mix(in srgb, var(--a-fg) 46%, transparent); color: inherit; cursor: pointer; font: inherit; animation: span-in .5s cubic-bezier(.23, 1, .32, 1) both; transition: inset-inline-start .24s linear, inline-size .24s linear, background-color .16s ease; }
+.e2e-span[data-role="call"] { background: color-mix(in srgb, var(--a-fg) 78%, transparent); }
+.e2e-span[data-role="output"] { background: color-mix(in srgb, var(--a-fg) 94%, transparent); }
+.e2e-span.slow { background: color-mix(in srgb, var(--color-accent) 78%, var(--a-fg) 22%); }
+.e2e-span.is-linked, .e2e-span.is-pointed { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+/* A wait: the ground between two windows, drawn the way the span always drew it and now a
+   target of its own. It answers to the row below rather than to the thread, so hovering
+   either one marks both. */
+.e2e-wait { position: absolute; inset-block: 0; background-color: color-mix(in srgb, var(--a-fg) 4%, transparent); background-image: repeating-linear-gradient(135deg, color-mix(in srgb, var(--a-fg) 13%, transparent) 0 3px, transparent 3px 7px); animation: span-in .5s cubic-bezier(.23, 1, .32, 1) both; }
+.e2e-wait.is-linked, .e2e-wait.is-pointed { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+@keyframes span-in { from { transform: scaleX(0); } }
+.run-facts { display: flex; margin: 0; border-bottom: var(--ds-border) solid color-mix(in srgb, var(--a-fg) 10%, transparent); }
+.run-facts div { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: space-between; min-width: 0; padding: 12px 8px 14px; border-left: var(--ds-border) solid color-mix(in srgb, var(--a-fg) 8%, transparent); }
+.run-facts div:first-child { border-left: 0; }
+.run-facts dt { margin: 0; overflow: hidden; color: color-mix(in srgb, var(--a-fg) 70%, transparent); font-family: var(--font-body); font-size: 10px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; overflow-wrap: break-word; }
+/* A reading and its note sit on one line while the cell has room and drop the note to its
+   own line when it does not, so a figure is never truncated to make space for its own
+   breakdown. */
+.run-facts dd { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 6px; margin: 8px 0 0; color: var(--a-fg); font-family: var(--font-mono); font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.run-fact-slash { color: color-mix(in srgb, var(--a-fg) 45%, transparent); font-weight: 400; }
+.run-steps { position: relative; list-style: none; margin: 22px 0 0; padding: 30px 0 0; display: flex; flex-direction: column; gap: 0; }
+.run-steps::before { content: "Sequence"; position: absolute; inset-block-start: 0; inset-inline: 0; padding: 0 0 12px; border-bottom: var(--ds-border) solid color-mix(in srgb, var(--a-fg) 10%, transparent); color: color-mix(in srgb, var(--a-fg) 48%, transparent); font-family: var(--font-heading); font-size: 10px; font-weight: var(--ds-label-weight); letter-spacing: .15em; text-transform: uppercase; }
+.run-steps::after { content: "Tokens     Time"; position: absolute; inset-block-start: 0; inset-inline-end: 0; color: color-mix(in srgb, var(--a-fg) 48%, transparent); font-family: var(--font-heading); font-size: 10px; font-weight: var(--ds-label-weight); letter-spacing: .15em; text-transform: uppercase; white-space: pre; }
+.step-row { display: grid; grid-template-columns: minmax(0, 1fr) 68px 52px; align-items: center; gap: 10px; width: 100%; padding: 11px 0; border: 0; border-bottom: var(--ds-border) solid color-mix(in srgb, var(--a-fg) 8%, transparent); background: transparent; color: color-mix(in srgb, var(--a-fg) 58%, transparent); font: inherit; text-align: left; cursor: pointer; transition: color .16s ease, background-color .16s ease; }
+.step-row:hover, .step-row.is-linked { color: var(--a-fg); }
+.step-name { display: flex; align-items: center; gap: 7px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: var(--font-body); font-size: 13px; font-weight: 700; letter-spacing: -.02em; }
+.step-chevron { flex: none; width: 12px; height: 12px; opacity: .45; transition: transform .16s ease; }
+.step-row[aria-pressed="true"] .step-chevron { transform: rotate(90deg); }
+.step-role-icon { flex: none; width: 13px; height: 13px; opacity: .72; }
+.step-tokens { text-align: right; font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+.step-ms { text-align: right; font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+/* The row that is chosen, banded the same way and held until it is chosen again or
+   another takes its place: the reader can see which row the card across the chat
+   belongs to without going back to the pointer. */
+.step-row.is-pointed { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.step-row.is-pointed .step-name { color: var(--a-fg); }
+.step-row.slow .step-name, .step-row.slow .step-ms { color: var(--color-accent); }
 /* Reasoning, drawn two ways. Dev Mode renders the element as it ships: its
    trigger is the brain and the word "Reasoning", inside the outline the element
    carries, and the sandbox palette reaches it through the data slots the way it
@@ -979,12 +1101,13 @@ h6 {
 .reasoning-root { padding: 8px 12px; border: var(--ds-border) solid var(--a-border); border-radius: var(--ds-radius-card); background: var(--a-bg); box-shadow: var(--ds-shadow); }
 .reasoning-root [data-slot="reasoning-trigger"] { max-width: none; color: var(--a-muted); font-size: 13px; }
 .reasoning-root [data-slot="reasoning-trigger"]:hover { color: var(--a-fg); }
-.reasoning-root [data-slot="reasoning-trigger-chevron"] { margin-left: auto; }
 .reasoning-root [data-slot="reasoning-text"] { max-height: 260px; padding-inline-start: 12px; border-inline-start: 1px solid var(--a-border); color: var(--a-fg); font-size: 13px; line-height: 1.5; }
-/* The reasoning window and its tokens, above the trace: the provider's own count
-   where it split thinking out of the completion total, an estimate where it did
-   not. Both live on the wire's clock, not the renderer's. */
-.reasoning-stats { display: flex; gap: 10px; margin: 0 0 8px; color: var(--a-muted); font-family: var(--font-mono); font-size: 11.5px; }
+/* The fills sit behind the card's own content, so the rows above them — the
+   trigger, the trace, a call's head and its detail — are lifted over them. */
+.part-card, .reasoning-root { position: relative; }
+.reasoning-root { overflow: hidden; }
+.part-head, .part-detail,
+.reasoning-root [data-slot="reasoning-trigger"], .reasoning-root [data-slot="reasoning-content"] { position: relative; }
 .reasoning-root [data-slot="reasoning-fade"]:first-child { background: linear-gradient(to bottom, var(--a-bg), transparent); }
 .reasoning-root [data-slot="reasoning-fade"]:last-child { background: linear-gradient(to top, var(--a-bg), transparent); }
 .reasoning-line { margin: 0; white-space: pre-wrap; }
@@ -1002,6 +1125,25 @@ h6 {
 .thought-tools { display: flex; flex-direction: column; margin-top: 10px; }
 .thought-tools > * { padding: 4px 0; border-top: 1px solid var(--a-border); }
 .thought-tools > *:first-child { border-top: 0; }
+/* The card a step points at — hovered, or clicked and held until another row is
+   clicked. A band around the card rather than a repaint of it: the card keeps the
+   palette it is being read in, and every design's accent is the one colour it
+   keeps high-contrast against its own surfaces. The band is drawn inside the box,
+   so nothing reflows when it appears. User Mode's single row answers to every step
+   of the turn, so a hover there bands the row that holds it. */
+[data-steps].is-linked,
+[data-steps].is-pointed { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+/* A thinking step points at one block of a trace that holds every window of the
+   turn. The band stands off the words it is about, rather than being drawn inside
+   their box the way it is on a card, so it reads as a mark on a passage. */
+.reasoning-window.is-linked,
+.reasoning-window.is-pointed { outline-offset: 2px; }
+/* Only the innermost drawing of a step wears the band. A card that holds the very block
+   the pointer is on gives its own band up, so the band says which window of the trace was
+   meant instead of claiming the trace around it — and a card whose trace is still closed,
+   holding no block yet, keeps the band as the only drawing there is. */
+.is-linked:has(.is-linked),
+.is-pointed:has(.is-pointed) { outline: none; }
 /* Reasoning arrives as one growing string, so each word gets the entrance the
    answer text's words get — that is what keeps a long trace from appearing in
    whole paragraphs. */

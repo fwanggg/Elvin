@@ -7,9 +7,10 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 0,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 0,
+            "leadMs": false,
             "usage": false,
             "estimated": true
           }
@@ -26,9 +27,10 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 1,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 1,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -45,9 +47,10 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 1,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 1,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -64,32 +67,10 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 1,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 1,
-            "usage": false,
-            "estimated": true
-          }
-        },
-        {
-          "type": "tool-call",
-          "toolCallId": "call_fixed_1",
-          "toolName": "get_order_status",
-          "args": {
-            "order_id": "4821"
-          },
-          "status": "completed"
-        },
-        {
-          "type": "text",
-          "text": "Answer after the tool."
-        },
-        {
-          "type": "stats",
-          "has": {
-            "reasoningMs": false,
-            "answerMs": false,
-            "tools": 1,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -110,9 +91,10 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 1,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 1,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -133,9 +115,34 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 1,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 1,
+            "leadMs": true,
+            "usage": false,
+            "estimated": true
+          }
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "stats",
+          "has": {
+            "spans": 1,
+            "totalMs": true,
+            "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -153,9 +160,10 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 0,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 0,
+            "leadMs": false,
             "usage": false,
             "estimated": true
           }
@@ -172,9 +180,10 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 1,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 1,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -191,9 +200,10 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 1,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 1,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -210,32 +220,10 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 1,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 1,
-            "usage": false,
-            "estimated": true
-          }
-        },
-        {
-          "type": "tool-call",
-          "toolCallId": "call_fixed_1",
-          "toolName": "get_order_status",
-          "args": {
-            "order_id": "4821"
-          },
-          "status": "completed"
-        },
-        {
-          "type": "text",
-          "text": "Answer after the tool."
-        },
-        {
-          "type": "stats",
-          "has": {
-            "reasoningMs": false,
-            "answerMs": false,
-            "tools": 1,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -256,9 +244,10 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 1,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 1,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -279,9 +268,34 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 1,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 1,
+            "leadMs": true,
+            "usage": false,
+            "estimated": true
+          }
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "stats",
+          "has": {
+            "spans": 1,
+            "totalMs": true,
+            "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -299,9 +313,10 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 0,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 0,
+            "leadMs": false,
             "usage": false,
             "estimated": true
           }
@@ -318,9 +333,10 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 1,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 1,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -337,9 +353,10 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 1,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 1,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -356,32 +373,10 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 1,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 1,
-            "usage": false,
-            "estimated": true
-          }
-        },
-        {
-          "type": "tool-call",
-          "toolCallId": "call_fixed_1",
-          "toolName": "get_order_status",
-          "args": {
-            "order_id": "4821"
-          },
-          "status": "completed"
-        },
-        {
-          "type": "text",
-          "text": "Answer after the tool."
-        },
-        {
-          "type": "stats",
-          "has": {
-            "reasoningMs": false,
-            "answerMs": false,
-            "tools": 1,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -402,9 +397,10 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 1,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 1,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -425,9 +421,34 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 1,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 1,
+            "leadMs": true,
+            "usage": false,
+            "estimated": true
+          }
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "stats",
+          "has": {
+            "spans": 1,
+            "totalMs": true,
+            "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -445,9 +466,10 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 0,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 0,
+            "leadMs": false,
             "usage": false,
             "estimated": true
           }
@@ -464,9 +486,10 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 1,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 1,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -483,9 +506,10 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 1,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 1,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -502,32 +526,10 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 1,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 1,
-            "usage": false,
-            "estimated": true
-          }
-        },
-        {
-          "type": "reasoning",
-          "text": "Considering the tool."
-        },
-        {
-          "type": "tool-call",
-          "toolCallId": "call_fixed_1",
-          "toolName": "get_order_status",
-          "args": {
-            "order_id": "4821"
-          },
-          "status": "completed"
-        },
-        {
-          "type": "stats",
-          "has": {
-            "reasoningMs": false,
-            "answerMs": false,
-            "tools": 1,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -546,15 +548,12 @@
           "status": "completed"
         },
         {
-          "type": "text",
-          "text": "Answer after thinking and the tool."
-        },
-        {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 1,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 1,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -579,9 +578,10 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 2,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 1,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -606,9 +606,38 @@
         {
           "type": "stats",
           "has": {
-            "reasoningMs": false,
+            "spans": 2,
+            "totalMs": true,
             "answerMs": false,
-            "tools": 1,
+            "leadMs": true,
+            "usage": false,
+            "estimated": true
+          }
+        },
+        {
+          "type": "reasoning",
+          "text": "Considering the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after thinking and the tool."
+        },
+        {
+          "type": "stats",
+          "has": {
+            "spans": 2,
+            "totalMs": true,
+            "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }

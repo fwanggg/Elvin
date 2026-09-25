@@ -10,8 +10,9 @@ import { ThinkingIndicator } from "@/components/assistant-ui/elements/thinking-i
 import { ToolCall } from "@/components/assistant-ui/elements/tool-call";
 import { TooltipIconButton } from "@/components/assistant-ui/elements/tooltip-icon-button";
 import { chipOf, describeResult, describeStep } from "@/lib/step-labels";
-import { formatMs, turnStatsOf, type ToolTiming, type TurnStats } from "@/lib/turn-stats";
-import { type Toggle, type ViewMode } from "@/components/sandbox/knobs";
+import { pointed, useStepLink } from "@/components/sandbox/step-link";
+import { formatRunIndex, formatSpan, formatTokens, isMeasurable, isStandout, outputKey, spanKey, spanKeys, spansOf, turnStatsOf, type TurnStats, type TurnSpan } from "@/lib/turn-stats";
+import { type Toggle } from "@/components/sandbox/knobs";
 import {
   AuiIf,
   ActionBarMorePrimitive,
@@ -27,9 +28,13 @@ import {
 /** The sandbox's part renderers: what a turn looks like as it streams. */
 
 type AssistantRuntimeMessageProps = Readonly<{
-  viewMode: ViewMode;
   emoji: Toggle;
   defaultOpen: boolean;
+}>;
+
+type UserRuntimeMessageProps = Readonly<{
+  emoji: Toggle;
+  activeRun: number | null;
 }>;
 
 type ToolCardProps = Readonly<{
@@ -37,8 +42,15 @@ type ToolCardProps = Readonly<{
   args: unknown;
   result: unknown;
   defaultOpen: boolean;
-  /** The wire's own clock for this call, when the proxy measured one. */
-  stat?: ToolTiming;
+  /** This call's window on the turn's timeline, when the proxy measured one. */
+  span?: TurnSpan;
+  /** The turn this call belongs to: part of the address the panel's rows carry. */
+  run: number | undefined;
+  /** The window the rows are laid out against. */
+  totalMs: number;
+  /** The longest call, whose window takes the accent; absent when there is no
+   *  call long enough to stand out. */
+  slowestCallMs?: number;
 }>;
 type ToolCallRowProps = Readonly<{
   name: string;
@@ -86,7 +98,8 @@ function EmojiMark({ role }: Readonly<{ role: EmojiRole }>): ReactNode {
   );
 }
 
-export function UserRuntimeMessage({ emoji }: Readonly<{ emoji: Toggle }>): ReactNode {
+/** User Mode is the product surface: the reader sees the prompt, not the debug run id. */
+export function UserModeUserMessage({ emoji }: UserRuntimeMessageProps): ReactNode {
   return (
     <MessagePrimitive.Root className={emoji === "on" ? "user-bubble emoji" : "user-bubble"}>
       {emoji === "on" && <EmojiMark role="user" />}
@@ -97,54 +110,55 @@ export function UserRuntimeMessage({ emoji }: Readonly<{ emoji: Toggle }>): Reac
   );
 }
 
-export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen }: AssistantRuntimeMessageProps): ReactNode {
-  // Most agents run tools and answer without ever streaming their thinking, so
-  // the line may only claim the work: "Thought for 40s" would be a claim about
-  // a trace that never arrived.
+/**
+ * Dev Mode owns run navigation. Its user message carries the run anchor the stats
+ * rail scrolls to and the label that mirrors the active run row.
+ */
+export function DevModeUserMessage({ emoji, activeRun }: UserRuntimeMessageProps): ReactNode {
+  const run = useRunIndex();
+
+  return (
+    <div className="run-turn" data-run={run}>
+      {run !== undefined && (
+        <span className={run === activeRun ? "run-label active" : "run-label"}>{`Run ${formatRunIndex(run)}`}</span>
+      )}
+      <MessagePrimitive.Root className={emoji === "on" ? "user-bubble emoji" : "user-bubble"}>
+        {emoji === "on" && <EmojiMark role="user" />}
+        <MessagePrimitive.Parts>
+          {({ part }) => part.type === "text" ? part.text : null}
+        </MessagePrimitive.Parts>
+      </MessagePrimitive.Root>
+    </div>
+  );
+}
+
+/** User Mode renders the turn as product UX: one thought row, prose trace, tool rows, answer. */
+export function UserModeAssistantMessage({ emoji, defaultOpen }: AssistantRuntimeMessageProps): ReactNode {
   const reasoningArrived = useAuiState((state) => state.message.parts.some((part) => part.type === "reasoning" && part.text.trim().length > 0));
   const thoughtStarted = useThoughtStarted();
-  const turnStats = useTurnStats();
-  // Only the fallback path needs this: a provider that reports no usage leaves
-  // the estimate as the only reading of how much thinking there was.
-  const reasoningChars = useAuiState((state) => state.message.parts.reduce((total, part) => (part.type === "reasoning" ? total + part.text.length : total), 0));
   const running = useAuiState((state) => state.message.status?.type === "running");
-  // The turn is answering while the newest part is text. A tool call that lands
-  // after some text ends that, so the clock starts again rather than falling
-  // silent for the rest of the turn.
   const answering = useAuiState((state) => {
     const last = state.message.parts.at(-1);
     return last?.type === "text" && last.text.trim().length > 0;
   });
   const clockRunning = running && !answering;
   const thinkingSeconds = useThinkingSeconds(clockRunning);
-  const thinkingLabel = useThinkingLabel(viewMode);
+  const thinkingLabel = useThinkingLabel();
   const counted = thinkingSeconds !== undefined && thinkingSeconds >= 1;
   const elapsed = clockRunning && counted ? `${thinkingSeconds}s` : undefined;
-  // The line speaks into the gap before anything has arrived to draw. Once a
-  // reasoning part or a call exists, User Mode's own row carries the phase and
-  // Dev Mode's box and cards always do, so the line has nothing left to say; and
-  // a turn that ends inside that gap hands over to the reading it took.
   const thinking = thoughtStarted
     ? null
     : !clockRunning && counted
       ? <p className="thinking-settled">{`Worked for ${thinkingSeconds}s`}</p>
-      : clockRunning && thinkingLabel !== undefined
+      : clockRunning
         ? <ThinkingIndicator className="thinking-indicator" label={thinkingLabel} elapsed={elapsed} />
         : null;
-  // What the row says. While the turn works it names the phase — "Searching the
-  // web for 4821", or the verb for a turn that is only reading; once it settles
-  // the number takes over, and it claims a trace only when one actually arrived.
-  const thoughtLabel = running && thinkingLabel !== undefined
+  const thoughtLabel = running
     ? thinkingLabel
     : counted
       ? reasoningArrived ? `Thought for ${thinkingSeconds}s` : `Worked for ${thinkingSeconds}s`
       : reasoningArrived ? "Thought" : "Worked";
-  // The middle of a turn is one group either way, but only User Mode folds all of
-  // it together: there the trace and the calls open under a single row. Dev Mode
-  // groups the trace alone and leaves every call its own card.
-  const groupBy = useMemo(() => (viewMode === "user"
-    ? groupPartByType({ reasoning: ["group-thought", "group-reasoning"], "tool-call": ["group-thought", "group-tool"] })
-    : groupPartByType({ reasoning: ["group-reasoning"] })), [viewMode]);
+  const groupBy = useMemo(() => groupPartByType({ reasoning: ["group-thought", "group-reasoning"], "tool-call": ["group-thought", "group-tool"] }), []);
 
   return (
     <MessagePrimitive.Root asChild>
@@ -153,74 +167,88 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen }: Assist
         <MessagePrimitive.Error>
           <p className="error-note"><ErrorPrimitive.Message /></p>
         </MessagePrimitive.Error>
-        {/* The line belongs to User Mode. There it names the phase that comes
-            first in a turn, so it opens the message and stays there: the trace,
-            the tool cards and the answer all stream in below it, nothing is ever
-            inserted over it, and the reading it settles into takes the place the
-            live line took. The slot holds its height for as long as the turn
-            runs, so the label changing state in it cannot move the conversation
-            either. Dev Mode draws the agent's own shapes and leaves the phase to
-            them: its reasoning box shimmers for the window the line would have
-            named, and its tool cards name their calls. So the line — and the
-            slot it was holding open — do not render there at all. */}
-        {viewMode === "user" && thinking !== null && <div className="thinking-slot">{thinking}</div>}
+        {thinking !== null && <div className="thinking-slot">{thinking}</div>}
         <MessagePrimitive.GroupedParts groupBy={groupBy}>
           {({ part, children }) => {
             switch (part.type) {
-              // User Mode's middle: the trace and the calls, folded under one row
-              // that names the phase — the way Claude shows a turn at work.
               case "group-thought":
                 return (
                   <ThoughtGroup key={part.indices[0]} label={thoughtLabel} seconds={thinkingSeconds} running={running} defaultOpen={defaultOpen}>
                     {children}
                   </ThoughtGroup>
                 );
-              case "group-reasoning": {
-                // The trace itself. Dev Mode draws the element as it ships — the
-                // brain, the word "Reasoning", the outline it carries — with its
-                // parts as children. User Mode hands the same parts to the
-                // element's text renderer, so the trace reads as prose rather
-                // than as a panel of steps.
-                if (viewMode === "user") {
-                  return <ReasoningText className="thought-trace">{children}</ReasoningText>;
-                }
-                const streaming = part.status.type === "running";
-                return (
-                  <ReasoningRoot key={`${part.indices[0]}-${defaultOpen}`} className="reasoning-root" streaming={streaming} defaultOpen={defaultOpen}>
-                    <ReasoningTrigger className="reasoning-trigger" active={streaming} duration={turnStats?.reasoningMs !== undefined ? Math.round(turnStats.reasoningMs / 100) / 10 : undefined} />
-                    <ReasoningContent aria-busy={streaming}>
-                      <ReasoningStats stats={turnStats} chars={reasoningChars} />
-                      <ReasoningText className="reasoning-text">{children}</ReasoningText>
-                    </ReasoningContent>
-                  </ReasoningRoot>
-                );
-              }
-              // The calls a turn made on its way to the answer, under the trace
-              // they came from. Each row is the tool-call element, so it opens
-              // onto the same request and result the humanized step does.
+              case "group-reasoning":
+                return <ReasoningText className="thought-trace">{children}</ReasoningText>;
               case "group-tool":
                 return <div className="thought-tools">{children}</div>;
               case "reasoning":
                 return <ReasoningPart {...part} />;
-              // Every call renders inline here: the sandbox registers no tool UIs, so
-              // there is nothing for the primitive's "standalone-tool-call" group key
-              // to lift out of the trace — nor for a tool's `display: "standalone"`,
-              // which reaches groupBy through its GroupByContext. That is the knob to
-              // reach for the first time a call has to stand on its own, an approval
-              // prompt say, instead of folding into the run of steps.
               case "tool-call":
-                if (viewMode === "user") return <ToolCallRow key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} argsText={part.argsText} result={part.result} isError={part.isError} defaultOpen={defaultOpen} />;
-                return <ToolCard key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} result={part.result} defaultOpen={defaultOpen} stat={turnStats?.tools[part.toolCallId]} />;
+                return <ToolCallRow key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} argsText={part.argsText} result={part.result} isError={part.isError} defaultOpen={defaultOpen} />;
               case "text":
-                return <StreamingTextPart type="text" text={part.text} status={part.status} />;
+                return <StreamingTextPart text={part.text} status={part.status} />;
               default:
                 return null;
             }
           }}
         </MessagePrimitive.GroupedParts>
-        {/* The action bar unmounts itself while the message is not hovered, so
-            its height is reserved here — the same reason the thinking label has
-            a slot. Without it, hovering a message shifts everything below it. */}
+        <div className="action-slot"><AssistantActionBar /></div>
+      </div>
+    </MessagePrimitive.Root>
+  );
+}
+
+/** Dev Mode renders telemetry surfaces: raw trace cards, tool cards, output keys, response register. */
+export function DevModeAssistantMessage({ emoji, defaultOpen }: AssistantRuntimeMessageProps): ReactNode {
+  const turnStats = useTurnStats();
+  const runIndex = useRunIndex();
+  const link = useStepLink();
+  const spans = turnStats?.spans ?? [];
+  const totalMs = turnStats?.totalMs ?? 0;
+  const callSpans = spans.filter((span) => span.kind === "tool");
+  const longestCallMs = callSpans.reduce((longest, span) => Math.max(longest, span.ms), 0);
+  const slowestCallMs = callSpans.length > 1 && isMeasurable(longestCallMs) ? longestCallMs : undefined;
+  const reasoningChars = useAuiState((state) => state.message.parts.reduce((total, part) => (part.type === "reasoning" ? total + part.text.length : total), 0));
+  const running = useAuiState((state) => state.message.status?.type === "running");
+  const groupBy = useMemo(() => groupPartByType({ reasoning: ["group-reasoning"] }), []);
+
+  return (
+    <MessagePrimitive.Root asChild>
+      <div className={emoji === "on" ? "message-row emoji" : "message-row"}>
+        {emoji === "on" && <EmojiMark role="assistant" />}
+        <MessagePrimitive.Error>
+          <p className="error-note"><ErrorPrimitive.Message /></p>
+        </MessagePrimitive.Error>
+        <MessagePrimitive.GroupedParts groupBy={groupBy}>
+          {({ part, children }) => {
+            switch (part.type) {
+              case "group-reasoning": {
+                const streaming = running;
+                const reasoningSpans = spansOf(turnStats, "reasoning");
+                const reasoningKeys = spanKeys(runIndex, reasoningSpans);
+                const reasoningLabelText = reasoningLabel(turnStats, reasoningChars, reasoningSpans.reduce((sum, span) => sum + span.ms, 0));
+                return (
+                  <ReasoningRoot key={`${part.indices[0]}-${defaultOpen}`} className={pointed("reasoning-root", reasoningKeys, link)} data-steps={reasoningKeys.length > 0 ? reasoningKeys : undefined} streaming={streaming} defaultOpen={defaultOpen}>
+                    {reasoningLabelText !== undefined && <span className="row-stat">{reasoningLabelText}</span>}
+                    <ReasoningTrigger className="reasoning-trigger" active={streaming} />
+                    <ReasoningContent aria-busy={streaming}>
+                      <ReasoningText className="reasoning-text">{children}</ReasoningText>
+                    </ReasoningContent>
+                  </ReasoningRoot>
+                );
+              }
+              case "reasoning":
+                return <ReasoningPart {...part} />;
+              case "tool-call":
+                return <ToolCard key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} result={part.result} defaultOpen={defaultOpen} run={runIndex} span={spansOf(turnStats, "tool", part.toolCallId)[0]} totalMs={totalMs} slowestCallMs={slowestCallMs} />;
+              case "text":
+                return <StreamingTextPart text={part.text} status={part.status} run={runIndex} />;
+              default:
+                return null;
+            }
+          }}
+        </MessagePrimitive.GroupedParts>
+        <ResponseRow stats={turnStats} />
         <div className="action-slot"><AssistantActionBar /></div>
       </div>
     </MessagePrimitive.Root>
@@ -289,15 +317,13 @@ function useThinkingVerb(): string {
  * What the turn is doing, in the words a person would use for it. A call that is
  * still running is named by its own verb form — "Searching the web for 4821" —
  * and the rest of the time the turn is thinking, which is named with a verb
- * rather than with the word "thinking". Dev Mode says none of this: its box and
- * its cards already carry the phase, so a label here would only repeat them.
+ * rather than with the word "thinking".
  */
-function useThinkingLabel(viewMode: ViewMode): string | undefined {
+function useThinkingLabel(): string {
   const verb = useThinkingVerb();
 
   return useAuiState((state) => {
-    if (viewMode !== "user") return undefined;
-    if (state.message.status?.type !== "running") return undefined;
+    if (state.message.status?.type !== "running") return verb;
     // The row names the last call the turn made, not only a running one. A call
     // that has just finished is still what the turn has been doing, so its label
     // stays until the next call replaces it rather than falling back to the verb.
@@ -323,6 +349,18 @@ function useThoughtStarted(): boolean {
  */
 function useTurnStats(): TurnStats | undefined {
   return useAuiState((state) => turnStatsOf(state.message.metadata?.custom));
+}
+
+/**
+ * Which turn this message opens, counted over the user messages — the same count
+ * the runs panel lists.
+ */
+function useRunIndex(): number | undefined {
+  return useAuiState((state) => {
+    const position = state.thread.messages.findIndex((message) => message.id === state.message.id);
+    if (position < 0) return undefined;
+    return state.thread.messages.slice(0, position + 1).filter((message) => message.role === "user").length;
+  });
 }
 
 /**
@@ -352,12 +390,15 @@ function useThinkingSeconds(active: boolean): number | undefined {
  * Soft streaming: the same text the plain renderer shows, handed to the
  * assistant-ui element so the newest words land tinted and settle into ink.
  */
-const StreamingTextPart: TextMessagePartComponent = ({ text, status }) => {
+function StreamingTextPart({ text, status, run }: Readonly<{ text: string; status: { type: string }; run?: number | undefined }>): ReactNode {
   const segments = useMemo<Segment[]>(() => [{ text }], [text]);
   const count = useMemo(() => text.split(" ").length, [text]);
+  const link = useStepLink();
+  const key = run === undefined ? undefined : outputKey(run);
+  const className = key === undefined ? "assistant-text streaming-text" : pointed("assistant-text streaming-text", key, link);
 
-  return <StreamingText className="assistant-text streaming-text" segments={segments} count={count} streaming={status.type === "running"} />;
-};
+  return <StreamingText className={className} data-steps={key} segments={segments} count={count} streaming={status.type === "running"} />;
+}
 
 /**
  * The assistant-ui action bar: copy, rate, speak, regenerate, the more menu, and
@@ -401,35 +442,65 @@ function AssistantActionBar(): ReactNode {
 
 
 /**
- * Reasoning arrives as one growing string, so the newest words are the only
- * thing that moves. Splitting on whitespace re-emits the provider's own line
- * breaks, which is what lets a long trace read as steps rather than a wall.
+ * Thinking arrives as one growing string, so the newest words are the only thing
+ * that moves — and, on this wire, as one part for the whole turn however many
+ * windows it ran in. The windows are therefore drawn from the trace's own
+ * coordinates: every stretch the proxy filed with a window carries that window's
+ * key, which is what lets a row in the panel point at the exact thinking it
+ * measured. Words no window claims stay unmarked rather than being quietly
+ * attached to one they did not belong to.
+ *
+ * Splitting on whitespace re-emits the provider's own line breaks, which is what
+ * lets a long trace read as steps rather than a wall.
  */
 const ReasoningPart: ReasoningMessagePartComponent = ({ text }) => {
-  const tokens = useMemo(() => text.split(/(\s+)/), [text]);
+  const turnStats = useTurnStats();
+  const runIndex = useRunIndex();
+  const link = useStepLink();
+
+  const windows = useMemo(() => {
+    const found: { key?: string; text: string }[] = [];
+    let cursor = 0;
+    for (const span of spansOf(turnStats, "reasoning")) {
+      const from = span.textFrom ?? cursor;
+      const to = span.textTo ?? from;
+      if (from > cursor) found.push({ text: text.slice(cursor, from) });
+      if (to > from) found.push({ key: spanKey(runIndex, span), text: text.slice(from, to) });
+      cursor = Math.max(cursor, to);
+    }
+    if (cursor < text.length) found.push({ text: text.slice(cursor) });
+    return found;
+  }, [text, turnStats, runIndex]);
 
   return (
     <p className="reasoning-line">
-      {tokens.map((token, index) => (
-        token.trim().length === 0 ? token : <span className="reasoning-word" key={index}>{token}</span>
+      {windows.map((window, index) => (
+        <span key={index} className={pointed("reasoning-window", window.key ?? "", link)} data-steps={window.key}>
+          {window.text.split(/(\s+)/).map((token, position) => (
+            token.trim().length === 0 ? token : <span className="reasoning-word" key={position}>{token}</span>
+          ))}
+        </span>
       ))}
     </p>
   );
 };
 
-function ToolCard({ name, args, result, defaultOpen, stat }: ToolCardProps): ReactNode {
+function ToolCard({ name, args, result, defaultOpen, run, span, totalMs, slowestCallMs }: ToolCardProps): ReactNode {
   const [open, setOpen] = useState(defaultOpen);
+  const link = useStepLink();
+  const slow = span !== undefined && slowestCallMs !== undefined && isStandout(span.ms, slowestCallMs);
+  const keys = span !== undefined ? spanKey(run, span) : "";
 
   return (
-    <div className="part-card">
+    <div className={pointed("part-card", keys, link)} data-steps={keys.length > 0 ? keys : undefined}>
       <button className="part-head" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
         <span>✓ Used tool <strong>{name}</strong></span>
-        {stat && (
-          <span className="part-stat" title={`${formatMs(stat.modelMs)} to name the call${stat.roundTripMs !== undefined ? `, then ${formatMs(stat.roundTripMs)} to the next token after the result` : ""}`}>
-            {stat.roundTripMs !== undefined ? `${formatMs(stat.modelMs)} + ${formatMs(stat.roundTripMs)}` : formatMs(stat.modelMs)}
+        {span && isMeasurable(span.ms) && (
+          <span className={slow ? "row-stat slow" : "row-stat"} title={`${formatSpan(span.ms)} of the ${formatSpan(totalMs)} the turn spent working`}>
+            {formatSpan(span.ms)}
           </span>
         )}
-        <span style={{ marginLeft: "auto" }}>{open ? "⌄" : "›"}</span>
+        <span className="part-chevron">{open ? "⌄" : "›"}</span>
       </button>
       {open && <div className="part-detail">{`Arguments\n${JSON.stringify(args ?? {}, null, 2)}\n\nResult\n${JSON.stringify(result ?? {}, null, 2)}`}</div>}
     </div>
@@ -437,25 +508,36 @@ function ToolCard({ name, args, result, defaultOpen, stat }: ToolCardProps): Rea
 }
 
 /**
- * The reasoning window, and the tokens the provider counted for it. Without a
- * provider split there is no thinking count — the completion total covers the
- * answer as well — so the line falls back to a characters-over-four estimate and
- * marks it rather than passing it off as measured.
+ * The reasoning row's numbers: how much it thought, and how long it spent doing
+ * it across every window it ran in. Without a provider split there is no thinking
+ * count — the completion total covers the answer as well — so the count falls
+ * back to a characters-over-four estimate and says so.
  */
-function ReasoningStats({ stats, chars }: Readonly<{ stats: TurnStats | undefined; chars: number }>): ReactNode {
-  const windowMs = stats?.reasoningMs;
-  if (windowMs === undefined) return null;
-
+function reasoningLabel(stats: TurnStats | undefined, chars: number, ms: number): string | undefined {
   const measured = stats?.usage?.reasoningTokens;
   const estimated = measured === undefined && chars > 0 ? Math.ceil(chars / 4) : undefined;
   const tokens = measured ?? estimated;
-  const speed = tokens !== undefined && windowMs > 0 ? (tokens / windowMs) * 1000 : undefined;
+  if (tokens === undefined) return isMeasurable(ms) ? formatSpan(ms) : undefined;
+  // With nothing measurable the count still stands on its own: a length under
+  // the resolution would print as "0.0s", which the wire never gave.
+  const time = isMeasurable(ms) ? ` · ${formatSpan(ms)}` : "";
+  return `${estimated !== undefined ? "≈" : ""}${formatTokens(tokens)} tok${time}${estimated !== undefined ? " est." : ""}`;
+}
+
+/**
+ * The answer's own line: what the writing cost and how long it took. The answer
+ * is the turn's output rather than a step of it, so it closes the message instead
+ * of joining the rows — and it is the same figure the runs panel reports.
+ */
+function ResponseRow({ stats }: Readonly<{ stats: TurnStats | undefined }>): ReactNode {
+  const ms = stats?.answerMs;
+  const tokens = stats?.usage?.completionTokens;
+  if (tokens === undefined && !isMeasurable(ms ?? 0)) return null;
 
   return (
-    <p className="reasoning-stats">
-      <span>{formatMs(windowMs)}</span>
-      {tokens !== undefined && <span>{estimated !== undefined ? `≈${tokens} tok` : `${tokens} tok`}</span>}
-      {speed !== undefined && <span>{`${speed.toFixed(1)} tok/s${estimated !== undefined ? " est." : ""}`}</span>}
+    <p className="response-row">
+      <span>{tokens !== undefined ? `Response · ${formatTokens(tokens)} tok` : "Response"}</span>
+      {isMeasurable(ms ?? 0) && <span className="response-ms">{formatSpan(ms ?? 0)}</span>}
     </p>
   );
 }

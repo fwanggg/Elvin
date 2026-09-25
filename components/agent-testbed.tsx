@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { Dropdown } from "@/components/dropdown";
 import { ModelPicker } from "@/components/model-picker";
 import { type Segment } from "@/components/assistant-ui/elements/streaming-text";
-import { type AppTheme, type Design, type OpenMode, type Pattern, type Toggle, type ViewMode, type Viewport } from "@/components/sandbox/knobs";
+import { type AppTheme, type Design, type Pattern, type Toggle, type ViewMode, type Viewport } from "@/components/sandbox/knobs";
 import { type TurnStats, type UsageTotals } from "@/lib/turn-stats";
-import { AssistantRuntimeMessage, UserRuntimeMessage } from "@/components/sandbox/messages";
+import { DevModeAssistantMessage, DevModeUserMessage, UserModeAssistantMessage, UserModeUserMessage } from "@/components/sandbox/messages";
+import { RunPanel } from "@/components/sandbox/run-panel";
+import { useRuns } from "@/components/sandbox/runs";
+import { StepDebugBoundary } from "@/components/sandbox/step-link";
 import {
   AssistantRuntimeProvider,
   ComposerPrimitive,
@@ -90,24 +93,21 @@ type ThemeVariableName =
 type RenderedPart = { type: "reasoning"; text: string } | ToolCallPart | { type: "text"; text: string };
 
 type ControlSidebarProps = Readonly<{
+  appTheme: AppTheme;
   pattern: Pattern;
   viewport: Viewport;
   design: Design;
   viewMode: ViewMode;
   emoji: Toggle;
-  openMode: OpenMode;
+  onAppThemeChange: (value: AppTheme) => void;
   onPatternChange: (value: Pattern) => void;
   onViewportChange: (value: Viewport) => void;
   onDesignChange: (value: Design) => void;
   onViewModeChange: (value: ViewMode) => void;
   onEmojiChange: (value: Toggle) => void;
-  onOpenModeChange: (value: OpenMode) => void;
 }>;
 
 type PreviewStageProps = Readonly<{
-  statusColor: string;
-  statusHost: string;
-  statusState: string;
   isConnected: boolean;
   appTheme: AppTheme;
   viewport: Viewport;
@@ -116,22 +116,27 @@ type PreviewStageProps = Readonly<{
   pattern: Pattern;
   runtime: AssistantRuntime;
   modelName: string;
-  model: string;
-  models: string[];
-  onModelChange: (value: string) => void;
   viewMode: ViewMode;
-  defaultOpen: boolean;
   threadKey: number;
   baseUrl: string;
   apiKey: string;
   connecting: boolean;
   error: string;
-  onDisconnect: () => void;
-  onStartThread: () => void;
-  onAppThemeChange: (value: AppTheme) => void;
   onBaseUrlChange: (value: string) => void;
   onApiKeyChange: (value: string) => void;
   onConnect: () => void;
+}>;
+
+type StageToolbarProps = Readonly<{
+  statusColor: string;
+  statusHost: string;
+  statusState: string;
+  isConnected: boolean;
+  model: string;
+  models: string[];
+  onDisconnect: () => void;
+  onStartThread: () => void;
+  onModelChange: (value: string) => void;
 }>;
 
 type ConnectEmptyStateProps = Readonly<{
@@ -149,7 +154,6 @@ type AssistantSandboxProps = Readonly<{
   modelName: string;
   emoji: Toggle;
   viewMode: ViewMode;
-  defaultOpen: boolean;
   threadKey: number;
 }>;
 
@@ -204,7 +208,14 @@ const DESIGN_LABELS: Record<Design, string> = {
 const DESIGN_LANGUAGES: ReadonlyArray<{ value: Design; label: string }> = (Object.keys(DESIGN_LABELS) as Design[]).map((value) => ({ value, label: DESIGN_LABELS[value] }));
 /** Who the parts render for. Both always render; only the writing changes. */
 const VIEW_MODE_LABELS: Record<ViewMode, string> = { dev: "Dev Mode", user: "User Mode" };
-const OPEN_MODE_LABELS: Record<OpenMode, string> = { collapsed: "Collapsed", expanded: "Expanded" };
+const VIEW_SURFACES = {
+  dev: { UserMessage: DevModeUserMessage, AssistantMessage: DevModeAssistantMessage, stepDebug: "enabled" },
+  user: { UserMessage: UserModeUserMessage, AssistantMessage: UserModeAssistantMessage, stepDebug: "disabled" },
+} satisfies Record<ViewMode, {
+  UserMessage: typeof DevModeUserMessage;
+  AssistantMessage: typeof DevModeAssistantMessage;
+  stepDebug: "enabled" | "disabled";
+}>;
 const TOGGLE_LABELS: Record<Toggle, string> = { on: "On", off: "Off" };
 const STATUS_COLORS: Record<ConnectionState, string> = {
   demo: "var(--color-accent)",
@@ -212,6 +223,9 @@ const STATUS_COLORS: Record<ConnectionState, string> = {
   live: "var(--color-ok)",
   error: "var(--color-accent-700)",
 };
+const RUN_PANEL_DEFAULT_WIDTH = 380;
+const RUN_PANEL_MIN_WIDTH = 300;
+const CHAT_MIN_WIDTH = 360;
 
 export function AgentTestbed(): ReactNode {
   const [pattern, setPattern] = useState<Pattern>("thread");
@@ -219,7 +233,6 @@ export function AgentTestbed(): ReactNode {
   const [design, setDesign] = useState<Design>("swiss");
   const [viewMode, setViewMode] = useState<ViewMode>("dev");
   const [emoji, setEmoji] = useState<Toggle>("off");
-  const [openMode, setOpenMode] = useState<OpenMode>("collapsed");
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [baseUrl, setBaseUrl] = useState("");
   const [model, setModel] = useState("");
@@ -259,13 +272,13 @@ export function AgentTestbed(): ReactNode {
         const data = (await response.json()) as ChatResponse;
         const text = data.error ?? data.content;
         const usage = data.usage ?? null;
-        // One shot, so there is no window to measure: the turn's own latency is
-        // the only clock the shape offers.
+        // One shot: a response that arrived whole has no windows to place on a
+        // timeline, so the rows carry no fills and the badge carries the turn.
         const stats: TurnStats = {
-          tools: {},
+          spans: [],
+          totalMs: 0,
           usage,
           estimated: usage === null,
-          ...(data.latencyMs !== undefined ? { answerMs: data.latencyMs } : {}),
         };
         yield {
           content: assembleContent({ text, reasoning: data.reasoning ?? "", toolCalls: fromResponse(data.toolCalls) }),
@@ -346,6 +359,9 @@ export function AgentTestbed(): ReactNode {
     setThreadGeneration((generation) => generation + 1);
     void runtime.threads.switchToNewThread();
   }
+  const devMode = viewMode === "dev";
+  const effectivePattern: Pattern = devMode ? "thread" : pattern;
+  const effectiveViewport: Viewport = devMode ? "desktop" : viewport;
   const { host: statusHost, state: statusState } = getStatusLabel(connection, baseUrl, connectionError);
   const statusColor = STATUS_COLORS[connection];
   const isConnected = connection === "live";
@@ -412,48 +428,49 @@ export function AgentTestbed(): ReactNode {
       <section className="frame" aria-label="Elvin agent testbed">
         <nav className="nav">
           <span className="nav-brand">Elvin</span>
+          <StageToolbar
+            statusColor={statusColor}
+            statusHost={statusHost}
+            statusState={statusState}
+            isConnected={isConnected}
+            model={model}
+            models={models}
+            onDisconnect={disconnect}
+            onStartThread={startThread}
+            onModelChange={setModel}
+          />
         </nav>
 
         <div className="main-grid">
           <ControlSidebar
-            pattern={pattern}
-            viewport={viewport}
+            appTheme={appTheme}
+            pattern={devMode ? "thread" : pattern}
+            viewport={devMode ? "desktop" : viewport}
             design={design}
             viewMode={viewMode}
             emoji={emoji}
-            openMode={openMode}
+            onAppThemeChange={setAppTheme}
             onPatternChange={setPattern}
             onViewportChange={setViewport}
             onDesignChange={setDesign}
             onViewModeChange={setViewMode}
             onEmojiChange={setEmoji}
-            onOpenModeChange={setOpenMode}
           />
           <PreviewStage
-            statusColor={statusColor}
-            statusHost={statusHost}
-            statusState={statusState}
             isConnected={isConnected}
             appTheme={appTheme}
-            viewport={viewport}
+            viewport={effectiveViewport}
             design={design}
-            pattern={pattern}
+            pattern={effectivePattern}
             runtime={runtime}
             modelName={model.trim() || "connected-agent"}
-            model={model}
-            models={models}
             viewMode={viewMode}
             emoji={emoji}
-            defaultOpen={openMode === "expanded"}
             threadKey={threadGeneration}
             baseUrl={baseUrl}
             apiKey={apiKey}
             connecting={connection === "connecting"}
             error={connection === "error" ? connectionError : ""}
-            onAppThemeChange={setAppTheme}
-            onDisconnect={disconnect}
-            onStartThread={startThread}
-            onModelChange={setModel}
             onBaseUrlChange={setBaseUrl}
             onApiKeyChange={setApiKey}
             onConnect={() => void checkConnection()}
@@ -466,67 +483,73 @@ export function AgentTestbed(): ReactNode {
 }
 
 function ControlSidebar({
+  appTheme,
   pattern,
   viewport,
   design,
   viewMode,
   emoji,
-  openMode,
+  onAppThemeChange,
   onPatternChange,
   onViewportChange,
   onDesignChange,
   onViewModeChange,
   onEmojiChange,
-  onOpenModeChange,
 }: ControlSidebarProps): ReactNode {
   return (
     <aside className="sidebar">
-      <PanelSection title="Design language">
-        <Dropdown label="Design language" value={design} options={DESIGN_LANGUAGES} onChange={(value) => onDesignChange(value as Design)} />
-        <p className="hint">Swaps the visual system — palette, type, geometry and elevation — inside the sandboxed app.</p>
-      </PanelSection>
-      <div className="section-rule" />
-      <SegmentedPanel
-        title="UI pattern"
-        name="pattern"
-        value={pattern}
-        options={["thread", "sidebar", "modal"]}
-        labels={PATTERN_SEGMENT_LABELS}
-        onChange={onPatternChange}
-      >
-        <p className="hint">Switches the assistant-ui sandbox shell without changing your agent runtime.</p>
-      </SegmentedPanel>
-      <div className="section-rule" />
-      <SegmentedPanel
-        title="Viewport"
-        name="viewport"
-        value={viewport}
-        options={["desktop", "mobile"]}
-        labels={VIEWPORT_LABELS}
-        onChange={onViewportChange}
-      >
-        <p className="hint">Frames the sandbox as a phone. The agent and its runtime are untouched.</p>
-      </SegmentedPanel>
-      <div className="section-rule" />
-      <PanelSection title="Message parts">
-        <SegmentedControlBlock
-          label="View mode"
+      <PanelSection title="View mode">
+        <Segment
           name="view"
           value={viewMode}
           options={["dev", "user"]}
           labels={VIEW_MODE_LABELS}
           onChange={onViewModeChange}
-          hint={getViewModeHint(viewMode)}
         />
+        <p className="hint">{getViewModeHint(viewMode)}</p>
+      </PanelSection>
+      <div className="section-rule" />
+      <PanelSection title="Design language">
+        <Dropdown label="Design language" value={design} options={DESIGN_LANGUAGES} onChange={(value) => onDesignChange(value as Design)} />
+        <p className="hint">Changes palette, type, shape, and elevation.</p>
         <SegmentedControlBlock
-          label="Default state"
-          name="open"
-          value={openMode}
-          options={["collapsed", "expanded"]}
-          labels={OPEN_MODE_LABELS}
-          onChange={onOpenModeChange}
-          hint={getOpenModeHint(openMode)}
+          label="App theme"
+          name="app-theme"
+          value={appTheme}
+          options={["dark", "light"]}
+          labels={APP_THEME_LABELS}
+          onChange={onAppThemeChange}
+          hint="Switches between dark and light."
         />
+      </PanelSection>
+      {viewMode === "user" && (
+        <>
+          <div className="section-rule" />
+          <SegmentedPanel
+            title="UI pattern"
+            name="pattern"
+            value={pattern}
+            options={["thread", "sidebar", "modal"]}
+            labels={PATTERN_SEGMENT_LABELS}
+            onChange={onPatternChange}
+          >
+            <p className="hint">Changes the assistant shell.</p>
+          </SegmentedPanel>
+          <div className="section-rule" />
+          <SegmentedPanel
+            title="Viewport"
+            name="viewport"
+            value={viewport}
+            options={["desktop", "mobile"]}
+            labels={VIEWPORT_LABELS}
+            onChange={onViewportChange}
+          >
+            <p className="hint">Frames desktop or phone.</p>
+          </SegmentedPanel>
+        </>
+      )}
+      <div className="section-rule" />
+      <PanelSection title="Message parts">
         <SegmentedControlBlock
           label="Emoji"
           name="emoji"
@@ -541,38 +564,7 @@ function ControlSidebar({
   );
 }
 
-function PreviewStage({
-  statusColor,
-  statusHost,
-  statusState,
-  isConnected,
-  appTheme,
-  viewport,
-  design,
-  emoji,
-  pattern,
-  runtime,
-  modelName,
-  model,
-  models,
-  viewMode,
-  defaultOpen,
-  threadKey,
-  baseUrl,
-  apiKey,
-  connecting,
-  error,
-  onAppThemeChange,
-  onDisconnect,
-  onStartThread,
-  onModelChange,
-  onBaseUrlChange,
-  onApiKeyChange,
-  onConnect,
-}: PreviewStageProps): ReactNode {
-  // The click has to read even when the thread was already empty and nothing
-  // else on screen moves, so the cell washes and the plus turns before the
-  // thread underneath it is replaced.
+function StageToolbar({ statusColor, statusHost, statusState, isConnected, model, models, onDisconnect, onStartThread, onModelChange }: StageToolbarProps): ReactNode {
   const [threadPulse, setThreadPulse] = useState(0);
 
   function startNewThread(): void {
@@ -581,51 +573,69 @@ function PreviewStage({
   }
 
   return (
-    <section className="stage">
-      <div className="metric-bar">
-        <div className="metric-cell metric-agent">
-          <div className="metric-cell-head">
-            <span>Agent</span>
-            {isConnected && (
-              <button className="metric-disconnect" type="button" onClick={onDisconnect}>Disconnect</button>
-            )}
-          </div>
-          <span className="metric-value">
-            <span className="metric-swatch" style={{ background: statusColor }} />
-            {statusHost.length > 0
-              ? <span className="metric-host">{statusHost}</span>
-              : <span className="metric-state">{statusState}</span>}
-          </span>
+    <div className="metric-bar">
+      <button className="metric-cell metric-action thread-new" type="button" onClick={startNewThread}>
+        {threadPulse > 0 && <span className="thread-wash" key={`wash-${threadPulse}`} aria-hidden="true" />}
+        <span className={threadPulse > 0 ? "metric-cell-head metric-icon thread-plus" : "metric-cell-head metric-icon"} key={`plus-${threadPulse}`} aria-hidden="true">+</span>
+        <span className="metric-value">New Thread</span>
+      </button>
+      <div className="metric-cell metric-agent">
+        <div className="metric-cell-head">
+          <span>Agent</span>
+          {isConnected && (
+            <button className="metric-disconnect" type="button" onClick={onDisconnect}>Disconnect</button>
+          )}
         </div>
-        <div className="metric-cell metric-model">
-          <span className="metric-cell-head">Model</span>
-          <ModelPicker
-            value={model}
-            options={models}
-            placeholder="Connect to load models"
-            emptyLabel="No model matches."
-            onValueChange={onModelChange}
-          />
-        </div>
-        <button className="metric-cell metric-action thread-new" type="button" onClick={startNewThread}>
-          {threadPulse > 0 && <span className="thread-wash" key={`wash-${threadPulse}`} aria-hidden="true" />}
-          <span className={threadPulse > 0 ? "metric-cell-head metric-icon thread-plus" : "metric-cell-head metric-icon"} key={`plus-${threadPulse}`} aria-hidden="true">+</span>
-          <span className="metric-value">New Thread</span>
-        </button>
+        <span className="metric-value">
+          <span className="metric-swatch" style={{ background: statusColor }} />
+          {statusHost.length > 0
+            ? <span className="metric-host">{statusHost}</span>
+            : <span className="metric-state">{statusState}</span>}
+        </span>
       </div>
+      <div className="metric-cell metric-model">
+        <span className="metric-cell-head">Model</span>
+        <ModelPicker
+          value={model}
+          options={models}
+          placeholder="Connect to load models"
+          emptyLabel="No model matches."
+          onValueChange={onModelChange}
+        />
+      </div>
+    </div>
+  );
+}
+
+function PreviewStage({
+  isConnected,
+  appTheme,
+  viewport,
+  design,
+  emoji,
+  pattern,
+  runtime,
+  modelName,
+  viewMode,
+  threadKey,
+  baseUrl,
+  apiKey,
+  connecting,
+  error,
+  onBaseUrlChange,
+  onApiKeyChange,
+  onConnect,
+}: PreviewStageProps): ReactNode {
+  return (
+    <section className="stage">
       <div className="canvas" data-viewport={viewport}>
-        {/* The app theme control rides the renderer's own top-right corner: it
-            belongs to the thing being previewed, not to the control column. */}
-        <div className="canvas-theme">
-          <Segment name="app-theme" value={appTheme} options={["dark", "light"]} labels={APP_THEME_LABELS} onChange={onAppThemeChange} />
-        </div>
         <div className="app-shell" data-theme={appTheme} data-design={design}>
           {isConnected ? (
             <>
               {pattern !== "thread" && <MockApplication />}
               {pattern === "modal" && <div className="modal-launcher">⌄</div>}
               <AssistantRuntimeProvider runtime={runtime}>
-                <AssistantSandbox pattern={pattern} modelName={modelName} viewMode={viewMode} emoji={emoji} defaultOpen={defaultOpen} threadKey={threadKey} />
+                <AssistantSandbox pattern={pattern} modelName={modelName} viewMode={viewMode} emoji={emoji} threadKey={threadKey} />
               </AssistantRuntimeProvider>
             </>
           ) : (
@@ -696,12 +706,99 @@ function ConnectEmptyState({ baseUrl, apiKey, connecting, error, onBaseUrlChange
   );
 }
 
-function AssistantSandbox({ pattern, modelName, viewMode, emoji, defaultOpen, threadKey }: AssistantSandboxProps): ReactNode {
-  return (
-    <div className={`assistant-frame ${pattern}`}>
+function AssistantSandbox({ pattern, modelName, viewMode, emoji, threadKey }: AssistantSandboxProps): ReactNode {
+  // The panel reads the thread itself; the sandbox only holds which turn is being
+  // looked at, and scrolls the chat to it when the panel asks for one.
+  const runs = useRuns();
+  const [chosenRun, setChosenRun] = useState<number | null>(null);
+  const [runPanelWidth, setRunPanelWidth] = useState(RUN_PANEL_DEFAULT_WIDTH);
+  const activeRun = chosenRun ?? runs.at(-1)?.index ?? null;
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const frameRef = useRef<HTMLDivElement | null>(null);
+  const surface = VIEW_SURFACES[viewMode];
+  const showStepDebug = surface.stepDebug === "enabled" && pattern === "thread";
+  const UserMessage = surface.UserMessage;
+  const AssistantMessage = surface.AssistantMessage;
+  const frameStyle = showStepDebug ? ({ "--run-panel-width": `${runPanelWidth}px` } as CSSProperties) : undefined;
+  function selectRun(index: number): void {
+    setChosenRun(index);
+    document.querySelector(`[data-run="${index}"]`)?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }
+
+  function resizeRunPanel(nextWidth: number): void {
+    const frameWidth = frameRef.current?.getBoundingClientRect().width ?? RUN_PANEL_DEFAULT_WIDTH + CHAT_MIN_WIDTH;
+    setRunPanelWidth(clampRunPanelWidth(nextWidth, frameWidth));
+  }
+
+  function startRunPanelResize(event: ReactPointerEvent<HTMLDivElement>): void {
+    if (!showStepDebug) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const frame = frameRef.current;
+    if (!frame) return;
+    const frameBox = frame.getBoundingClientRect();
+    const resize = (pointerEvent: PointerEvent) => {
+      setRunPanelWidth(clampRunPanelWidth(frameBox.right - pointerEvent.clientX, frameBox.width));
+    };
+    const stop = () => {
+      window.removeEventListener("pointermove", resize);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+    };
+    window.addEventListener("pointermove", resize);
+    window.addEventListener("pointerup", stop, { once: true });
+    window.addEventListener("pointercancel", stop, { once: true });
+  }
+
+  function resizeRunPanelWithKeys(event: KeyboardEvent<HTMLDivElement>): void {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    resizeRunPanel(runPanelWidth + (event.key === "ArrowLeft" ? 24 : -24));
+  }
+
+  // Reading the chat moves the panel with it. The turn to show is the latest run
+  // marker that has entered the chat viewport: as you scroll down and the next
+  // prompt appears, the stats rail follows that newer turn; when every marker is
+  // still below the viewport, the first run is the one in hand.
+  //
+  // A pointer resting on the panel suspends this, because the scrolls in flight
+  // then are the panel's own — the click that jumped to a turn, the hover that
+  // brought a card into sight — and each of those already set the selection.
+  // Reading them back would have the selection chase the pointer instead.
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    let frame = 0;
+    const read = () => {
+      if (document.querySelector(".run-panel")?.matches(":hover")) return;
+      const bottom = viewport.getBoundingClientRect().bottom;
+      const markers = viewport.querySelectorAll<HTMLElement>("[data-run]");
+      const first = markers[0];
+      if (first === undefined) return;
+      let current = Number(first.dataset.run);
+      for (const marker of markers) {
+        if (marker.getBoundingClientRect().top > bottom) break;
+        current = Number(marker.dataset.run);
+      }
+      setChosenRun((run) => (run === current ? run : current));
+    };
+    const queueRead = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(read);
+    };
+    queueRead();
+    viewport.addEventListener("scroll", queueRead, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      viewport.removeEventListener("scroll", queueRead);
+    };
+  }, [runs.length]);
+
+  const frame = (
+    <div className={`assistant-frame ${pattern}`} ref={frameRef} style={frameStyle}>
       {pattern !== "thread" && <div className="assistant-header"><span>Acme Support</span><span>×</span></div>}
       <ThreadPrimitive.Root className="messages">
-        <ThreadPrimitive.Viewport className="message-col">
+        <ThreadPrimitive.Viewport className="message-col" ref={viewportRef}>
           {/* The line belongs to the thread, so a fresh thread draws it again:
               the key is the thread's own generation, which New Thread bumps —
               mounting alone would not replay it on an already-empty thread. */}
@@ -712,8 +809,8 @@ function AssistantSandbox({ pattern, modelName, viewMode, emoji, defaultOpen, th
           </AuiIf>
           <ThreadPrimitive.Messages>
             {({ message }) => message.role === "user"
-              ? <UserRuntimeMessage emoji={emoji} />
-              : <AssistantRuntimeMessage viewMode={viewMode} emoji={emoji} defaultOpen={defaultOpen} />}
+              ? <UserMessage emoji={emoji} activeRun={activeRun} />
+              : <AssistantMessage emoji={emoji} defaultOpen={false} />}
           </ThreadPrimitive.Messages>
         </ThreadPrimitive.Viewport>
         {/* Its own row, outside the scroller: the thread scrolls above the
@@ -734,8 +831,28 @@ function AssistantSandbox({ pattern, modelName, viewMode, emoji, defaultOpen, th
           </ComposerPrimitive.Root>
         </ThreadPrimitive.ViewportFooter>
       </ThreadPrimitive.Root>
+      {/* The step debugger is one Dev Mode feature: the stats rail, the run span,
+          and the panel-to-chat hover/choice link. User Mode is the product
+          surface, so it gets none of that right-column debugger behavior. The
+          narrow shells have no room for the rail either. */}
+      {showStepDebug && (
+        <div
+          className="run-resizer"
+          role="separator"
+          aria-label="Resize stats panel"
+          aria-orientation="vertical"
+          aria-valuemin={RUN_PANEL_MIN_WIDTH}
+          aria-valuenow={runPanelWidth}
+          tabIndex={0}
+          onKeyDown={resizeRunPanelWithKeys}
+          onPointerDown={startRunPanelResize}
+        />
+      )}
+      {showStepDebug && <RunPanel runs={runs} active={activeRun} onSelect={selectRun} />}
     </div>
   );
+
+  return <StepDebugBoundary activeRun={activeRun} enabled={showStepDebug}>{frame}</StepDebugBoundary>;
 }
 
 /**
@@ -766,6 +883,10 @@ function streamTiming({ streamStartTime, firstTokenTime, totalChunks, toolCallCo
     totalChunks,
     toolCallCount,
   };
+}
+
+function clampRunPanelWidth(width: number, frameWidth: number): number {
+  return Math.min(Math.max(width, RUN_PANEL_MIN_WIDTH), Math.max(RUN_PANEL_MIN_WIDTH, frameWidth - CHAT_MIN_WIDTH));
 }
 function PanelSection({ title, children }: PanelSectionProps): ReactNode {
   return <div className="panel-section"><h6>{title}</h6>{children}</div>;
@@ -845,25 +966,16 @@ function getStatusLabel(connection: ConnectionState, baseUrl: string, connection
  */
 function getViewModeHint(viewMode: ViewMode): string {
   return viewMode === "dev"
-    ? "Tools and reasoning read as the agent sent them: a card per call, and the trace in its group."
-    : "The same parts written for a person: each call reads as a step in plain language, its argument as a chip, and the raw request and result behind a disclosure.";
+    ? "Shows stats; hides layout knobs."
+    : "Shows product-style messages.";
 }
 
 function getEmojiHint(emoji: Toggle): string {
   switch (emoji) {
     case "on":
-      return "Each turn carries a role emoji beside the message.";
+      return "Shows animated role markers.";
     case "off":
-      return "Messages render without an emoji marker.";
-  }
-}
-
-function getOpenModeHint(openMode: OpenMode): string {
-  switch (openMode) {
-    case "expanded":
-      return "Collapsible parts start open.";
-    case "collapsed":
-      return "Collapsible parts start closed.";
+      return "Hides role markers.";
   }
 }
 
