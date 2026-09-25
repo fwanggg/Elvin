@@ -97,7 +97,7 @@ function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
                   onClick={() => link.choose(step.key)}
                   onPointerEnter={() => link.mark(step.key)}
                   onPointerLeave={link.leave}
-                  style={{ insetInlineStart: `${spot.start}%`, inlineSize: `${spot.size}%`, animationDelay: `${index * 45}ms` }}
+                  style={{ insetInlineStart: `${spot.start}%`, inlineSize: `${Math.max(spot.size, MIN_SEGMENT_PERCENT)}%`, animationDelay: `${index * 45}ms` }}
                 />
               );
             })}
@@ -156,7 +156,7 @@ function StepRow({ step, slow }: Readonly<{ step: RunStep; slow: boolean }>): Re
   const estimated = step.tokens === undefined && step.chars !== undefined && step.chars > 0;
   const counted = step.tokens ?? (estimated ? Math.ceil((step.chars ?? 0) / 4) : undefined);
   const tokens = useWalked(counted, asTokens);
-  const lasted = useWalked(isMeasurable(step.ms) ? step.ms : undefined, asSpan);
+  const lasted = useWalked(Math.max(step.ms, MIN_READING_MS), asSpan);
 
   return (
     <li>
@@ -243,6 +243,20 @@ function withWaits(run: number, steps: readonly RunStep[], leadMs: number, e2eMs
 
 /** How long a figure takes to walk to its value. */
 const WALK_MS = 320;
+
+/**
+ * The smallest reading a row reports. One decimal of a second is what this panel measures to, so
+ * a stretch shorter than that is said as this rather than as nothing: a row with a blank where
+ * its figure goes reads as a row that failed rather than as a stretch too short to name.
+ */
+const MIN_READING_MS = 100;
+
+/**
+ * The narrowest a stretch of the span is ever drawn, as a percentage of it — the same reasoning
+ * said in the span's own terms. Width here is a share of the run, so on a long run even a tenth of
+ * a second rounds away to nothing, and a stretch nobody can see is one that looks absent.
+ */
+const MIN_SEGMENT_PERCENT = 0.7;
 
 /**
  * A figure that walks to its value rather than being replaced by it. Every reading
