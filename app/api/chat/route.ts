@@ -89,7 +89,7 @@ type ToolCall = {
 type StreamEvent =
   | { type: "text"; text: string }
   | { type: "reasoning"; text: string }
-  | { type: "tool-call"; toolCallId: string; toolName: string; args: unknown; status: string }
+  | { type: "tool-call"; toolCallId: string; toolName: string; args: unknown; label?: string; status: string }
   | { type: "stats"; stats: TurnStats }
   | { type: "error"; error: string }
   | { type: "done"; sessionId?: string };
@@ -100,7 +100,20 @@ type ToolState = {
   arguments: string;
   /** Last arguments value that parsed, so partial JSON never renders. */
   args: unknown;
+  /**
+   * The provider's own rendering of what the call is for — the URL it is navigating, the
+   * pattern it is searching. It is not an argument list, and a provider that reports no
+   * arguments at all may still report this.
+   */
+  label: string;
   status: string;
+  /**
+   * When the provider said the call started and when it finished, where it says so. The pair is
+   * the call's own window; a provider that only names a call leaves these unset, and its window
+   * is measured around the naming instead.
+   */
+  startedAt?: number;
+  endedAt?: number;
 };
 
 /** The thinking window still growing. Only thinking is ever left open — a call is
@@ -458,6 +471,7 @@ function toolStateFromNormalizedCall(call: NormalizedToolCall, status: ToolState
     name: call.name,
     arguments: JSON.stringify(call.arguments),
     args: call.arguments,
+    label: "",
     status,
   };
 }
@@ -519,7 +533,7 @@ async function consumeStream(upstream: Response, round: number, state: DeltaStat
       const payload = safeJson(chunk);
       const usedUsage = recordUsage(state, payload, round);
       const before = snapshotOf(state);
-      let changed = applyProviderEvent(state, eventName, payload);
+      let changed = applyProviderEvent(state, eventName, payload, Date.now());
       if (!changed) {
         const delta = firstDelta(payload);
         if (delta) {
@@ -657,6 +671,7 @@ function emptyToolState(rawCall: ToolCall, index: number): ToolState {
     name: "",
     arguments: "",
     args: {},
+    label: "",
     status: "running",
   };
 }
@@ -679,6 +694,7 @@ function applyToolCallDelta(prior: ToolState, rawCall: ToolCall): ToolState {
     name: `${prior.name}${rawCall.function?.name ?? rawCall.name ?? ""}`,
     arguments: argsText,
     args,
+    label: prior.label,
     status: prior.status,
   };
 }
@@ -693,7 +709,7 @@ function firstString(...values: unknown[]) {
  * a tool event carrying `tool`, and thinking as the same shape with
  * `tool: "_thinking"`.
  */
-function applyProviderEvent(state: DeltaState, eventName: string, payload: unknown) {
+function applyProviderEvent(state: DeltaState, eventName: string, payload: unknown, at: number) {
   if (!payload || typeof payload !== "object") return false;
   const record = payload as Record<string, unknown>;
   const tool = firstString(record.tool, record.tool_name, record.toolName);
@@ -710,18 +726,30 @@ function applyProviderEvent(state: DeltaState, eventName: string, payload: unkno
     const key = `event-${id}`;
     const prior = state.toolCalls.get(key);
     const hinted = firstString(record.status, record.state);
+    const status = providerToolStatus(eventName, hinted);
     // The event may quote the call as an object or as the JSON string OpenAI uses, and both are
     // read: a card that cannot show what a call was called with has nothing to show at all, and
     // the provider's label for the step is no substitute for it.
     const carried = record.args ?? record.arguments ?? prior?.args;
     const args = typeof carried === "string" ? safeJson(carried.length > 0 ? carried : "{}") : carried ?? {};
+    // A provider that says when a call starts and when it finishes has timed the call itself, and
+    // that pair is the window it gets: measuring around the moment the call was named instead
+    // reports the model's writing time whenever the provider runs the tool on its own side.
+    const startedAt = prior?.startedAt ?? (status === "running" ? at : undefined);
+    const endedAt = prior?.endedAt ?? (status === "running" ? undefined : at);
     state.toolCalls.set(key, {
       id,
       name: tool,
       arguments: typeof record.arguments === "string" ? record.arguments : prior?.arguments ?? "",
       args,
-      status: providerToolStatus(eventName, hinted),
+      label: firstString(record.label, record.preview, record.detail) ?? prior?.label ?? "",
+      status,
+      ...(startedAt !== undefined ? { startedAt } : {}),
+      ...(endedAt !== undefined ? { endedAt } : {}),
     });
+    if (startedAt !== undefined && endedAt !== undefined && prior?.endedAt === undefined) {
+      pushSpan(state, { kind: "tool", id, startedAt, endedAt });
+    }
     return true;
   }
 
@@ -754,7 +782,14 @@ function providerToolStatus(eventName: string, hinted?: string): ToolState["stat
 }
 
 function toolCallEvent(call: ToolState): StreamEvent {
-  return { type: "tool-call", toolCallId: call.id, toolName: call.name, args: call.args, status: call.status };
+  return {
+    type: "tool-call",
+    toolCallId: call.id,
+    toolName: call.name,
+    args: call.args,
+    ...(call.label.length > 0 ? { label: call.label } : {}),
+    status: call.status,
+  };
 }
 
 function snapshotEvents(state: DeltaState): StreamEvent[] {
@@ -824,9 +859,14 @@ function stamp(state: DeltaState, before: { reasoning: number; text: number; cal
   for (const [key, call] of state.toolCalls) {
     if (state.spanned.has(key)) continue;
     state.spanned.add(key);
-    // Whatever ran before the call ended where it last spoke; the call owns the
-    // stretch from there to the moment it was named.
+    // Whatever ran before the call ended where it last spoke, whoever is timing the call: a call
+    // interrupts thinking, so the run is closed here either way.
     closeSpan(state, state.openSpan?.lastAt ?? now, round);
+    // A call the provider times itself has its own window already, filed from the start and the
+    // end it reported, so this stretch — which ends where the call was named — is not the call's
+    // and is not filed for it. Filed by both, the panel drew the call twice and the card read the
+    // naming time with the call's real window sitting behind it.
+    if (call.startedAt !== undefined) continue;
     pushSpan(state, { kind: "tool", id: call.id, startedAt: state.cursorAt ?? state.roundStartedAt, endedAt: now });
     state.cursorAt = now;
   }

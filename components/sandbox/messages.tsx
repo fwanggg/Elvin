@@ -40,6 +40,8 @@ type UserRuntimeMessageProps = Readonly<{
 type ToolCardProps = Readonly<{
   name: string;
   args: unknown;
+  /** The provider's own rendering of the call, when it sent one. Not an argument list. */
+  label?: string;
   result: unknown;
   defaultOpen: boolean;
   /** This call's window on the turn's timeline, when the proxy measured one. */
@@ -56,6 +58,7 @@ type ToolCallRowProps = Readonly<{
   name: string;
   args: unknown;
   argsText: string | undefined;
+  label?: string;
   result: unknown;
   isError?: boolean;
   defaultOpen: boolean;
@@ -184,7 +187,7 @@ export function UserModeAssistantMessage({ emoji, defaultOpen }: AssistantRuntim
               case "reasoning":
                 return <ReasoningPart {...part} />;
               case "tool-call":
-                return <ToolCallRow key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} argsText={part.argsText} result={part.result} isError={part.isError} defaultOpen={defaultOpen} />;
+                return <ToolCallRow key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} argsText={part.argsText} label={callLabel(part)} result={part.result} isError={part.isError} defaultOpen={defaultOpen} />;
               case "text":
                 return <AnswerText />;
               default:
@@ -240,7 +243,7 @@ export function DevModeAssistantMessage({ emoji, defaultOpen }: AssistantRuntime
               case "reasoning":
                 return <ReasoningPart {...part} />;
               case "tool-call":
-                return <ToolCard key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} result={part.result} defaultOpen={defaultOpen} run={runIndex} span={spansOf(turnStats, "tool", part.toolCallId)[0]} totalMs={totalMs} slowestCallMs={slowestCallMs} />;
+                return <ToolCard key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} label={callLabel(part)} result={part.result} defaultOpen={defaultOpen} run={runIndex} span={spansOf(turnStats, "tool", part.toolCallId)[0]} totalMs={totalMs} slowestCallMs={slowestCallMs} />;
               case "text":
                 return <AnswerText run={runIndex} />;
               default:
@@ -297,6 +300,25 @@ function resultFailed(result: unknown): boolean {
   return result !== null && typeof result === "object" && "error" in (result as Record<string, unknown>);
 }
 
+/**
+ * The provider's own rendering of a call — the URL a browsing call is navigating, the pattern a
+ * search is looking for. Only some providers send it, it is not an argument list, and a call can
+ * have one while quoting no arguments at all, so it is read defensively and shown under its own
+ * heading rather than standing in for the arguments.
+ */
+function callLabel(part: unknown): string | undefined {
+  const label = (part as { label?: unknown }).label;
+  return typeof label === "string" && label.length > 0 ? label : undefined;
+}
+
+/** Whether the provider quoted any arguments for this call, in either the object or string spelling. */
+function hasArguments(args: unknown): boolean {
+  if (args === null || args === undefined) return false;
+  if (typeof args === "string") return args.length > 0 && args !== "{}";
+  if (typeof args === "object") return Object.keys(args as Record<string, unknown>).length > 0;
+  return true;
+}
+
 /** Claude names the work with a verb, so a turn that is only reading gets one. */
 const THINKING_VERBS = ["Pondering", "Figuring", "Mulling", "Considering", "Working through"] as const;
 
@@ -329,7 +351,10 @@ function useThinkingLabel(): string {
     // stays until the next call replaces it rather than falling back to the verb.
     const latest = state.message.parts.filter((part) => part.type === "tool-call").at(-1);
     if (latest?.type === "tool-call") {
-      return describeStep(latest.toolName, latest.args, latest.result === undefined ? "running" : "complete");
+      // A provider's label describes the call better than arguments can when it quoted none: the
+      // row reads "Navigating for “https://amazon…”" instead of naming the tool and stopping.
+      const label = callLabel(latest);
+      return describeStep(latest.toolName, label !== undefined ? { label } : latest.args, latest.result === undefined ? "running" : "complete");
     }
     return verb;
   });
@@ -487,7 +512,7 @@ const ReasoningPart: ReasoningMessagePartComponent = ({ text }) => {
   );
 };
 
-function ToolCard({ name, args, result, defaultOpen, run, span, totalMs, slowestCallMs }: ToolCardProps): ReactNode {
+function ToolCard({ name, args, label, result, defaultOpen, run, span, totalMs, slowestCallMs }: ToolCardProps): ReactNode {
   const [open, setOpen] = useState(defaultOpen);
   const link = useStepLink();
   // A call with no result has not settled, and the check and the duration belong to a call that
@@ -497,6 +522,14 @@ function ToolCard({ name, args, result, defaultOpen, run, span, totalMs, slowest
   const running = result === undefined;
   const slow = !running && span !== undefined && slowestCallMs !== undefined && isStandout(span.ms, slowestCallMs);
   const keys = span !== undefined ? spanKey(run, span) : "";
+  // What the provider says the call is for, what it was called with, and what came back. A call
+  // whose arguments nobody quoted says so: an empty object reads as an empty call, and that
+  // distinction is the whole reason this line exists.
+  const detail = [
+    ...(label !== undefined ? [`Request\n${label}`] : []),
+    `Arguments\n${hasArguments(args) ? JSON.stringify(args, null, 2) : "none quoted"}`,
+    `Result\n${running ? "not returned yet" : JSON.stringify(result, null, 2)}`,
+  ].join("\n\n");
 
   return (
     <div className={pointed("part-card", keys, link)} data-steps={keys.length > 0 ? keys : undefined}>
@@ -511,7 +544,7 @@ function ToolCard({ name, args, result, defaultOpen, run, span, totalMs, slowest
         )}
         <span className="part-chevron">{open ? "⌄" : "›"}</span>
       </button>
-      {open && <div className="part-detail">{`Arguments\n${JSON.stringify(args ?? {}, null, 2)}\n\nResult\n${running ? "not returned yet" : JSON.stringify(result, null, 2)}`}</div>}
+      {open && <div className="part-detail">{detail}</div>}
     </div>
   );
 }
@@ -557,17 +590,20 @@ function ResponseRow({ stats }: Readonly<{ stats: TurnStats | undefined }>): Rea
  * and the raw request and result behind the disclosure. The labels come from the
  * vocabulary the humanized steps use, so the two readings agree.
  */
-function ToolCallRow({ name, args, argsText, result, isError, defaultOpen }: ToolCallRowProps): ReactNode {
+function ToolCallRow({ name, args, argsText, label, result, isError, defaultOpen }: ToolCallRowProps): ReactNode {
   const [open, setOpen] = useState(defaultOpen);
   const failed = isError === true || resultFailed(result);
+  // A call that quoted no arguments is still described by what the provider said it is for: when
+  // the label is the only thing naming the work, the sentence and its chip read from it.
+  const described = label !== undefined && !hasArguments(args) ? { label } : args;
 
   return (
     <ToolCall
       className="tool-call"
-      label={describeStep(name, args, failed ? "failed" : "complete")}
-      activeLabel={describeStep(name, args, "running")}
-      query={chipOf(args)}
-      request={argsText !== undefined && argsText.length > 0 ? argsText : JSON.stringify(args ?? {}, null, 2)}
+      label={describeStep(name, described, failed ? "failed" : "complete")}
+      activeLabel={describeStep(name, described, "running")}
+      query={chipOf(described)}
+      request={label ?? (argsText !== undefined && argsText.length > 0 ? argsText : JSON.stringify(args ?? {}, null, 2))}
       result={describeResult(result)}
       running={result === undefined}
       open={open}
