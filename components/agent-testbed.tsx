@@ -6,7 +6,7 @@ import { ModelPicker } from "@/components/model-picker";
 import { type Segment } from "@/components/assistant-ui/elements/streaming-text";
 import { type AppTheme, type Design, type OpenMode, type Pattern, type Toggle, type ViewMode, type Viewport } from "@/components/sandbox/knobs";
 import { type TurnStats, type UsageTotals } from "@/lib/turn-stats";
-import { AssistantRuntimeMessage, UserRuntimeMessage } from "@/components/sandbox/messages";
+import { DevModeAssistantMessage, DevModeUserMessage, UserModeAssistantMessage, UserModeUserMessage } from "@/components/sandbox/messages";
 import { RunPanel } from "@/components/sandbox/run-panel";
 import { useRuns } from "@/components/sandbox/runs";
 import { StepDebugBoundary } from "@/components/sandbox/step-link";
@@ -208,6 +208,14 @@ const DESIGN_LABELS: Record<Design, string> = {
 const DESIGN_LANGUAGES: ReadonlyArray<{ value: Design; label: string }> = (Object.keys(DESIGN_LABELS) as Design[]).map((value) => ({ value, label: DESIGN_LABELS[value] }));
 /** Who the parts render for. Both always render; only the writing changes. */
 const VIEW_MODE_LABELS: Record<ViewMode, string> = { dev: "Dev Mode", user: "User Mode" };
+const VIEW_SURFACES = {
+  dev: { UserMessage: DevModeUserMessage, AssistantMessage: DevModeAssistantMessage, stepDebug: "enabled" },
+  user: { UserMessage: UserModeUserMessage, AssistantMessage: UserModeAssistantMessage, stepDebug: "disabled" },
+} satisfies Record<ViewMode, {
+  UserMessage: typeof DevModeUserMessage;
+  AssistantMessage: typeof DevModeAssistantMessage;
+  stepDebug: "enabled" | "disabled";
+}>;
 const OPEN_MODE_LABELS: Record<OpenMode, string> = { collapsed: "Collapsed", expanded: "Expanded" };
 const TOGGLE_LABELS: Record<Toggle, string> = { on: "On", off: "Off" };
 const STATUS_COLORS: Record<ConnectionState, string> = {
@@ -713,8 +721,10 @@ function AssistantSandbox({ pattern, modelName, viewMode, emoji, defaultOpen, th
   const [chosenRun, setChosenRun] = useState<number | null>(null);
   const activeRun = chosenRun ?? runs.at(-1)?.index ?? null;
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const showStepDebug = viewMode === "dev" && pattern === "thread";
-
+  const surface = VIEW_SURFACES[viewMode];
+  const showStepDebug = surface.stepDebug === "enabled" && pattern === "thread";
+  const UserMessage = surface.UserMessage;
+  const AssistantMessage = surface.AssistantMessage;
   function selectRun(index: number): void {
     setChosenRun(index);
     document.querySelector(`[data-run="${index}"]`)?.scrollIntoView({ block: "start", behavior: "smooth" });
@@ -773,8 +783,8 @@ function AssistantSandbox({ pattern, modelName, viewMode, emoji, defaultOpen, th
           </AuiIf>
           <ThreadPrimitive.Messages>
             {({ message }) => message.role === "user"
-              ? <UserRuntimeMessage emoji={emoji} activeRun={activeRun} />
-              : <AssistantRuntimeMessage viewMode={viewMode} emoji={emoji} defaultOpen={defaultOpen} />}
+              ? <UserMessage emoji={emoji} activeRun={activeRun} />
+              : <AssistantMessage emoji={emoji} defaultOpen={defaultOpen} />}
           </ThreadPrimitive.Messages>
         </ThreadPrimitive.Viewport>
         {/* Its own row, outside the scroller: the thread scrolls above the
