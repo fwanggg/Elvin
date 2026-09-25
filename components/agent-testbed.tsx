@@ -704,17 +704,56 @@ function AssistantSandbox({ pattern, modelName, viewMode, emoji, defaultOpen, th
   const runs = useRuns();
   const [chosenRun, setChosenRun] = useState<number | null>(null);
   const activeRun = chosenRun ?? runs.at(-1)?.index ?? null;
+  const viewportRef = useRef<HTMLDivElement | null>(null);
 
   function selectRun(index: number): void {
     setChosenRun(index);
     document.querySelector(`[data-run="${index}"]`)?.scrollIntoView({ block: "start", behavior: "smooth" });
   }
 
+  // Reading the chat moves the panel with it. The turn to show is the last one
+  // whose marker has passed the top of the viewport — the turn being read — and
+  // every run owns the stretch from its own marker to the next one's, so a long
+  // answer still counts as part of the turn that wrote it. With the thread
+  // unscrolled no marker has passed, and the first turn is the one in hand.
+  //
+  // A pointer resting on the panel suspends this, because the scrolls in flight
+  // then are the panel's own — the click that jumped to a turn, the hover that
+  // brought a card into sight — and each of those already set the selection.
+  // Reading them back would have the selection chase the pointer instead.
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    let frame = 0;
+    const read = () => {
+      if (document.querySelector(".run-panel")?.matches(":hover")) return;
+      const top = viewport.getBoundingClientRect().top;
+      const markers = viewport.querySelectorAll<HTMLElement>("[data-run]");
+      const first = markers[0];
+      if (first === undefined) return;
+      let current = Number(first.dataset.run);
+      for (const marker of markers) {
+        if (marker.getBoundingClientRect().top > top) break;
+        current = Number(marker.dataset.run);
+      }
+      setChosenRun(current);
+    };
+    const onScroll = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(read);
+    };
+    viewport.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      viewport.removeEventListener("scroll", onScroll);
+    };
+  }, []);
+
   return (
     <div className={`assistant-frame ${pattern}`}>
       {pattern !== "thread" && <div className="assistant-header"><span>Acme Support</span><span>×</span></div>}
       <ThreadPrimitive.Root className="messages">
-        <ThreadPrimitive.Viewport className="message-col">
+        <ThreadPrimitive.Viewport className="message-col" ref={viewportRef}>
           {/* The line belongs to the thread, so a fresh thread draws it again:
               the key is the thread's own generation, which New Thread bumps —
               mounting alone would not replay it on an already-empty thread. */}
