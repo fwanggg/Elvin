@@ -7,7 +7,7 @@ import { ModelPicker } from "@/components/model-picker";
 import { type AppTheme, type Design, type Pattern, type Toggle, type ViewMode, type Viewport } from "@/components/sandbox/knobs";
 import { type TurnStats, type UsageTotals } from "@/lib/turn-stats";
 import { GATEWAY_PROMPT } from "@/lib/gateway-prompt";
-import { localHistory, readApiKey, readConnection, readSessionMessages, rememberSession, writeApiKey, writeConnection } from "@/lib/session-store";
+import { forgetSession, localHistory, readApiKey, readConnection, readSessionMessages, rememberSession, writeApiKey, writeConnection } from "@/lib/session-store";
 import { DevModeAssistantMessage, DevModeUserMessage, UserModeAssistantMessage, UserModeUserMessage } from "@/components/sandbox/messages";
 import { RunPanel } from "@/components/sandbox/run-panel";
 import { SessionList } from "@/components/session-list";
@@ -424,6 +424,15 @@ export function AgentTestbed(): ReactNode {
   function startThread(): void {
     openThread(`elvin-${crypto.randomUUID().slice(0, 8)}`);
   }
+
+  /**
+   * Forget a conversation. Deleting the one in use takes the thread it backs with it, so the
+   * sandbox starts a fresh one rather than showing a conversation the browser no longer holds.
+   */
+  function deleteSession(id: string): void {
+    forgetSession(id);
+    if (id === sessionRef.current) startThread();
+  }
   const devMode = viewMode === "dev";
   const effectivePattern: Pattern = devMode ? "thread" : pattern;
   const effectiveViewport: Viewport = devMode ? "desktop" : viewport;
@@ -521,7 +530,14 @@ export function AgentTestbed(): ReactNode {
             onDesignChange={setDesign}
             onViewModeChange={setViewMode}
             onEmojiChange={setEmoji}
-            sessions={<SessionList currentId={threadId} onSelect={openThread} onNewThread={startThread} />}
+            sessions={
+              <SessionList
+                currentId={threadId}
+                onSelect={openThread}
+                onNewThread={startThread}
+                onDelete={deleteSession}
+              />
+            }
           />
           <PreviewStage
             isConnected={isConnected}

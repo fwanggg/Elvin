@@ -4,10 +4,11 @@ import { useEffect, useState, type ReactNode } from "react";
 import { listSessions, subscribeToTranscripts, type SessionSummary } from "@/lib/session-store";
 
 type SessionListProps = Readonly<{
-  /** The conversation the sandbox is on, marked and kept at the top. */
+  /** The conversation the sandbox is on, marked but not moved: the list stays in time order. */
   currentId: string;
   onSelect: (id: string) => void;
   onNewThread: () => void;
+  onDelete: (id: string) => void;
 }>;
 
 /**
@@ -18,7 +19,7 @@ type SessionListProps = Readonly<{
  * a turn has been taken. Selecting one hands the sandbox that thread and its id goes back on the
  * wire, so the provider's own memory follows the reader rather than running ahead of them.
  */
-export function SessionList({ currentId, onSelect, onNewThread }: SessionListProps): ReactNode {
+export function SessionList({ currentId, onSelect, onNewThread, onDelete }: SessionListProps): ReactNode {
   // Read in an effect rather than while rendering: the store is the browser's, and a client
   // component also renders on the server, where there is none.
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
@@ -40,8 +41,9 @@ export function SessionList({ currentId, onSelect, onNewThread }: SessionListPro
       <ul className="sessions-list">
         {sessions.map((session) => {
           const live = session.id === currentId;
+          const title = session.title.length > 0 ? session.title : "New thread";
           return (
-            <li key={session.id}>
+            <li className="session-item" key={session.id}>
               <button
                 className={live ? "session is-live" : "session"}
                 type="button"
@@ -50,11 +52,19 @@ export function SessionList({ currentId, onSelect, onNewThread }: SessionListPro
               >
                 <span className="session-line">
                   {live && <span className="session-mark" aria-hidden="true" />}
-                  <span className="session-title">{session.title.length > 0 ? session.title : "New thread"}</span>
+                  <span className="session-title">{title}</span>
                   <span className="session-when">{live ? "LIVE" : whenOf(session.savedAt)}</span>
                 </span>
                 <span className="session-meta">{metaOf(session)}</span>
               </button>
+              {/* Sits where the time does and takes its place on hover, so nothing shifts. */}
+              <button
+                className="session-delete"
+                type="button"
+                aria-label={`Delete ${title}`}
+                title={`Delete ${title}`}
+                onClick={() => onDelete(session.id)}
+              />
             </li>
           );
         })}

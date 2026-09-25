@@ -22,7 +22,7 @@ const CONNECTION_KEY = "elvin.connection";
 const THREAD_KEY = "elvin.threadId";
 const API_KEY = "elvin.apiKey";
 const VERSION = 1;
-const KEEP_THREADS = 12;
+const KEEP_THREADS = 5;
 
 /** Listeners wanting to hear about a transcript being written; see `subscribeToTranscripts`. */
 const listeners = new Set<() => void>();
@@ -112,6 +112,20 @@ export function readSessionMessages(id: string): ThreadMessage[] {
 }
 
 /**
+ * Drop a conversation: its transcript, and with it its row. A session still in use is dropped the
+ * same way, and the sandbox starts a fresh one rather than holding a thread nothing backs.
+ */
+export function forgetSession(id: string): void {
+  if (id.length === 0) return;
+  try {
+    window.localStorage.removeItem(TRANSCRIPT_PREFIX + id);
+  } catch (error) {
+    console.warn(`Could not remove the transcript of ${id}.`, error);
+  }
+  for (const listener of listeners) listener();
+}
+
+/**
  * Note a thread as a conversation before anything has been said in it. A session the reader started
  * and stepped away from is still one they made, and without this it would leave the list the moment
  * it was no longer the one in use — which is exactly when they would look for it.
@@ -125,8 +139,11 @@ export function rememberSession(id: string): void {
 }
 
 /**
- * Every conversation this browser has, the one in use first — including a thread nothing has been
- * said in yet, which is a session too and the one the list would otherwise be missing.
+ * Every conversation this browser has, newest first.
+ *
+ * Ordered by when each was last written and nothing else, so the row being looked at keeps its
+ * place: a list that reorders under the pointer loses the one thing a list is for. The conversation
+ * in use is included even with no transcript, which is a session too.
  */
 export function listSessions(): SessionSummary[] {
   const current = currentThreadId();
@@ -140,7 +157,7 @@ export function listSessions(): SessionSummary[] {
     if (stored) sessions.push({ id, ...summarize(stored) });
   }
 
-  sessions.sort((left, right) => (left.id === current ? -1 : right.id === current ? 1 : 0) || right.savedAt - left.savedAt);
+  sessions.sort((left, right) => right.savedAt - left.savedAt);
   if (sessions.some((session) => session.id === current)) return sessions;
   return [{ id: current, title: "", runs: 0, ms: 0, savedAt: Date.now() }, ...sessions];
 }
