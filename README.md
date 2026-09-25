@@ -49,7 +49,7 @@ components/
 lib/
   step-labels.ts        #   tool calls as plain-language steps
   turn-stats.ts         #   what the proxy measured, shared with the renderers
-scripts/                # gateways (local providers; a terminal session as one), behaviour baseline, provider probe
+scripts/                # gateway, behaviour baseline, provider probe
 reports/                # baselines and screenshots
 ```
 
