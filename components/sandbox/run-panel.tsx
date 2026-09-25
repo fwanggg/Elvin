@@ -122,7 +122,7 @@ function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
           <dd>{usage?.cachedTokens === undefined ? "—" : <span ref={cached} />}</dd>
         </div>
         <div>
-          <dt title="Provider completion_tokens/output_tokens for the assistant answer.">Output tok</dt>
+          <dt title="Provider completion_tokens/output_tokens for the assistant answer.">Output</dt>
           <dd>{usage === null ? "—" : <span ref={answered} />}</dd>
         </div>
       </dl>
