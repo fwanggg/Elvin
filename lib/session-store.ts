@@ -104,6 +104,27 @@ export function currentThreadId(): string {
 }
 
 /**
+ * Everything a stored conversation holds, for replaying it into a live thread: switching to a
+ * session creates a thread, and a thread that has just been created has no history to load.
+ */
+export function readSessionMessages(id: string): ThreadMessage[] {
+  return readThread(id)?.messages.map((entry) => entry.message) ?? [];
+}
+
+/**
+ * Note a thread as a conversation before anything has been said in it. A session the reader started
+ * and stepped away from is still one they made, and without this it would leave the list the moment
+ * it was no longer the one in use — which is exactly when they would look for it.
+ */
+export function rememberSession(id: string): void {
+  if (id.length === 0 || readThread(id)) return;
+  const empty: StoredThread = { version: VERSION, savedAt: Date.now(), headId: null, messages: [] };
+  write(TRANSCRIPT_PREFIX + id, JSON.stringify(empty));
+  prune();
+  for (const listener of listeners) listener();
+}
+
+/**
  * Every conversation this browser has, the one in use first — including a thread nothing has been
  * said in yet, which is a session too and the one the list would otherwise be missing.
  */
