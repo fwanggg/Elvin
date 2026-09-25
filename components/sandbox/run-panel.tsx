@@ -205,11 +205,13 @@ const asCompact = (value: number): string => formatTokenCount(Math.round(value))
 /**
  * The model's own first-token wait, named in full on the hover: the turn's figure is
  * its first call's, and a turn that ran tools made more than one, so the rest are
- * listed rather than dropped.
+ * listed rather than dropped. A turn with none says why, rather than leaving a dash
+ * to be read as a broken figure.
  */
 function ttftTitle(ttfts: readonly number[]): string {
+  if (ttfts.length === 0) return "No first token to time: the provider answered in one piece rather than streaming.";
   const definition = "Time from the request to the first streamed token, measured at the proxy.";
-  if (ttfts.length <= 1) return definition;
+  if (ttfts.length === 1) return definition;
   return `${definition} This turn made ${ttfts.length} model calls: ${ttfts.map((ms, index) => `${index + 1}) ${formatSpan(ms)}`).join(", ")}.`;
 }
 
