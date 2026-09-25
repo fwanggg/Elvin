@@ -453,17 +453,43 @@ function AssistantActionBar(): ReactNode {
 
 
 /**
- * Reasoning arrives as one growing string, so the newest words are the only
- * thing that moves. Splitting on whitespace re-emits the provider's own line
- * breaks, which is what lets a long trace read as steps rather than a wall.
+ * Thinking arrives as one growing string, so the newest words are the only thing
+ * that moves — and, on this wire, as one part for the whole turn however many
+ * windows it ran in. The windows are therefore drawn from the trace's own
+ * coordinates: every stretch the proxy filed with a window carries that window's
+ * key, which is what lets a row in the panel point at the exact thinking it
+ * measured. Words no window claims stay unmarked rather than being quietly
+ * attached to one they did not belong to.
+ *
+ * Splitting on whitespace re-emits the provider's own line breaks, which is what
+ * lets a long trace read as steps rather than a wall.
  */
 const ReasoningPart: ReasoningMessagePartComponent = ({ text }) => {
-  const tokens = useMemo(() => text.split(/(\s+)/), [text]);
+  const turnStats = useTurnStats();
+  const runIndex = useRunIndex();
+
+  const windows = useMemo(() => {
+    const found: { key?: string; text: string }[] = [];
+    let cursor = 0;
+    for (const span of spansOf(turnStats, "reasoning")) {
+      const from = span.textFrom ?? cursor;
+      const to = span.textTo ?? from;
+      if (from > cursor) found.push({ text: text.slice(cursor, from) });
+      if (to > from) found.push({ key: spanKey(runIndex, span), text: text.slice(from, to) });
+      cursor = Math.max(cursor, to);
+    }
+    if (cursor < text.length) found.push({ text: text.slice(cursor) });
+    return found;
+  }, [text, turnStats, runIndex]);
 
   return (
     <p className="reasoning-line">
-      {tokens.map((token, index) => (
-        token.trim().length === 0 ? token : <span className="reasoning-word" key={index}>{token}</span>
+      {windows.map((window, index) => (
+        <span className="reasoning-window" data-steps={window.key} key={index}>
+          {window.text.split(/(\s+)/).map((token, position) => (
+            token.trim().length === 0 ? token : <span className="reasoning-word" key={position}>{token}</span>
+          ))}
+        </span>
       ))}
     </p>
   );

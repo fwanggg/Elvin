@@ -104,7 +104,9 @@ type ToolState = {
   status: string;
 };
 
-type OpenSpan = { kind: SpanKind; id?: string; startedAt: number; lastAt: number };
+/** The thinking window still growing. Only thinking is ever left open — a call is
+ *  filed the moment it is named — so this is what a window means while it runs. */
+type OpenSpan = { startedAt: number; lastAt: number; textFrom: number; textTo: number };
 
 type DeltaState = {
   text: string;
@@ -124,6 +126,12 @@ type DeltaState = {
   answerEndedAt: number | null;
   /** The window still open, if any. */
   openSpan: OpenSpan | null;
+  /** The thinking window each round filed, so that round's own count can be handed
+   *  to it: thinking is reported per response, and a response files one window. */
+  reasoningWindow: Map<number, TurnSpan>;
+  /** What each round reported for its thinking, for the window that was already
+   *  filed by the time the number arrived. */
+  roundTokens: Map<number, number>;
   /** Call keys already on the timeline, so a fragment cannot file a second span. */
   spanned: Set<string>;
   usage: UsageTotals | null;
@@ -467,7 +475,7 @@ async function consumeStream(upstream: Response, round: number, state: DeltaStat
     }
     const content = textContent(choice);
     if (content) state.text += content;
-    recordUsage(state, data);
+    recordUsage(state, data, round);
     stamp(state, before, round);
     emit();
     return roundToolCalls(state, round);
@@ -500,7 +508,7 @@ async function consumeStream(upstream: Response, round: number, state: DeltaStat
       if (chunk.length === 0 || chunk === "[DONE]") continue;
 
       const payload = safeJson(chunk);
-      const usedUsage = recordUsage(state, payload);
+      const usedUsage = recordUsage(state, payload, round);
       const before = snapshotOf(state);
       let changed = applyProviderEvent(state, eventName, payload);
       if (!changed) {
@@ -524,7 +532,7 @@ async function consumeStream(upstream: Response, round: number, state: DeltaStat
   // This round's stream is over, so a run it left open ended with its own last
   // delta. The next round opens a new one, which is what gives the reasoning row
   // more than one bar.
-  closeSpan(state, state.openSpan?.lastAt ?? Date.now());
+  closeSpan(state, state.openSpan?.lastAt ?? Date.now(), round);
   emit();
   return roundToolCalls(state, round);
 }
@@ -550,6 +558,8 @@ function eventStream(upstream: Response, sessionId: string | null, continueAfter
         answerStartedAt: null,
         answerEndedAt: null,
         openSpan: null,
+        reasoningWindow: new Map(),
+        roundTokens: new Map(),
         spanned: new Set(),
         usage: null,
       };
@@ -782,18 +792,20 @@ function stamp(state: DeltaState, before: { reasoning: number; text: number; cal
     // The answer is the turn's output rather than a window of work: it closes
     // the run before it, moves the cursor past itself, and is measured on its
     // own so a surface can say how long the writing took.
-    closeSpan(state, state.openSpan?.lastAt ?? now);
+    closeSpan(state, state.openSpan?.lastAt ?? now, round);
     state.cursorAt = now;
     state.answerStartedAt ??= now;
     state.answerEndedAt = now;
   }
 
   if (grewReasoning) {
-    if (state.openSpan?.kind !== "reasoning") {
-      closeSpan(state, now);
-      state.openSpan = { kind: "reasoning", startedAt: now, lastAt: now };
+    if (state.openSpan === null) {
+      // `before` is the trace as it stood before this delta, so the window opens
+      // where the words it is about to file begin.
+      state.openSpan = { startedAt: now, lastAt: now, textFrom: before.reasoning, textTo: state.reasoning.length };
     } else {
       state.openSpan.lastAt = now;
+      state.openSpan.textTo = state.reasoning.length;
     }
   }
 
@@ -803,37 +815,58 @@ function stamp(state: DeltaState, before: { reasoning: number; text: number; cal
     state.spanned.add(key);
     // Whatever ran before the call ended where it last spoke; the call owns the
     // stretch from there to the moment it was named.
-    closeSpan(state, state.openSpan?.lastAt ?? now);
+    closeSpan(state, state.openSpan?.lastAt ?? now, round);
     pushSpan(state, { kind: "tool", id: call.id, startedAt: state.cursorAt ?? state.roundStartedAt, endedAt: now });
     state.cursorAt = now;
   }
 }
 
 /** Files the open window, ending it at `at`, and moves the cursor there. */
-function closeSpan(state: DeltaState, at: number) {
+function closeSpan(state: DeltaState, at: number, round: number) {
   const open = state.openSpan;
   if (!open) return;
-  pushSpan(state, {
-    kind: open.kind,
-    ...(open.id !== undefined ? { id: open.id } : {}),
+  state.reasoningWindow.set(round, pushSpan(state, {
+    kind: "reasoning",
     startedAt: open.startedAt,
     endedAt: at,
-  });
+    textFrom: open.textFrom,
+    textTo: open.textTo,
+  }));
   state.cursorAt = at;
   state.openSpan = null;
+  attachReasoningTokens(state, round);
 }
 
-function pushSpan(state: DeltaState, span: { kind: SpanKind; id?: string; startedAt: number; endedAt: number }) {
+/**
+ * Hands a round's reported thinking count to the window that round filed. The
+ * provider reports thinking per response rather than per window, so whichever of
+ * the two arrives second does the handing over.
+ */
+function attachReasoningTokens(state: DeltaState, round: number): void {
+  const tokens = state.roundTokens.get(round);
+  const window = state.reasoningWindow.get(round);
+  if (tokens === undefined || window === undefined) return;
+  window.tokens = tokens;
+}
+
+function pushSpan(state: DeltaState, span: { kind: SpanKind; id?: string; startedAt: number; endedAt: number; textFrom?: number; textTo?: number }): TurnSpan {
   if (state.startedAt === null) state.startedAt = span.startedAt;
   // Every window is filed, including one whose two ends landed in the same
   // millisecond: dropping those here would make the count depend on the clock,
   // and a row that cannot claim a length simply draws no bar. See `Timeline`.
-  state.spans.push({
+  const filed: TurnSpan = {
     kind: span.kind,
     ...(span.id !== undefined ? { id: span.id } : {}),
+    // Where the window's words sit in the trace, for the windows that have words
+    // to place: a card drawing the whole trace can then point at the stretch a
+    // row measured rather than the two having to guess at each other.
+    ...(span.textFrom !== undefined ? { textFrom: span.textFrom } : {}),
+    ...(span.textTo !== undefined ? { textTo: span.textTo } : {}),
     startMs: Math.max(0, span.startedAt - state.startedAt),
     ms: Math.max(0, span.endedAt - span.startedAt),
-  });
+  };
+  state.spans.push(filed);
+  return filed;
 }
 
 function turnStats(state: DeltaState): TurnStats {
@@ -884,10 +917,14 @@ function usageOf(payload: unknown): UsageTotals | null {
   };
 }
 
-function recordUsage(state: DeltaState, payload: unknown): boolean {
+function recordUsage(state: DeltaState, payload: unknown, round: number): boolean {
   const usage = usageOf(payload);
   if (!usage) return false;
   state.usage = state.usage ? addUsage(state.usage, usage) : usage;
+  // Kept per round as well as in the turn's total: a thinking window is what the
+  // count belongs to, and the window may already have been filed.
+  if (usage.reasoningTokens !== undefined) state.roundTokens.set(round, usage.reasoningTokens);
+  attachReasoningTokens(state, round);
   return true;
 }
 

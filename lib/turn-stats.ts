@@ -31,6 +31,21 @@ export type TurnSpan = {
   startMs: number;
   /** How long the window ran, in ms. */
   ms: number;
+  /**
+   * Where this window's words sit in the message's thinking trace, in characters.
+   * Thinking arrives as one string, so a card that draws all of it needs these to
+   * point at the stretch a single row measured instead of guessing at it. Only
+   * thinking windows have them.
+   */
+  textFrom?: number;
+  textTo?: number;
+  /**
+   * What the provider said this window's thinking cost, where it reported that at
+   * all: endpoints split thinking out of the answer per response, not per window,
+   * and a response files at most one thinking window. Absent means unknown, which
+   * a surface reads from the window's own words instead.
+   */
+  tokens?: number;
 };
 
 export type TurnStats = {
