@@ -63,12 +63,14 @@ type ToolCallPart = {
   args: JsonObject;
   argsText: string;
   result: unknown;
+  /** The provider's own rendering of the call, when it sent one — see the card's Request line. */
+  label?: string;
 };
 
 type StreamEvent =
   | { type: "text"; text: string }
   | { type: "reasoning"; text: string }
-  | { type: "tool-call"; toolCallId: string; toolName: string; args: unknown; status?: string }
+  | { type: "tool-call"; toolCallId: string; toolName: string; args: unknown; label?: string; status?: string }
   | { type: "stats"; stats: TurnStats }
   | { type: "error"; error: string }
   | { type: "done"; sessionId?: string };
@@ -329,6 +331,7 @@ export function AgentTestbed(): ReactNode {
               args,
               argsText: JSON.stringify(args),
               result: event.status && !isRunningStatus(event.status) ? { status: event.status } : undefined,
+              ...(event.label !== undefined ? { label: event.label } : {}),
             });
           }
 

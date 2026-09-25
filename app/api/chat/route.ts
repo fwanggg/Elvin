@@ -89,7 +89,7 @@ type ToolCall = {
 type StreamEvent =
   | { type: "text"; text: string }
   | { type: "reasoning"; text: string }
-  | { type: "tool-call"; toolCallId: string; toolName: string; args: unknown; status: string }
+  | { type: "tool-call"; toolCallId: string; toolName: string; args: unknown; label?: string; status: string }
   | { type: "stats"; stats: TurnStats }
   | { type: "error"; error: string }
   | { type: "done"; sessionId?: string };
@@ -100,6 +100,12 @@ type ToolState = {
   arguments: string;
   /** Last arguments value that parsed, so partial JSON never renders. */
   args: unknown;
+  /**
+   * The provider's own rendering of what the call is for — the URL it is navigating, the
+   * pattern it is searching. It is not an argument list, and a provider that reports no
+   * arguments at all may still report this.
+   */
+  label: string;
   status: string;
 };
 
@@ -458,6 +464,7 @@ function toolStateFromNormalizedCall(call: NormalizedToolCall, status: ToolState
     name: call.name,
     arguments: JSON.stringify(call.arguments),
     args: call.arguments,
+    label: "",
     status,
   };
 }
@@ -657,6 +664,7 @@ function emptyToolState(rawCall: ToolCall, index: number): ToolState {
     name: "",
     arguments: "",
     args: {},
+    label: "",
     status: "running",
   };
 }
@@ -679,6 +687,7 @@ function applyToolCallDelta(prior: ToolState, rawCall: ToolCall): ToolState {
     name: `${prior.name}${rawCall.function?.name ?? rawCall.name ?? ""}`,
     arguments: argsText,
     args,
+    label: prior.label,
     status: prior.status,
   };
 }
@@ -720,6 +729,7 @@ function applyProviderEvent(state: DeltaState, eventName: string, payload: unkno
       name: tool,
       arguments: typeof record.arguments === "string" ? record.arguments : prior?.arguments ?? "",
       args,
+      label: firstString(record.label, record.preview, record.detail) ?? prior?.label ?? "",
       status: providerToolStatus(eventName, hinted),
     });
     return true;
@@ -754,7 +764,14 @@ function providerToolStatus(eventName: string, hinted?: string): ToolState["stat
 }
 
 function toolCallEvent(call: ToolState): StreamEvent {
-  return { type: "tool-call", toolCallId: call.id, toolName: call.name, args: call.args, status: call.status };
+  return {
+    type: "tool-call",
+    toolCallId: call.id,
+    toolName: call.name,
+    args: call.args,
+    ...(call.label.length > 0 ? { label: call.label } : {}),
+    status: call.status,
+  };
 }
 
 function snapshotEvents(state: DeltaState): StreamEvent[] {
