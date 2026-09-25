@@ -655,8 +655,9 @@ h6 {
   text-transform: var(--ds-label-transform);
 }
 /* Sessions: the conversations this browser has, read from the same store the
-   sandbox writes its transcript to. The row in use is marked and stays on top,
-   because it is a conversation even when nothing has been said in it yet. */
+   sandbox writes its transcript to. Newest first, and never reordered by being
+   selected: the row under the pointer keeps its place. The one in use is marked
+   instead, because it is a conversation even with nothing in it yet. */
 .sessions { display: flex; flex-direction: column; }
 .sessions-head { display: flex; align-items: center; gap: 8px; padding: var(--ds-space-section); }
 .sessions-count {
@@ -718,6 +719,40 @@ h6 {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Deleting a conversation: the badge sits on the time and takes its place when the
+   row is reached, so the row neither shifts nor loses anything behind it. Hidden it
+   takes no clicks, so the only way to press it is to have meant the time is gone. */
+.session-item { position: relative; }
+.session-item:hover .session-when { visibility: hidden; }
+.session-delete {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  translate: 0 -50%;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-accent);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s ease;
+}
+.session-delete::before {
+  content: "";
+  width: 10px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--color-bg);
+}
+.session-item:hover .session-delete,
+.session-delete:focus-visible { opacity: 1; pointer-events: auto; }
+.session-delete:hover { background: var(--color-accent-600); }
+@media (prefers-reduced-motion: reduce) { .session-delete { transition: none; } }
 .seg { display: flex; }
 /* Each segment carries the border so its box is the same 34px as .select; the
    group outline is the outer borders of the first and last segment. */
