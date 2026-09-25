@@ -1,0 +1,80 @@
+{
+  "prompt": "Use a shell tool to run: echo hi. Then say done in one line.",
+  "events": [
+    {
+      "type": "stats",
+      "stats": {
+        "spans": [],
+        "totalMs": "<ms>",
+        "usage": null,
+        "estimated": true
+      }
+    },
+    {
+      "type": "tool-call",
+      "toolCallId": "call_00_ET_UT8FySzEaNebmd2qhYfs7205",
+      "toolName": "bash",
+      "args": {
+        "command": "echo hi",
+        "i": "Running echo hi"
+      },
+      "status": "running"
+    },
+    {
+      "type": "stats",
+      "stats": {
+        "spans": [
+          {
+            "kind": "tool",
+            "id": "call_00_ET_UT8FySzEaNebmd2qhYfs7205",
+            "startMs": "<ms>",
+            "ms": "<ms>"
+          }
+        ],
+        "totalMs": "<ms>",
+        "leadMs": "<ms>",
+        "usage": null,
+        "estimated": true
+      }
+    },
+    {
+      "type": "text",
+      "text": "done"
+    },
+    {
+      "type": "stats",
+      "stats": {
+        "spans": [
+          {
+            "kind": "tool",
+            "id": "call_00_ET_UT8FySzEaNebmd2qhYfs7205",
+            "startMs": "<ms>",
+            "ms": "<ms>"
+          }
+        ],
+        "totalMs": "<ms>",
+        "leadMs": "<ms>",
+        "usage": {
+          "promptTokens": 44800,
+          "completionTokens": 58,
+          "totalTokens": 44858,
+          "cachedTokens": 44416
+        },
+        "estimated": false
+      }
+    },
+    {
+      "type": "tool-call",
+      "toolCallId": "call_00_ET_UT8FySzEaNebmd2qhYfs7205",
+      "toolName": "bash",
+      "args": {
+        "command": "echo hi",
+        "i": "Running echo hi"
+      },
+      "status": "completed"
+    },
+    {
+      "type": "done"
+    }
+  ]
+}
