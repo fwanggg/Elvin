@@ -144,7 +144,8 @@ export function marked(base: string, answering: string, link: Pick<StepLink, "ho
  * the trace is open, otherwise the card that owns it.
  */
 export function pointed(base: string, answering: string, link: Pick<StepLink, "hovered" | "chosen">): string {
-  const on = link.hovered.length === 1 ? touches(link.hovered, answering) : link.hovered.join(" ") === answering;
+  if (answering.length === 0) return base;
+  const on = link.hovered.length === 1 ? touches(link.hovered, answering) : link.hovered.length > 1 && link.hovered.join(" ") === answering;
   const held = heldBy(answering, link);
   return `${base}${on || held ? " is-linked" : ""}${held ? " is-pointed" : ""}`;
 }
