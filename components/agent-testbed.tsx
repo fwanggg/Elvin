@@ -706,6 +706,7 @@ function AssistantSandbox({ pattern, modelName, viewMode, emoji, defaultOpen, th
   const [chosenRun, setChosenRun] = useState<number | null>(null);
   const activeRun = chosenRun ?? runs.at(-1)?.index ?? null;
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const showStepDebug = viewMode === "dev" && pattern === "thread";
 
   function selectRun(index: number): void {
     setChosenRun(index);
@@ -751,7 +752,7 @@ function AssistantSandbox({ pattern, modelName, viewMode, emoji, defaultOpen, th
   }, []);
 
   return (
-    <StepLinkProvider activeRun={activeRun}>
+    <StepLinkProvider activeRun={activeRun} enabled={showStepDebug}>
       <div className={`assistant-frame ${pattern}`}>
         {pattern !== "thread" && <div className="assistant-header"><span>Acme Support</span><span>×</span></div>}
         <ThreadPrimitive.Root className="messages">
@@ -788,10 +789,11 @@ function AssistantSandbox({ pattern, modelName, viewMode, emoji, defaultOpen, th
             </ComposerPrimitive.Root>
           </ThreadPrimitive.ViewportFooter>
         </ThreadPrimitive.Root>
-        {/* The turn's own plane, beside the chat it belongs to. The narrow shells —
-            copilot and floating — have no room for a second column, so this is a
-            thread-pattern surface. */}
-        {pattern === "thread" && <RunPanel runs={runs} active={activeRun} onSelect={selectRun} />}
+        {/* The step debugger is one Dev Mode feature: the stats rail, the run span,
+            and the three-way hover/choice link between rows, spans and cards.
+            User Mode is the product surface, so it gets none of that right-column
+            debugger behavior. The narrow shells have no room for the rail either. */}
+        {showStepDebug && <RunPanel runs={runs} active={activeRun} onSelect={selectRun} />}
       </div>
     </StepLinkProvider>
   );
