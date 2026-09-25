@@ -93,12 +93,14 @@ type ThemeVariableName =
 type RenderedPart = { type: "reasoning"; text: string } | ToolCallPart | { type: "text"; text: string };
 
 type ControlSidebarProps = Readonly<{
+  appTheme: AppTheme;
   pattern: Pattern;
   viewport: Viewport;
   design: Design;
   viewMode: ViewMode;
   emoji: Toggle;
   openMode: OpenMode;
+  onAppThemeChange: (value: AppTheme) => void;
   onPatternChange: (value: Pattern) => void;
   onViewportChange: (value: Viewport) => void;
   onDesignChange: (value: Design) => void;
@@ -131,7 +133,6 @@ type PreviewStageProps = Readonly<{
   error: string;
   onDisconnect: () => void;
   onStartThread: () => void;
-  onAppThemeChange: (value: AppTheme) => void;
   onBaseUrlChange: (value: string) => void;
   onApiKeyChange: (value: string) => void;
   onConnect: () => void;
@@ -419,12 +420,14 @@ export function AgentTestbed(): ReactNode {
 
         <div className="main-grid">
           <ControlSidebar
+            appTheme={appTheme}
             pattern={pattern}
             viewport={viewport}
             design={design}
             viewMode={viewMode}
             emoji={emoji}
             openMode={openMode}
+            onAppThemeChange={setAppTheme}
             onPatternChange={setPattern}
             onViewportChange={setViewport}
             onDesignChange={setDesign}
@@ -453,7 +456,6 @@ export function AgentTestbed(): ReactNode {
             apiKey={apiKey}
             connecting={connection === "connecting"}
             error={connection === "error" ? connectionError : ""}
-            onAppThemeChange={setAppTheme}
             onDisconnect={disconnect}
             onStartThread={startThread}
             onModelChange={setModel}
@@ -469,12 +471,14 @@ export function AgentTestbed(): ReactNode {
 }
 
 function ControlSidebar({
+  appTheme,
   pattern,
   viewport,
   design,
   viewMode,
   emoji,
   openMode,
+  onAppThemeChange,
   onPatternChange,
   onViewportChange,
   onDesignChange,
@@ -487,6 +491,15 @@ function ControlSidebar({
       <PanelSection title="Design language">
         <Dropdown label="Design language" value={design} options={DESIGN_LANGUAGES} onChange={(value) => onDesignChange(value as Design)} />
         <p className="hint">Swaps the visual system — palette, type, geometry and elevation — inside the sandboxed app.</p>
+        <SegmentedControlBlock
+          label="App theme"
+          name="app-theme"
+          value={appTheme}
+          options={["dark", "light"]}
+          labels={APP_THEME_LABELS}
+          onChange={onAppThemeChange}
+          hint="Switches the previewed app between dark and light."
+        />
       </PanelSection>
       <div className="section-rule" />
       <SegmentedPanel
@@ -565,7 +578,6 @@ function PreviewStage({
   apiKey,
   connecting,
   error,
-  onAppThemeChange,
   onDisconnect,
   onStartThread,
   onModelChange,
@@ -617,11 +629,6 @@ function PreviewStage({
         </button>
       </div>
       <div className="canvas" data-viewport={viewport}>
-        {/* The app theme control rides the renderer's own top-right corner: it
-            belongs to the thing being previewed, not to the control column. */}
-        <div className="canvas-theme">
-          <Segment name="app-theme" value={appTheme} options={["dark", "light"]} labels={APP_THEME_LABELS} onChange={onAppThemeChange} />
-        </div>
         <div className="app-shell" data-theme={appTheme} data-design={design}>
           {isConnected ? (
             <>

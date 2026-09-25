@@ -834,12 +834,6 @@ h6 {
      given rather than the browser window. */
   container-type: inline-size;
 }
-/* The app theme control rides the renderer's top-right corner. It keeps the
-   sidebar's segmented styling, but carries its own surface: it sits on top of
-   the app, not on the chrome's flat background. */
-.canvas-theme { position: absolute; z-index: 1; top: calc(var(--ds-space-canvas) + 10px); right: calc(var(--ds-space-canvas) + 10px); display: flex; }
-.canvas-theme .seg { background: var(--color-bg); }
-.canvas-theme .seg-opt { flex: none; padding: 6px 12px; }
 
 /* Mobile: the same shell, framed as a phone. Only this frame is a named
    container, so only the phone answers the narrow rules at the foot of this
