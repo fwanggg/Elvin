@@ -100,7 +100,6 @@ type ToolState = {
   arguments: string;
   /** Last arguments value that parsed, so partial JSON never renders. */
   args: unknown;
-  label: string;
   status: string;
 };
 
@@ -459,7 +458,6 @@ function toolStateFromNormalizedCall(call: NormalizedToolCall, status: ToolState
     name: call.name,
     arguments: JSON.stringify(call.arguments),
     args: call.arguments,
-    label: "",
     status,
   };
 }
@@ -659,7 +657,6 @@ function emptyToolState(rawCall: ToolCall, index: number): ToolState {
     name: "",
     arguments: "",
     args: {},
-    label: "",
     status: "running",
   };
 }
@@ -682,7 +679,6 @@ function applyToolCallDelta(prior: ToolState, rawCall: ToolCall): ToolState {
     name: `${prior.name}${rawCall.function?.name ?? rawCall.name ?? ""}`,
     arguments: argsText,
     args,
-    label: prior.label,
     status: prior.status,
   };
 }
@@ -714,12 +710,16 @@ function applyProviderEvent(state: DeltaState, eventName: string, payload: unkno
     const key = `event-${id}`;
     const prior = state.toolCalls.get(key);
     const hinted = firstString(record.status, record.state);
+    // The event may quote the call as an object or as the JSON string OpenAI uses, and both are
+    // read: a card that cannot show what a call was called with has nothing to show at all, and
+    // the provider's label for the step is no substitute for it.
+    const carried = record.args ?? record.arguments ?? prior?.args;
+    const args = typeof carried === "string" ? safeJson(carried.length > 0 ? carried : "{}") : carried ?? {};
     state.toolCalls.set(key, {
       id,
       name: tool,
-      arguments: prior?.arguments ?? "",
-      args: prior?.args ?? {},
-      label: firstString(record.label, record.preview, record.detail) ?? prior?.label ?? "",
+      arguments: typeof record.arguments === "string" ? record.arguments : prior?.arguments ?? "",
+      args,
       status: providerToolStatus(eventName, hinted),
     });
     return true;
@@ -753,15 +753,8 @@ function providerToolStatus(eventName: string, hinted?: string): ToolState["stat
   return "running";
 }
 
-function visibleToolArgs(call: ToolState): unknown {
-  if (call.label.length > 0) {
-    return { label: call.label };
-  }
-  return call.args;
-}
-
 function toolCallEvent(call: ToolState): StreamEvent {
-  return { type: "tool-call", toolCallId: call.id, toolName: call.name, args: visibleToolArgs(call), status: call.status };
+  return { type: "tool-call", toolCallId: call.id, toolName: call.name, args: call.args, status: call.status };
 }
 
 function snapshotEvents(state: DeltaState): StreamEvent[] {
