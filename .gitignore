@@ -5,3 +5,8 @@ out/
 .env
 *.tsbuildinfo
 .DS_Store
+
+# A local harness for driving the sandbox with a terminal session. Not part of what this repo
+# does — it is a provider to point the playground at, and it needs an agent installed on the
+# machine running it — so it stays out of the tree.
+scripts/omp-openai-proxy.mjs
