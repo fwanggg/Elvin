@@ -1039,7 +1039,16 @@ h6 {
    The scaffold's .tool-card has always done the same. */
 .part-card { margin: 8px 0; overflow: hidden; border: var(--ds-border) solid var(--a-border); border-radius: var(--ds-radius-card); background: var(--a-bg); box-shadow: var(--ds-shadow); }
 .part-head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 12px; border: 0; background: transparent; cursor: pointer; font-size: 13px; text-align: left; }
-.part-detail { padding: 10px 12px; border-top: 1px solid var(--a-border); background: var(--a-chrome); color: var(--a-fg); font-family: var(--font-mono); font-size: 12px; line-height: 1.5; }
+/* The detail is written as lines — "Arguments", the arguments, "Result", the result — so it has
+   to keep them: without this the whole reading collapses into one run-on line, and an absent
+   result is indistinguishable from an empty one. */
+.part-detail { padding: 10px 12px; border-top: 1px solid var(--a-border); background: var(--a-chrome); color: var(--a-fg); font-family: var(--font-mono); font-size: 12px; line-height: 1.5; white-space: pre-wrap; }
+/* The mark for a call that is still out: the same pulse the panel's running dots use, so a card
+   with work in flight never reads as a card that has finished. */
+.part-running { display: inline-flex; align-items: center; gap: 6px; }
+.part-running::before { content: ""; flex: none; width: 5px; height: 5px; border-radius: 999px; background: var(--a-accent); animation: part-pulse 1.6s ease-in-out infinite; }
+@keyframes part-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .part-running::before { animation: none; } }
 /* The turn's shape lives in the panel beside the chat, not behind the rows it
    describes: a fill under a row competes with the words on it, and the same
    numbers read better as one column that can be scanned. */
