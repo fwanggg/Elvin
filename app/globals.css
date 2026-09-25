@@ -1074,7 +1074,7 @@ h6 {
    own line when it does not, so a figure is never truncated to make space for its own
    breakdown. */
 .run-facts dd { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 6px; margin: 8px 0 0; color: var(--a-fg); font-family: var(--font-mono); font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
-.run-fact-note { color: color-mix(in srgb, var(--a-fg) 62%, transparent); font-size: 11px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; }
+.run-fact-slash { color: color-mix(in srgb, var(--a-fg) 45%, transparent); font-weight: 400; }
 .run-steps { position: relative; list-style: none; margin: 22px 0 0; padding: 30px 0 0; display: flex; flex-direction: column; gap: 0; }
 .run-steps::before { content: "Sequence"; position: absolute; inset-block-start: 0; inset-inline: 0; padding: 0 0 12px; border-bottom: var(--ds-border) solid color-mix(in srgb, var(--a-fg) 10%, transparent); color: color-mix(in srgb, var(--a-fg) 48%, transparent); font-family: var(--font-heading); font-size: 10px; font-weight: var(--ds-label-weight); letter-spacing: .15em; text-transform: uppercase; }
 .run-steps::after { content: "Tokens     Time"; position: absolute; inset-block-start: 0; inset-inline-end: 0; color: color-mix(in srgb, var(--a-fg) 48%, transparent); font-family: var(--font-heading); font-size: 10px; font-weight: var(--ds-label-weight); letter-spacing: .15em; text-transform: uppercase; white-space: pre; }

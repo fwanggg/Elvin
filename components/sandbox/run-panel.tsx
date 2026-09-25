@@ -114,12 +114,17 @@ function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
           <dd ref={total} />
         </div>
         <div>
-          <dt title={inputTitle(usage)}>Input</dt>
+          <dt title={inputTitle(usage)}>Input/Cached</dt>
           <dd>
-            {usage === null ? "—" : <span ref={asked} />}
-            <span className="run-fact-note">
-              cached {usage === null || usage.cachedTokens == null ? "—" : <span ref={cached} />}
-            </span>
+            {usage === null ? (
+              "—"
+            ) : (
+              <>
+                <span ref={asked} />
+                <span className="run-fact-slash">/</span>
+                {usage.cachedTokens == null ? "—" : <span ref={cached} />}
+              </>
+            )}
           </dd>
         </div>
         <div>
@@ -205,9 +210,9 @@ const asCompact = (value: number): string => formatTokenCount(Math.round(value))
  * out against the input it came out of rather than left to be read as a miss count.
  */
 function inputTitle(usage: UsageTotals | null): string {
-  const input = "Everything the model was sent: the system prompt, the history, the tools, and any session context.";
+  const input = "The first figure is everything the model was sent: the system prompt, the history, the tools, and any session context.";
   if (usage === null) return input;
-  const shapes = "The cached line reads prompt_tokens_details.cached_tokens, prompt_cache_hit_tokens, or cache_read_input_tokens, whichever the provider sends.";
+  const shapes = "The figure after the slash is how much of it the provider served from its own cache, read from prompt_tokens_details.cached_tokens, prompt_cache_hit_tokens, or cache_read_input_tokens, whichever the provider sends.";
   if (usage.cachedTokens === undefined) return `${input} ${shapes} This turn was recorded before the panel read cached input, so it has no figure either way.`;
   if (usage.cachedTokens === null) return `${input} ${shapes} This provider said nothing about caching.`;
   return `${input} ${shapes} ${usage.cachedTokens.toLocaleString("en-US")} of these ${usage.promptTokens.toLocaleString("en-US")} were served from cache.`;
