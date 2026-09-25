@@ -52,6 +52,7 @@ export function RunPanel({ runs, active, onSelect }: Readonly<{ runs: readonly R
 function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
   const link = useStepLink();
   const usage = run.stats?.usage ?? null;
+  const ttfts = run.stats?.ttftMs ?? [];
   const calls = run.steps.filter((step) => step.role === "call");
   const longestCallMs = calls.reduce((longest, step) => Math.max(longest, step.ms), 0);
   const reasoningMs = run.steps.reduce((sum, step) => sum + (step.role === "reasoning" ? step.ms : 0), 0);
@@ -67,6 +68,7 @@ function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
   const inFlightMs = Math.max(0, e2eMs - run.steps.reduce((sum, step) => sum + step.ms, 0));
 
   const total = useWalked(e2eMs, asSpan);
+  const ttft = useWalked(ttfts[0], asSpan);
   const asked = useWalked(usage?.promptTokens, asCompact);
   const answered = useWalked(usage?.completionTokens, asCompact);
   const callCount = useWalked(calls.length, asWhole);
@@ -116,6 +118,10 @@ function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
         <div>
           <dt>Total dur</dt>
           <dd ref={total} />
+        </div>
+        <div>
+          <dt title={ttftTitle(ttfts)}>TTFT</dt>
+          <dd>{ttfts.length === 0 ? "—" : <span ref={ttft} />}</dd>
         </div>
         <div>
           <dt title="Provider prompt_tokens/input_tokens. Includes system prompt, history, tools, and provider session context.">Prompt ctx</dt>
@@ -195,6 +201,17 @@ const asWhole = (value: number): string => String(Math.round(value));
 const asSpan = (value: number): string => formatSpan(value);
 const asTokens = (value: number): string => `${formatTokenCount(Math.round(value))} tok`;
 const asCompact = (value: number): string => formatTokenCount(Math.round(value));
+
+/**
+ * The model's own first-token wait, named in full on the hover: the turn's figure is
+ * its first call's, and a turn that ran tools made more than one, so the rest are
+ * listed rather than dropped.
+ */
+function ttftTitle(ttfts: readonly number[]): string {
+  const definition = "Time from the request to the first streamed token, measured at the proxy.";
+  if (ttfts.length <= 1) return definition;
+  return `${definition} This turn made ${ttfts.length} model calls: ${ttfts.map((ms, index) => `${index + 1}) ${formatSpan(ms)}`).join(", ")}.`;
+}
 
 /** How long a figure takes to walk to its value. */
 const WALK_MS = 320;
