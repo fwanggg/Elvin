@@ -9,7 +9,7 @@ import { type TurnStats, type UsageTotals } from "@/lib/turn-stats";
 import { AssistantRuntimeMessage, UserRuntimeMessage } from "@/components/sandbox/messages";
 import { RunPanel } from "@/components/sandbox/run-panel";
 import { useRuns } from "@/components/sandbox/runs";
-import { StepLinkProvider } from "@/components/sandbox/step-link";
+import { StepDebugBoundary } from "@/components/sandbox/step-link";
 import {
   AssistantRuntimeProvider,
   ComposerPrimitive,
@@ -751,52 +751,52 @@ function AssistantSandbox({ pattern, modelName, viewMode, emoji, defaultOpen, th
     };
   }, []);
 
-  return (
-    <StepLinkProvider activeRun={activeRun} enabled={showStepDebug}>
-      <div className={`assistant-frame ${pattern}`}>
-        {pattern !== "thread" && <div className="assistant-header"><span>Acme Support</span><span>×</span></div>}
-        <ThreadPrimitive.Root className="messages">
-          <ThreadPrimitive.Viewport className="message-col" ref={viewportRef}>
-            {/* The line belongs to the thread, so a fresh thread draws it again:
-                the key is the thread's own generation, which New Thread bumps —
-                mounting alone would not replay it on an already-empty thread. */}
-            <AuiIf condition={(state) => state.thread.isEmpty}>
-              <div className="thread-empty" key={threadKey}>
-                <h3>Ask your agent anything</h3>
-              </div>
-            </AuiIf>
-            <ThreadPrimitive.Messages>
-              {({ message }) => message.role === "user"
-                ? <UserRuntimeMessage emoji={emoji} activeRun={activeRun} />
-                : <AssistantRuntimeMessage viewMode={viewMode} emoji={emoji} defaultOpen={defaultOpen} />}
-            </ThreadPrimitive.Messages>
-          </ThreadPrimitive.Viewport>
-          {/* Its own row, outside the scroller: the thread scrolls above the
-              composer rather than passing behind it. */}
-          <ThreadPrimitive.ViewportFooter className="composer-wrap">
-            <ComposerPrimitive.Root className="composer">
-              <ComposerPrimitive.Input placeholder="Send a message…" rows={1} />
-              <div className="composer-footer">
-                <span>＋</span>
-                <span>{modelName}</span>
-                <AuiIf condition={(state) => !state.thread.isRunning}>
-                  <ComposerPrimitive.Send className="send-dot">↑</ComposerPrimitive.Send>
-                </AuiIf>
-                <AuiIf condition={(state) => state.thread.isRunning}>
-                  <ComposerPrimitive.Cancel className="send-dot running">■</ComposerPrimitive.Cancel>
-                </AuiIf>
-              </div>
-            </ComposerPrimitive.Root>
-          </ThreadPrimitive.ViewportFooter>
-        </ThreadPrimitive.Root>
-        {/* The step debugger is one Dev Mode feature: the stats rail, the run span,
-            and the three-way hover/choice link between rows, spans and cards.
-            User Mode is the product surface, so it gets none of that right-column
-            debugger behavior. The narrow shells have no room for the rail either. */}
-        {showStepDebug && <RunPanel runs={runs} active={activeRun} onSelect={selectRun} />}
-      </div>
-    </StepLinkProvider>
+  const frame = (
+    <div className={`assistant-frame ${pattern}`}>
+      {pattern !== "thread" && <div className="assistant-header"><span>Acme Support</span><span>×</span></div>}
+      <ThreadPrimitive.Root className="messages">
+        <ThreadPrimitive.Viewport className="message-col" ref={viewportRef}>
+          {/* The line belongs to the thread, so a fresh thread draws it again:
+              the key is the thread's own generation, which New Thread bumps —
+              mounting alone would not replay it on an already-empty thread. */}
+          <AuiIf condition={(state) => state.thread.isEmpty}>
+            <div className="thread-empty" key={threadKey}>
+              <h3>Ask your agent anything</h3>
+            </div>
+          </AuiIf>
+          <ThreadPrimitive.Messages>
+            {({ message }) => message.role === "user"
+              ? <UserRuntimeMessage emoji={emoji} activeRun={activeRun} />
+              : <AssistantRuntimeMessage viewMode={viewMode} emoji={emoji} defaultOpen={defaultOpen} />}
+          </ThreadPrimitive.Messages>
+        </ThreadPrimitive.Viewport>
+        {/* Its own row, outside the scroller: the thread scrolls above the
+            composer rather than passing behind it. */}
+        <ThreadPrimitive.ViewportFooter className="composer-wrap">
+          <ComposerPrimitive.Root className="composer">
+            <ComposerPrimitive.Input placeholder="Send a message…" rows={1} />
+            <div className="composer-footer">
+              <span>＋</span>
+              <span>{modelName}</span>
+              <AuiIf condition={(state) => !state.thread.isRunning}>
+                <ComposerPrimitive.Send className="send-dot">↑</ComposerPrimitive.Send>
+              </AuiIf>
+              <AuiIf condition={(state) => state.thread.isRunning}>
+                <ComposerPrimitive.Cancel className="send-dot running">■</ComposerPrimitive.Cancel>
+              </AuiIf>
+            </div>
+          </ComposerPrimitive.Root>
+        </ThreadPrimitive.ViewportFooter>
+      </ThreadPrimitive.Root>
+      {/* The step debugger is one Dev Mode feature: the stats rail, the run span,
+          and the three-way hover/choice link between rows, spans and cards.
+          User Mode is the product surface, so it gets none of that right-column
+          debugger behavior. The narrow shells have no room for the rail either. */}
+      {showStepDebug && <RunPanel runs={runs} active={activeRun} onSelect={selectRun} />}
+    </div>
   );
+
+  return <StepDebugBoundary activeRun={activeRun} enabled={showStepDebug}>{frame}</StepDebugBoundary>;
 }
 
 /**

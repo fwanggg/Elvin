@@ -42,8 +42,6 @@ type StepLink = {
   choose: (key: string) => void;
 };
 
-const StepLinkContext = createContext<StepLink | null>(null);
-
 const DISABLED_STEP_LINK: StepLink = {
   hovered: [],
   chosen: null,
@@ -53,24 +51,30 @@ const DISABLED_STEP_LINK: StepLink = {
   choose: () => {},
 };
 
+const StepLinkContext = createContext<StepLink>(DISABLED_STEP_LINK);
+
 /**
- * Holds which step the pointer is on and which one was chosen, but only while the Dev
- * Mode stats rail is present. User Mode is the product surface, so the same chat markup
- * gets a disabled link: no hover bands, no held choice, no auto-opened debug cards.
+ * The feature boundary for Dev Mode's step debugger. Outside it the chat still renders
+ * the same components, but `useStepLink` returns the no-op link.
  */
-export function StepLinkProvider({ activeRun, enabled, children }: Readonly<{ activeRun: number | null; enabled: boolean; children: ReactNode }>): ReactNode {
+export function StepDebugBoundary({ activeRun, enabled, children }: Readonly<{ activeRun: number | null; enabled: boolean; children: ReactNode }>): ReactNode {
+  if (!enabled) return children;
+  return <StepLinkProvider activeRun={activeRun}>{children}</StepLinkProvider>;
+}
+
+/** Holds which step the pointer is on and which one was chosen. */
+function StepLinkProvider({ activeRun, children }: Readonly<{ activeRun: number | null; children: ReactNode }>): ReactNode {
   const [hovered, setHovered] = useState<readonly string[]>([]);
   const [chosen, setChosen] = useState<string | null>(null);
   const opened = useRef<string | null>(null);
   const listed = useRef(activeRun);
 
   const show = useCallback((keys: string) => {
-    if (!enabled) return;
     const next = keys.split(" ").filter((key) => key.length > 0);
     // The same marks twice in a row are not news: a pointer crossing a card fires this
     // for every element it crosses, and none of them should cost a render.
     setHovered((current) => (current.join(" ") === next.join(" ") ? current : next));
-  }, [enabled]);
+  }, []);
 
   const mark = useCallback((keys: string) => show(keys), [show]);
 
@@ -87,61 +91,50 @@ export function StepLinkProvider({ activeRun, enabled, children }: Readonly<{ ac
   }, []);
 
   // What is marked or chosen belongs to the run that lists it: a panel turned to another
-  // run is showing no choice, and no pointer, rather than keys whose rows are gone. The
-  // same cleanup runs when the stats feature is disabled by switching to User Mode.
+  // run is showing no choice, and no pointer, rather than keys whose rows are gone.
   useEffect(() => {
-    if (!enabled) {
-      if (opened.current !== null) closeAt(opened.current, null);
-      opened.current = null;
-      listed.current = activeRun;
-      setChosen(null);
-      setHovered((current) => (current.length === 0 ? current : []));
-      return;
-    }
     if (listed.current === activeRun) return;
     listed.current = activeRun;
     setChosen(null);
     setHovered((current) => (current.length === 0 ? current : []));
-  }, [activeRun, enabled]);
+  }, [activeRun]);
 
   // The chosen step owns the chat: choosing one opens the card that made it and points
   // at the exact part of it, choosing another closes the first, and choosing the same
   // one closes it again.
   useEffect(() => {
-    if (!enabled) return;
     const previous = opened.current;
     opened.current = chosen;
     if (previous !== null && previous !== chosen) closeAt(previous, chosen);
     if (chosen !== null) openAt(chosen);
-  }, [chosen, enabled]);
+  }, [chosen]);
 
   // A mark off the viewport is a mark nobody sees, so the chat gives up the least it
   // can: `nearest` moves nothing that is already in sight.
   useEffect(() => {
-    if (!enabled || hovered.length === 0) return;
+    if (hovered.length === 0) return;
     deepestCard(hovered)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [hovered, enabled]);
+  }, [hovered]);
 
-  const value = useMemo<StepLink>(() => {
-    if (!enabled) return DISABLED_STEP_LINK;
-    return {
-      hovered,
-      chosen,
-      mark,
-      enter,
-      leave,
-      choose: (key: string) => setChosen((current) => (current === key ? null : key)),
-    };
-  }, [enabled, hovered, chosen, mark, enter, leave]);
+  useEffect(() => () => {
+    if (opened.current !== null) closeAt(opened.current, null);
+  }, []);
+
+  const value = useMemo<StepLink>(() => ({
+    hovered,
+    chosen,
+    mark,
+    enter,
+    leave,
+    choose: (key: string) => setChosen((current) => (current === key ? null : key)),
+  }), [hovered, chosen, mark, enter, leave]);
 
   return <StepLinkContext.Provider value={value}>{children}</StepLinkContext.Provider>;
 }
 
-/** The link, from anywhere the linked drawings are. */
+/** The link, from anywhere the linked drawings are. Outside Dev Mode it is inert. */
 export function useStepLink(): StepLink {
-  const link = useContext(StepLinkContext);
-  if (link === null) throw new Error("useStepLink needs a StepLinkProvider above it");
-  return link;
+  return useContext(StepLinkContext);
 }
 
 /** Whether a mark covers any of the keys an element answers to. */
