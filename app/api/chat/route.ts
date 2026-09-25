@@ -15,6 +15,8 @@ type RequestBody = {
   stream?: boolean;
   capability?: string;
   threadId?: string;
+  /** What the endpoint said it was when it was checked (`owned_by`), when it said anything. */
+  owner?: string;
 };
 
 type OpenAIMessage = {
@@ -161,11 +163,18 @@ type DeltaState = {
 };
 
 /**
- * Providers that keep conversation state server side name the header that
- * pins it. Bare OpenAI has no sessions, so the header is simply ignored.
+ * The session a conversation is carried in. Providers that keep state server side name the header
+ * that pins it, and Hermes named one first — so the neutral spelling is what every endpoint is
+ * given, and the Hermes one is added beside it only for an endpoint that said, in `/models`, that
+ * it is Hermes. Bare OpenAI has no sessions and ignores both; a harness that keeps its own history
+ * is unaffected either way.
  */
-const SESSION_HEADER = "X-Hermes-Session-Id";
-const SESSION_RESPONSE_HEADER = "x-hermes-session-id";
+const SESSION_HEADER = "X-Session-Id";
+const SESSION_RESPONSE_HEADER = "x-session-id";
+const HERMES_SESSION_HEADER = "X-Hermes-Session-Id";
+const HERMES_RESPONSE_HEADER = "x-hermes-session-id";
+/** The owner a provider declares in `/models` when the provider is Hermes. */
+const HERMES_OWNER = "hermes";
 
 /**
  * Endpoints whose models reason mandatorily reject the reasoning parameter.
@@ -292,7 +301,13 @@ function providerHeaders(body: RequestBody): Record<string, string> {
     "Content-Type": "application/json",
     ...(body.apiKey?.trim() ? { Authorization: `Bearer ${body.apiKey.trim()}` } : {}),
     ...(body.threadId?.trim() ? { [SESSION_HEADER]: body.threadId.trim() } : {}),
+    ...(body.threadId?.trim() && isHermes(body.owner) ? { [HERMES_SESSION_HEADER]: body.threadId.trim() } : {}),
   };
+}
+
+/** Whether the endpoint said, when it was checked, that it is Hermes. */
+function isHermes(owner: string | undefined): boolean {
+  return owner?.trim().toLowerCase() === HERMES_OWNER;
 }
 
 function createProviderCaller(options: {
@@ -425,9 +440,12 @@ async function nonStreamingResponse(options: {
   return NextResponse.json({ error: "The agent kept requesting tools.", sessionId: options.sessionId }, { status: 502 });
 }
 
-/** The session the provider actually used — its own when it ignores our header. */
+/**
+ * The session the provider actually used — its own when it ignores our header, and under either
+ * spelling, since a Hermes endpoint answers with the header it was asked in.
+ */
 function sessionIdOf(response: Response, requested?: string) {
-  return response.headers.get(SESSION_RESPONSE_HEADER) ?? requested?.trim() ?? null;
+  return response.headers.get(SESSION_RESPONSE_HEADER) ?? response.headers.get(HERMES_RESPONSE_HEADER) ?? requested?.trim() ?? null;
 }
 
 /**

@@ -18,7 +18,7 @@ type ProviderEndpoints = {
 };
 
 type ModelProbe =
-  | { ok: true; models: string[] }
+  | { ok: true; models: string[]; owner?: string }
   | { ok: false; error?: string };
 
 type CapabilitiesProbe =
@@ -47,7 +47,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   const capabilities = await checkCapabilities(endpoints.capabilities, apiKey);
-  return checkResponse(model, models.models, capabilities);
+  return checkResponse(model, models.models, capabilities, models.owner);
 }
 
 async function parseRequest(request: Request): Promise<ParsedRequest> {
@@ -82,12 +82,13 @@ async function probeModels(endpoints: ProviderEndpoints, apiKey: string | undefi
   return { ok: true, models: [] };
 }
 
-function checkResponse(model: string | undefined, models: string[], capabilities: CapabilitiesProbe): NextResponse {
+function checkResponse(model: string | undefined, models: string[], capabilities: CapabilitiesProbe, owner: string | undefined): NextResponse {
   return NextResponse.json({
     ok: true,
     model: model || models[0],
     models,
     capabilities: capabilities.ok ? capabilities.capabilities : [],
+    ...(owner !== undefined ? { owner } : {}),
   });
 }
 
@@ -103,9 +104,13 @@ async function checkModels(endpoint: string, apiKey?: string): Promise<ModelProb
   if (!response.ok) return { ok: false, error: providerError(text, response.status) };
 
   try {
-    const data = JSON.parse(text) as { data?: Array<{ id?: string } | string> };
-    const models = (data.data ?? []).map((item) => typeof item === "string" ? item : item.id).filter((item): item is string => Boolean(item));
-    return { ok: true, models };
+    const data = JSON.parse(text) as { data?: Array<{ id?: string; owned_by?: string } | string> };
+    const entries = data.data ?? [];
+    const models = entries.map((item) => (typeof item === "string" ? item : item.id)).filter((item): item is string => Boolean(item));
+    // The one field a provider uses to say what it is. A client that has to send a harness its own
+    // header has no other way to know before it sends the request.
+    const owner = entries.map((item) => (typeof item === "string" ? undefined : item.owned_by)).find((item) => typeof item === "string");
+    return { ok: true, models, ...(owner !== undefined ? { owner } : {}) };
   } catch {
     return { ok: true, models: [] };
   }
