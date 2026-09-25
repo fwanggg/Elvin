@@ -1060,19 +1060,12 @@ h6 {
 .e2e-span[data-role="output"] { background: color-mix(in srgb, var(--a-fg) 94%, transparent); }
 .e2e-span.slow { background: color-mix(in srgb, var(--color-accent) 78%, var(--a-fg) 22%); }
 .e2e-span.is-linked, .e2e-span.is-pointed { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-/* The model's own wait, before it said anything. Solid rather than hatched: the hatch
-   means ground no row can name, and this ground has a name. */
-.e2e-wait { position: absolute; inset-block: 0; inset-inline-start: 0; transform-origin: left center; background: color-mix(in srgb, var(--a-fg) 26%, transparent); animation: span-in .5s cubic-bezier(.23, 1, .32, 1) both; }
 @keyframes span-in { from { transform: scaleX(0); } }
-/* The key under the span: the model's own wait, and the ground between windows that no row
-   can name. Each figure is what it measures, not a remainder of a remainder. */
+/* The key under the span: the wait that no row claimed, named for what the turn was doing
+   while it passed. */
 .run-e2e-key { display: flex; align-items: center; gap: 8px; margin: 12px 0 0; padding: 0 0 12px; border-bottom: var(--ds-border) solid color-mix(in srgb, var(--a-fg) 10%, transparent); color: color-mix(in srgb, var(--a-fg) 64%, transparent); font-family: var(--font-body); font-size: 12px; font-weight: 700; letter-spacing: -.01em; }
 .run-e2e-swatch { flex: none; width: 10px; height: 10px; background-color: color-mix(in srgb, var(--a-fg) 5%, transparent); background-image: repeating-linear-gradient(135deg, color-mix(in srgb, var(--a-fg) 22%, transparent) 0 3px, transparent 3px 7px); }
 .run-e2e-key-ms { margin-inline-start: auto; color: var(--a-fg); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-/* Each entry of the key takes half the line, so its figure sits at its own end: one
-   entry reads as it always did, and two read as two columns. */
-.run-e2e-key-part { flex: 1 1 0; display: flex; align-items: center; gap: 8px; min-width: 0; }
-.run-e2e-swatch.wait { background-image: none; background-color: color-mix(in srgb, var(--a-fg) 26%, transparent); }
 .run-facts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; margin: 0; border-bottom: var(--ds-border) solid color-mix(in srgb, var(--a-fg) 10%, transparent); }
 .run-facts div { display: flex; flex-direction: column; justify-content: space-between; min-width: 0; padding: 12px 8px 14px; border-left: var(--ds-border) solid color-mix(in srgb, var(--a-fg) 8%, transparent); }
 .run-facts div:first-child { border-left: 0; }
