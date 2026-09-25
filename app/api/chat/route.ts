@@ -76,6 +76,44 @@ type ProviderTool = {
  */
 const MAX_TOOL_ROUNDS = 3;
 
+/** What a translator is given beside the frame itself. */
+type Translation = { at: number; round: number };
+
+/**
+ * A provider's dialect, as a function over one frame. Each translator is asked in turn and the
+ * first one that recognises the frame wins; a frame nobody recognises is ignored without breaking
+ * the turn. A translator mutates the turn's state and says whether the frame was its own.
+ */
+type Translator = {
+  name: string;
+  translate: (state: DeltaState, eventName: string, payload: unknown, context: Translation) => boolean;
+};
+
+/**
+ * The translators, in the order they are asked.
+ *
+ * **`default` must always be the last one in this array.** It is the fallback: the OpenAI-shaped
+ * envelope (`choices[].delta`) that every compatible server speaks, which is also the shape a
+ * dialect most easily resembles by accident. Keeping it last means a named dialect — Hermes' tool
+ * event, a `_thinking` record — is always reached first and can never be shadowed by the fallback.
+ * A new dialect goes above `default`, never below it.
+ */
+const TRANSLATORS: readonly Translator[] = [
+  {
+    name: "hermes",
+    translate: (state, eventName, payload, context) => applyProviderEvent(state, eventName, payload, context.at),
+  },
+  {
+    name: "default",
+    translate: (state, _eventName, payload, context) => {
+      const delta = firstDelta(payload);
+      if (delta === null) return false;
+      applyDelta(state, delta, context.round);
+      return true;
+    },
+  },
+];
+
 type ToolCall = {
   id?: string;
   type?: string;
@@ -527,6 +565,8 @@ async function consumeStream(upstream: Response, round: number, state: DeltaStat
   const decoder = new TextDecoder();
   let buffer = "";
   let eventName = "";
+  /** Which dialect each frame arrived in, for the log below. */
+  const claims = new Map<string, number>();
 
   while (true) {
     const { done, value } = await reader.read();
@@ -551,13 +591,13 @@ async function consumeStream(upstream: Response, round: number, state: DeltaStat
       const payload = safeJson(chunk);
       const usedUsage = recordUsage(state, payload, round);
       const before = snapshotOf(state);
-      let changed = applyProviderEvent(state, eventName, payload, Date.now());
-      if (!changed) {
-        const delta = firstDelta(payload);
-        if (delta) {
-          applyDelta(state, delta, round);
-          changed = true;
-        }
+      const context: Translation = { at: Date.now(), round };
+      let changed = false;
+      for (const translator of TRANSLATORS) {
+        if (!translator.translate(state, eventName, payload, context)) continue;
+        changed = true;
+        claims.set(translator.name, (claims.get(translator.name) ?? 0) + 1);
+        break;
       }
       if (changed) stamp(state, before, round);
       // A usage-only chunk draws nothing, but it is the one frame carrying the
@@ -566,6 +606,9 @@ async function consumeStream(upstream: Response, round: number, state: DeltaStat
     }
   }
 
+  // Which dialect the frames of this turn arrived in. A turn that used two translators is a fact
+  // worth being able to read rather than infer.
+  console.log(`[chat] frames claimed by ${[...claims].map(([name, count]) => `${name}×${count}`).join(", ") || "nothing"}`);
   // The turn is over once the stream ends, so its tool calls are settled.
   for (const [key, call] of state.toolCalls) {
     if (key.startsWith(`round-${round}-`)) state.toolCalls.set(key, { ...call, status: "completed" });
