@@ -5,13 +5,14 @@
       "contentType": "text/event-stream; charset=utf-8",
       "events": [
         {
-          "type": "tool-call",
-          "toolCallId": "call_fixed_1",
-          "toolName": "get_order_status",
-          "args": {
-            "order_id": "4821"
-          },
-          "status": "running"
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 0,
+            "usage": false,
+            "estimated": true
+          }
         },
         {
           "type": "tool-call",
@@ -23,6 +24,35 @@
           "status": "running"
         },
         {
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
+        },
+        {
           "type": "tool-call",
           "toolCallId": "call_fixed_1",
           "toolName": "get_order_status",
@@ -30,6 +60,16 @@
             "order_id": "4821"
           },
           "status": "completed"
+        },
+        {
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
         },
         {
           "type": "tool-call",
@@ -45,17 +85,14 @@
           "text": "Answer after the tool."
         },
         {
-          "type": "tool-call",
-          "toolCallId": "call_fixed_1",
-          "toolName": "get_order_status",
-          "args": {
-            "order_id": "4821"
-          },
-          "status": "completed"
-        },
-        {
-          "type": "text",
-          "text": "Answer after the tool."
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
         },
         {
           "type": "tool-call",
@@ -69,6 +106,39 @@
         {
           "type": "text",
           "text": "Answer after the tool."
+        },
+        {
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
         },
         {
           "type": "done",
@@ -81,13 +151,14 @@
       "contentType": "text/event-stream; charset=utf-8",
       "events": [
         {
-          "type": "tool-call",
-          "toolCallId": "call_fixed_1",
-          "toolName": "get_order_status",
-          "args": {
-            "order_id": "4821"
-          },
-          "status": "running"
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 0,
+            "usage": false,
+            "estimated": true
+          }
         },
         {
           "type": "tool-call",
@@ -99,6 +170,35 @@
           "status": "running"
         },
         {
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
+        },
+        {
           "type": "tool-call",
           "toolCallId": "call_fixed_1",
           "toolName": "get_order_status",
@@ -106,6 +206,16 @@
             "order_id": "4821"
           },
           "status": "completed"
+        },
+        {
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
         },
         {
           "type": "tool-call",
@@ -121,17 +231,14 @@
           "text": "Answer after the tool."
         },
         {
-          "type": "tool-call",
-          "toolCallId": "call_fixed_1",
-          "toolName": "get_order_status",
-          "args": {
-            "order_id": "4821"
-          },
-          "status": "completed"
-        },
-        {
-          "type": "text",
-          "text": "Answer after the tool."
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
         },
         {
           "type": "tool-call",
@@ -145,6 +252,39 @@
         {
           "type": "text",
           "text": "Answer after the tool."
+        },
+        {
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
         },
         {
           "type": "done",
@@ -157,13 +297,14 @@
       "contentType": "text/event-stream; charset=utf-8",
       "events": [
         {
-          "type": "tool-call",
-          "toolCallId": "call_fixed_1",
-          "toolName": "get_order_status",
-          "args": {
-            "order_id": "4821"
-          },
-          "status": "running"
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 0,
+            "usage": false,
+            "estimated": true
+          }
         },
         {
           "type": "tool-call",
@@ -175,6 +316,35 @@
           "status": "running"
         },
         {
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
+        },
+        {
           "type": "tool-call",
           "toolCallId": "call_fixed_1",
           "toolName": "get_order_status",
@@ -182,6 +352,16 @@
             "order_id": "4821"
           },
           "status": "completed"
+        },
+        {
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
         },
         {
           "type": "tool-call",
@@ -197,17 +377,14 @@
           "text": "Answer after the tool."
         },
         {
-          "type": "tool-call",
-          "toolCallId": "call_fixed_1",
-          "toolName": "get_order_status",
-          "args": {
-            "order_id": "4821"
-          },
-          "status": "completed"
-        },
-        {
-          "type": "text",
-          "text": "Answer after the tool."
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
         },
         {
           "type": "tool-call",
@@ -221,6 +398,39 @@
         {
           "type": "text",
           "text": "Answer after the tool."
+        },
+        {
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
         },
         {
           "type": "done",
@@ -233,13 +443,14 @@
       "contentType": "text/event-stream; charset=utf-8",
       "events": [
         {
-          "type": "tool-call",
-          "toolCallId": "call_fixed_1",
-          "toolName": "get_order_status",
-          "args": {
-            "order_id": "4821"
-          },
-          "status": "running"
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 0,
+            "usage": false,
+            "estimated": true
+          }
         },
         {
           "type": "tool-call",
@@ -251,6 +462,35 @@
           "status": "running"
         },
         {
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "running"
+        },
+        {
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
+        },
+        {
           "type": "tool-call",
           "toolCallId": "call_fixed_1",
           "toolName": "get_order_status",
@@ -258,6 +498,16 @@
             "order_id": "4821"
           },
           "status": "completed"
+        },
+        {
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
         },
         {
           "type": "reasoning",
@@ -271,6 +521,16 @@
             "order_id": "4821"
           },
           "status": "completed"
+        },
+        {
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
         },
         {
           "type": "reasoning",
@@ -290,21 +550,14 @@
           "text": "Answer after thinking and the tool."
         },
         {
-          "type": "reasoning",
-          "text": "Considering the tool."
-        },
-        {
-          "type": "tool-call",
-          "toolCallId": "call_fixed_1",
-          "toolName": "get_order_status",
-          "args": {
-            "order_id": "4821"
-          },
-          "status": "completed"
-        },
-        {
-          "type": "text",
-          "text": "Answer after thinking and the tool."
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
         },
         {
           "type": "reasoning",
@@ -322,6 +575,43 @@
         {
           "type": "text",
           "text": "Answer after thinking and the tool."
+        },
+        {
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
+        },
+        {
+          "type": "reasoning",
+          "text": "Considering the tool."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after thinking and the tool."
+        },
+        {
+          "type": "stats",
+          "has": {
+            "reasoningMs": false,
+            "answerMs": false,
+            "tools": 1,
+            "usage": false,
+            "estimated": true
+          }
         },
         {
           "type": "done",

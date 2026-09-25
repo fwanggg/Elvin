@@ -978,6 +978,9 @@ h6 {
 .part-card { margin: 8px 0; overflow: hidden; border: var(--ds-border) solid var(--a-border); border-radius: var(--ds-radius-card); background: var(--a-bg); box-shadow: var(--ds-shadow); }
 .part-head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 12px; border: 0; background: transparent; cursor: pointer; font-size: 13px; text-align: left; }
 .part-detail { padding: 10px 12px; border-top: 1px solid var(--a-border); background: var(--a-chrome); color: var(--a-fg); font-family: var(--font-mono); font-size: 12px; line-height: 1.5; }
+/* The call's own clock, beside its name: the model's time to get to the call,
+   then the agent's time to carry on once the result went back. */
+.part-stat { flex: none; color: var(--a-muted); font-family: var(--font-mono); font-size: 11.5px; }
 /* Reasoning, drawn two ways. Dev Mode renders the element as it ships: its
    trigger is the brain and the word "Reasoning", inside the outline the element
    carries, and the sandbox palette reaches it through the data slots the way it
@@ -989,6 +992,10 @@ h6 {
 .reasoning-root [data-slot="reasoning-trigger"]:hover { color: var(--a-fg); }
 .reasoning-root [data-slot="reasoning-trigger-chevron"] { margin-left: auto; }
 .reasoning-root [data-slot="reasoning-text"] { max-height: 260px; padding-inline-start: 12px; border-inline-start: 1px solid var(--a-border); color: var(--a-fg); font-size: 13px; line-height: 1.5; }
+/* The reasoning window and its tokens, above the trace: the provider's own count
+   where it split thinking out of the completion total, an estimate where it did
+   not. Both live on the wire's clock, not the renderer's. */
+.reasoning-stats { display: flex; gap: 10px; margin: 0 0 8px; color: var(--a-muted); font-family: var(--font-mono); font-size: 11.5px; }
 .reasoning-root [data-slot="reasoning-fade"]:first-child { background: linear-gradient(to bottom, var(--a-bg), transparent); }
 .reasoning-root [data-slot="reasoning-fade"]:last-child { background: linear-gradient(to top, var(--a-bg), transparent); }
 .reasoning-line { margin: 0; white-space: pre-wrap; }

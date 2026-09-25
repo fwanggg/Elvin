@@ -103,7 +103,7 @@ function eventsOf(body) {
     if (payload.length === 0) continue;
     try {
       const parsed = JSON.parse(payload);
-      if (typeof parsed?.type === "string") events.push(parsed);
+      if (typeof parsed?.type === "string") events.push(normalize(parsed));
     } catch {
       events.push({ type: "unparsed", payload });
     }
@@ -111,6 +111,26 @@ function eventsOf(body) {
   return events;
 }
 
+/**
+ * The stats event carries the wall clock the proxy measured, which differs by
+ * milliseconds every run by design. Its shape is what a client depends on, so
+ * that is what is compared: which fields were present, and how many calls the
+ * turn made — never the readings themselves.
+ */
+function normalize(event) {
+  if (event.type !== "stats") return event;
+  const stats = event.stats ?? {};
+  return {
+    type: "stats",
+    has: {
+      reasoningMs: typeof stats.reasoningMs === "number",
+      answerMs: typeof stats.answerMs === "number",
+      tools: Object.keys(stats.tools ?? {}).length,
+      usage: stats.usage !== null && stats.usage !== undefined,
+      estimated: stats.estimated === true,
+    },
+  };
+}
 async function chatCase(scenario) {
   const response = await fetch(`${APP}/api/chat`, {
     method: "POST",

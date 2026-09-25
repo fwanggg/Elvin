@@ -89,6 +89,7 @@ type StreamEvent =
   | { type: "text"; text: string }
   | { type: "reasoning"; text: string }
   | { type: "tool-call"; toolCallId: string; toolName: string; args: unknown; status: string }
+  | { type: "stats"; stats: TurnStats }
   | { type: "error"; error: string }
   | { type: "done"; sessionId?: string };
 
@@ -102,12 +103,54 @@ type ToolState = {
   status: string;
 };
 
+type UsageTotals = {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  /** Present only where the provider splits thinking out of the completion count. */
+  reasoningTokens?: number;
+};
+
+type ToolTiming = {
+  /** From the round's start to the moment the model named the call. */
+  modelMs: number;
+  /** From the call to the first delta of the round that followed it. */
+  roundTripMs?: number;
+};
+
+/**
+ * When each part of a turn was in flight, measured here rather than in the
+ * browser: the proxy sees the provider's own chunks, so a window is the time the
+ * wire spent on that part rather than the time the renderer spent drawing it.
+ * Tokens come from the provider's `usage`, which only exists where it reports
+ * one — hence the flag rather than a silent zero.
+ */
+type TurnStats = {
+  reasoningMs?: number;
+  answerMs?: number;
+  tools: Record<string, ToolTiming>;
+  usage: UsageTotals | null;
+  /** True while no usage has arrived: any token figure is an estimate. */
+  estimated: boolean;
+};
+
+type ToolClock = { calledAt: number; modelMs: number; settledAt?: number; answeredAt?: number };
+
 type DeltaState = {
   text: string;
   reasoning: string;
   /** Which channel supplied the reasoning, so a mirrored copy is not appended twice. */
   reasoningSource: "details" | "field" | null;
   toolCalls: Map<string, ToolState>;
+  /** Clocks, in epoch ms. */
+  roundStartedAt: number;
+  roundWithDelta: number | null;
+  reasoningStartedAt: number | null;
+  reasoningEndedAt: number | null;
+  answerStartedAt: number | null;
+  answerEndedAt: number | null;
+  toolTimes: Map<string, ToolClock>;
+  usage: UsageTotals | null;
 };
 
 /**
@@ -122,6 +165,18 @@ const SESSION_RESPONSE_HEADER = "x-hermes-session-id";
  * Remembered per endpoint+model so only the first turn pays for the discovery.
  */
 const reasoningRejected = new Set<string>();
+/**
+ * Endpoints that reject the OpenAI `stream_options` field outright. Same rule as
+ * reasoning — remember the refusal per endpoint+model rather than carry a table
+ * of who supports it — and estimate the tokens instead.
+ */
+const usageRejected = new Set<string>();
+
+/** What a refusal looks like in a provider's own error text. */
+const REFUSAL: Record<"reasoning" | "usage", RegExp> = {
+  reasoning: /reason/i,
+  usage: /stream_options|include_usage/i,
+};
 
 export const runtime = "nodejs";
 
@@ -253,20 +308,30 @@ function createProviderCaller(options: {
       ...(options.tools ? { tools: options.tools, tool_choice: "auto" } : {}),
     };
 
-    const first = await fetchProvider(options, payload, !reasoningRejected.has(cacheKey));
-    if (first.ok) return { ok: true, response: first };
+    // Both extras are asked for by what the wire allows rather than by model
+    // name, and each refusal is remembered: reasoning because mandatory models
+    // 400 on it, usage because not every endpoint knows `stream_options`.
+    const include = {
+      reasoning: !reasoningRejected.has(cacheKey),
+      usage: Boolean(options.body.stream) && !usageRejected.has(cacheKey),
+    };
 
-    // Some models reason mandatorily and reject the parameter outright. Rather
-    // than carrying a model table, drop it and let the provider decide.
-    const failureText = await first.text();
-    if (/reason/i.test(failureText)) {
-      reasoningRejected.add(cacheKey);
-      const retry = await fetchProvider(options, payload, false);
-      if (retry.ok) return { ok: true, response: retry };
-      const retryText = await retry.text();
-      return { ok: false, error: providerError(safeJson(retryText), retry.status), status: retry.status };
+    let attempt = await fetchProvider(options, payload, include);
+    if (attempt.ok) return { ok: true, response: attempt };
+
+    let failureText = await attempt.text();
+    let failureStatus = attempt.status;
+    for (const extra of ["reasoning", "usage"] as const) {
+      if (!include[extra] || !REFUSAL[extra].test(failureText)) continue;
+      if (extra === "reasoning") reasoningRejected.add(cacheKey);
+      else usageRejected.add(cacheKey);
+      include[extra] = false;
+      attempt = await fetchProvider(options, payload, include);
+      if (attempt.ok) return { ok: true, response: attempt };
+      failureText = await attempt.text();
+      failureStatus = attempt.status;
     }
-    return { ok: false, error: providerError(safeJson(failureText), first.status), status: first.status };
+    return { ok: false, error: providerError(safeJson(failureText), failureStatus), status: failureStatus };
   };
 }
 
@@ -277,12 +342,18 @@ function fetchProvider(
     signal: AbortSignal;
   },
   payload: Record<string, unknown>,
-  includeReasoning: boolean,
+  include: { reasoning: boolean; usage: boolean },
 ) {
   return fetch(options.endpoint, {
     method: "POST",
     headers: options.headers,
-    body: JSON.stringify(includeReasoning ? { ...payload, reasoning: { enabled: true } } : payload),
+    body: JSON.stringify({
+      ...payload,
+      ...(include.reasoning ? { reasoning: { enabled: true } } : {}),
+      // Without this the provider reports no usage at all: its own accounting
+      // arrives in a final chunk that carries no choices.
+      ...(include.usage ? { stream_options: { include_usage: true } } : {}),
+    }),
     signal: options.signal,
   });
 }
@@ -335,6 +406,7 @@ async function nonStreamingResponse(options: {
         toolCalls: normalizeToolCalls(choice.tool_calls),
         sessionId: options.sessionId,
         latencyMs: Date.now() - options.startedAt,
+        usage: usageOf(data),
       });
     }
 
@@ -402,11 +474,13 @@ function toolStateFromNormalizedCall(call: NormalizedToolCall, status: ToolState
  * returns the tool calls that turn asked for.
  */
 async function consumeStream(upstream: Response, round: number, state: DeltaState, emit: () => void): Promise<ToolCallSummary[]> {
+  state.roundStartedAt = Date.now();
   const isEventStream = (upstream.headers.get("content-type") ?? "").includes("text/event-stream");
 
   if (!isEventStream) {
     const data = safeJson(await upstream.text());
     const choice = firstChoiceMessage(data);
+    const before = snapshotOf(state);
     const reasoning = reasoningContent(choice, data);
     if (reasoning) {
       state.reasoning += reasoning;
@@ -417,6 +491,8 @@ async function consumeStream(upstream: Response, round: number, state: DeltaStat
     }
     const content = textContent(choice);
     if (content) state.text += content;
+    recordUsage(state, data);
+    stamp(state, before, round);
     emit();
     return roundToolCalls(state, round);
   }
@@ -448,21 +524,30 @@ async function consumeStream(upstream: Response, round: number, state: DeltaStat
       if (chunk.length === 0 || chunk === "[DONE]") continue;
 
       const payload = safeJson(chunk);
-      if (applyProviderEvent(state, eventName, payload)) {
-        emit();
-        continue;
+      const usedUsage = recordUsage(state, payload);
+      const before = snapshotOf(state);
+      let changed = applyProviderEvent(state, eventName, payload);
+      if (!changed) {
+        const delta = firstDelta(payload);
+        if (delta) {
+          applyDelta(state, delta, round);
+          changed = true;
+        }
       }
-
-      const delta = firstDelta(payload);
-      if (!delta) continue;
-      applyDelta(state, delta, round);
-      emit();
+      if (changed) stamp(state, before, round);
+      // A usage-only chunk draws nothing, but it is the one frame carrying the
+      // provider's own token counts, so it is forwarded rather than dropped.
+      if (changed || usedUsage) emit();
     }
   }
 
   // The turn is over once the stream ends, so its tool calls are settled.
   for (const [key, call] of state.toolCalls) {
     if (key.startsWith(`round-${round}-`)) state.toolCalls.set(key, { ...call, status: "completed" });
+  }
+  const settledAt = Date.now();
+  for (const clock of state.toolTimes.values()) {
+    if (clock.settledAt === undefined) clock.settledAt = settledAt;
   }
   emit();
   return roundToolCalls(state, round);
@@ -477,7 +562,20 @@ function eventStream(upstream: Response, sessionId: string | null, continueAfter
   const stream = new ReadableStream({
     async start(controller) {
       const send = (event: StreamEvent) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
-      const state: DeltaState = { text: "", reasoning: "", reasoningSource: null, toolCalls: new Map() };
+      const state: DeltaState = {
+        text: "",
+        reasoning: "",
+        reasoningSource: null,
+        toolCalls: new Map(),
+        roundStartedAt: Date.now(),
+        roundWithDelta: null,
+        reasoningStartedAt: null,
+        reasoningEndedAt: null,
+        answerStartedAt: null,
+        answerEndedAt: null,
+        toolTimes: new Map(),
+        usage: null,
+      };
       const emit = () => {
         for (const event of snapshotEvents(state)) send(event);
       };
@@ -677,7 +775,125 @@ function snapshotEvents(state: DeltaState): StreamEvent[] {
   if (state.text.length > 0) {
     events.push({ type: "text", text: state.text });
   }
+  // The clocks ride every snapshot: a part's window is only known once it has
+  // closed, so the last frame of a turn carries the finished numbers.
+  events.push({ type: "stats", stats: turnStats(state) });
   return events;
+}
+
+function snapshotOf(state: DeltaState) {
+  return { reasoning: state.reasoning.length, text: state.text.length, calls: state.toolCalls.size };
+}
+
+/**
+ * Stamps what the wire just touched. Comparing sizes instead of reading every
+ * provider shape keeps this in one place: the OpenAI delta path, the named-event
+ * path and the one-shot response all end up here.
+ */
+function stamp(state: DeltaState, before: { reasoning: number; text: number; calls: number }, round: number) {
+  const changed = state.reasoning.length > before.reasoning || state.text.length > before.text || state.toolCalls.size > before.calls;
+  if (!changed) return;
+  const now = Date.now();
+
+  // The first delta of a later round is what a settled call was waiting for.
+  if (state.roundWithDelta !== round) {
+    for (const clock of state.toolTimes.values()) {
+      if (clock.settledAt !== undefined && clock.answeredAt === undefined) clock.answeredAt = now;
+    }
+    state.roundWithDelta = round;
+  }
+
+  if (state.reasoning.length > before.reasoning) {
+    state.reasoningStartedAt ??= now;
+    state.reasoningEndedAt = now;
+  }
+  if (state.text.length > before.text) {
+    state.answerStartedAt ??= now;
+    state.answerEndedAt = now;
+  }
+  if (state.toolCalls.size > before.calls) {
+    for (const [key] of state.toolCalls) {
+      if (state.toolTimes.has(key)) continue;
+      state.toolTimes.set(key, { calledAt: now, modelMs: Math.max(0, now - state.roundStartedAt) });
+    }
+  }
+}
+
+/** A part's window, or nothing when the one frame that carried it was all of it. */
+function windowMs(startedAt: number | null, endedAt: number | null): number | undefined {
+  if (startedAt === null || endedAt === null || endedAt <= startedAt) return undefined;
+  return endedAt - startedAt;
+}
+function turnStats(state: DeltaState): TurnStats {
+  const tools: Record<string, ToolTiming> = {};
+  for (const [key, clock] of state.toolTimes) {
+    const call = state.toolCalls.get(key);
+    if (!call) continue;
+    tools[call.id] = {
+      modelMs: clock.modelMs,
+      ...(clock.answeredAt !== undefined ? { roundTripMs: Math.max(0, clock.answeredAt - clock.calledAt) } : {}),
+    };
+  }
+  // A window needs two ends: a response that arrived whole, in one frame, has
+  // no window to report, and a zero would read as an instant rather than as
+  // "this provider does not stream".
+  const reasoningMs = windowMs(state.reasoningStartedAt, state.reasoningEndedAt);
+  const answerMs = windowMs(state.answerStartedAt, state.answerEndedAt);
+  return {
+    ...(reasoningMs !== undefined ? { reasoningMs } : {}),
+    ...(answerMs !== undefined ? { answerMs } : {}),
+    tools,
+    usage: state.usage,
+    estimated: state.usage === null,
+  };
+}
+
+/**
+ * The provider's own accounting, which OpenAI-compatible endpoints only send
+ * when `stream_options.include_usage` was asked for; one entry per provider call,
+ * so a tool round trip reports its own. Field names differ by vendor, and only
+ * some split thinking out of the completion count.
+ */
+function usageOf(payload: unknown): UsageTotals | null {
+
+  if (!payload || typeof payload !== "object" || !("usage" in payload)) return null;
+  const usage = payload.usage;
+  if (!usage || typeof usage !== "object") return null;
+
+  const prompt = numberOr("prompt_tokens" in usage ? usage.prompt_tokens : undefined) ?? numberOr("input_tokens" in usage ? usage.input_tokens : undefined);
+  const completion = numberOr("completion_tokens" in usage ? usage.completion_tokens : undefined) ?? numberOr("output_tokens" in usage ? usage.output_tokens : undefined);
+  const total = numberOr("total_tokens" in usage ? usage.total_tokens : undefined) ?? (prompt !== undefined && completion !== undefined ? prompt + completion : undefined);
+  if (prompt === undefined && completion === undefined && total === undefined) return null;
+
+  const details = "completion_tokens_details" in usage ? usage.completion_tokens_details : "output_tokens_details" in usage ? usage.output_tokens_details : undefined;
+  const reasoningTokens = details && typeof details === "object" && "reasoning_tokens" in details ? numberOr(details.reasoning_tokens) : undefined;
+  return {
+    promptTokens: prompt ?? 0,
+    completionTokens: completion ?? 0,
+    totalTokens: total ?? 0,
+    ...(reasoningTokens !== undefined ? { reasoningTokens } : {}),
+  };
+}
+
+function recordUsage(state: DeltaState, payload: unknown): boolean {
+  const usage = usageOf(payload);
+  if (!usage) return false;
+  state.usage = state.usage ? addUsage(state.usage, usage) : usage;
+  return true;
+}
+
+function addUsage(a: UsageTotals, b: UsageTotals): UsageTotals {
+  const reasoning = a.reasoningTokens !== undefined || b.reasoningTokens !== undefined ? (a.reasoningTokens ?? 0) + (b.reasoningTokens ?? 0) : undefined;
+  return {
+    promptTokens: a.promptTokens + b.promptTokens,
+    completionTokens: a.completionTokens + b.completionTokens,
+    totalTokens: a.totalTokens + b.totalTokens,
+    ...(reasoning !== undefined ? { reasoningTokens: reasoning } : {}),
+  };
+}
+
+function numberOr(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 function firstDelta(data: unknown) {
