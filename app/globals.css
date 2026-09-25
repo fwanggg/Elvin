@@ -999,61 +999,70 @@ h6 {
   /* A share of the frame rather than a fixed rail: the panel and the chat are the
      two halves of one layout, so a wider stage gives the panel more of the room
      its bars can use. */
-  width: clamp(320px, 30%, 520px);
+  width: clamp(460px, 38%, 620px);
   min-width: 0;
   display: flex;
   flex-direction: column;
   overflow: auto;
-  padding: 20px 16px 28px;
-  border-left: var(--ds-border) solid var(--a-border);
-  background: var(--a-bg);
+  padding: 26px 0 34px;
+  border-left: var(--ds-border) solid color-mix(in srgb, var(--a-fg) 14%, transparent);
+  background: color-mix(in srgb, var(--a-bg) 92%, #2b2626 8%);
   color: var(--a-fg);
-  font-size: 12.5px;
+  font-size: 13px;
 }
-.run-panel-title { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0; color: var(--a-muted); font-family: var(--font-heading); font-size: 11px; font-weight: var(--ds-label-weight); letter-spacing: var(--ds-label-tracking); text-transform: var(--ds-label-transform); }
-.run-list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 11px; }
+.run-panel-title { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0 20px; color: color-mix(in srgb, var(--a-fg) 54%, transparent); font-family: var(--font-heading); font-size: 11px; font-weight: var(--ds-label-weight); letter-spacing: .16em; text-transform: var(--ds-label-transform); }
+.run-list { list-style: none; margin: 24px 0 0; padding: 0 0 22px; display: flex; flex-direction: column; gap: 0; border-block: var(--ds-border) solid color-mix(in srgb, var(--a-fg) 10%, transparent); }
 .run-list > li { min-width: 0; }
-.run-row { display: flex; align-items: baseline; gap: 10px; width: 100%; padding: 0; border: 0; background: transparent; color: var(--a-muted); cursor: pointer; font: inherit; text-align: left; }
-.run-row:hover, .run-row.active { color: var(--a-fg); }
-.run-index { flex: none; font-family: var(--font-mono); font-size: 11px; }
-.run-prompt { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.run-ms { flex: none; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-.run-bar { display: block; height: 2px; margin-top: 6px; background: color-mix(in srgb, var(--a-fg) 8%, transparent); }
-.run-bar > span { display: block; height: 100%; transform-origin: left center; background: color-mix(in srgb, var(--a-fg) 32%, transparent); animation: span-in .5s cubic-bezier(.23, 1, .32, 1) both; }
-.run-bar > span.slow { background: var(--color-accent); }
-.run-detail { margin-top: 24px; padding-top: 18px; border-top: var(--ds-border) solid var(--a-border); }
+.run-row { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: baseline; gap: 16px; width: 100%; padding: 17px 20px; border: 0; background: transparent; color: color-mix(in srgb, var(--a-fg) 56%, transparent); cursor: pointer; font: inherit; text-align: left; transition: background-color .16s ease, color .16s ease; }
+.run-row:hover { background: color-mix(in srgb, var(--a-fg) 5%, transparent); color: color-mix(in srgb, var(--a-fg) 82%, transparent); }
+.run-row.active { background: color-mix(in srgb, var(--a-fg) 10%, #2f2829 90%); color: var(--a-fg); box-shadow: inset 0 -2px 0 var(--color-accent); }
+.run-row.active .run-index { color: var(--color-accent); }
+.run-index { flex: none; font-family: var(--font-mono); font-size: 13px; font-weight: 800; color: color-mix(in srgb, currentColor 82%, transparent); }
+.run-prompt { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: var(--font-heading); font-size: 17px; font-weight: 800; letter-spacing: -.03em; }
+.run-ms { flex: none; font-family: var(--font-mono); font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.run-bar { display: none; }
+.run-detail { position: relative; margin: 34px 20px 0; padding: 0; border: 0; }
+.run-detail .run-panel-title { margin: 0; padding-inline-end: 160px; }
 /* The run's own span, end to end: the turn as its badge measures it — request to last
    token, the wait for that token and the answer it wrote included — with every window
    drawn where it sat on that one clock. What the windows do not cover is the request
    in flight: hatched, because it is the time around the steps rather than a reading of
    one, and named under the span. The windows sweep in one after the other, so a run
    arrives as a shape rather than as blocks that were always there. */
-.run-e2e { position: relative; height: 10px; margin: 14px 0 0; background-color: color-mix(in srgb, var(--a-fg) 4%, transparent); background-image: repeating-linear-gradient(45deg, color-mix(in srgb, var(--a-fg) 9%, transparent) 0 2px, transparent 2px 5px); }
-.e2e-span { display: block; position: absolute; inset-block: 0; padding: 0; border: 0; transform-origin: left center; background: color-mix(in srgb, var(--a-fg) 32%, transparent); color: inherit; cursor: pointer; font: inherit; animation: span-in .5s cubic-bezier(.23, 1, .32, 1) both; transition: inset-inline-start .24s linear, inline-size .24s linear; }
-.e2e-span[data-role="call"] { background: color-mix(in srgb, var(--a-fg) 58%, transparent); }
-.e2e-span.slow { background: var(--color-accent); }
-.e2e-span.is-linked, .e2e-span.is-pointed { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+.run-e2e { position: relative; height: 16px; margin: 42px 0 0; background-color: color-mix(in srgb, var(--a-fg) 4%, transparent); background-image: repeating-linear-gradient(135deg, color-mix(in srgb, var(--a-fg) 13%, transparent) 0 3px, transparent 3px 7px); }
+.e2e-span { display: block; position: absolute; inset-block: 0; padding: 0; border: 0; transform-origin: left center; background: color-mix(in srgb, var(--a-fg) 46%, transparent); color: inherit; cursor: pointer; font: inherit; animation: span-in .5s cubic-bezier(.23, 1, .32, 1) both; transition: inset-inline-start .24s linear, inline-size .24s linear, background-color .16s ease; }
+.e2e-span[data-role="call"] { background: color-mix(in srgb, var(--a-fg) 78%, transparent); }
+.e2e-span[data-role="output"] { background: color-mix(in srgb, var(--a-fg) 94%, transparent); }
+.e2e-span.slow { background: color-mix(in srgb, var(--color-accent) 78%, var(--a-fg) 22%); }
+.e2e-span.is-linked, .e2e-span.is-pointed { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 @keyframes span-in { from { transform: scaleX(0); } }
 /* The hatching's own word, and its figure: what the run spent while the request was in
    flight, which is the run less everything its windows measured. */
-.run-e2e-key { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; color: var(--a-muted); font-family: var(--font-mono); font-size: 12px; }
-.run-e2e-swatch { flex: none; width: 10px; height: 10px; background-color: color-mix(in srgb, var(--a-fg) 5%, transparent); background-image: repeating-linear-gradient(45deg, color-mix(in srgb, var(--a-fg) 22%, transparent) 0 2px, transparent 2px 5px); }
-.run-e2e-key-ms { margin-inline-start: auto; color: var(--a-fg); font-variant-numeric: tabular-nums; }
-.run-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; margin: 16px 0 0; }
-.run-facts dt { margin: 0; color: var(--a-muted); font-size: 11px; }
-.run-facts dd { margin: 3px 0 0; font-family: var(--font-mono); font-size: 14px; font-variant-numeric: tabular-nums; }
-.run-steps { list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.step-row { display: grid; grid-template-columns: minmax(0, 1fr) 64px 46px; align-items: center; gap: 10px; width: 100%; padding: 0; border: 0; background: transparent; color: var(--a-muted); font: inherit; text-align: left; cursor: pointer; }
-.step-name { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: var(--font-mono); font-size: 12px; }
-.step-tokens { text-align: right; font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; }
-.step-ms { text-align: right; font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; }
-/* The rows are ways into the cards they measure, and say so: the reading brightens
-   under the pointer, from whichever surface the pointer came. */
-.step-row.is-linked .step-name { color: var(--a-fg); }
+.run-e2e-key { display: flex; align-items: center; gap: 10px; margin: 16px 0 0; padding: 0 0 16px; border-bottom: var(--ds-border) solid color-mix(in srgb, var(--a-fg) 10%, transparent); color: color-mix(in srgb, var(--a-fg) 64%, transparent); font-family: var(--font-heading); font-size: 14px; font-weight: 800; letter-spacing: -.02em; }
+.run-e2e-swatch { flex: none; width: 12px; height: 12px; background-color: color-mix(in srgb, var(--a-fg) 5%, transparent); background-image: repeating-linear-gradient(135deg, color-mix(in srgb, var(--a-fg) 22%, transparent) 0 3px, transparent 3px 7px); }
+.run-e2e-key-ms { margin-inline-start: auto; color: var(--a-fg); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.run-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 0; border-bottom: var(--ds-border) solid color-mix(in srgb, var(--a-fg) 10%, transparent); }
+.run-facts div { min-width: 0; padding: 16px 10px 18px; border-left: var(--ds-border) solid color-mix(in srgb, var(--a-fg) 8%, transparent); }
+.run-facts div:first-child { border-left: 0; }
+.run-facts dt { display: flex; align-items: center; gap: 6px; margin: 0; color: color-mix(in srgb, var(--a-fg) 70%, transparent); font-family: var(--font-heading); font-size: 11px; font-weight: 800; letter-spacing: -.03em; white-space: nowrap; }
+.run-facts dt::before { content: ""; flex: none; width: 10px; height: 10px; background: color-mix(in srgb, var(--a-fg) 55%, transparent); }
+.run-facts dd { margin: 14px 0 0; overflow: hidden; color: var(--a-fg); font-family: var(--font-mono); font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+.run-facts div:nth-child(4) { position: absolute; inset-block-start: -12px; inset-inline-end: 0; padding: 0; border: 0; text-align: right; }
+.run-facts div:nth-child(4) dt { display: none; }
+.run-facts div:nth-child(4) dd { margin: 0; overflow: visible; font-size: 42px; line-height: .95; letter-spacing: -.08em; }
+.run-steps { position: relative; list-style: none; margin: 30px 0 0; padding: 36px 0 0; display: flex; flex-direction: column; gap: 0; }
+.run-steps::before { content: "Sequence"; position: absolute; inset-block-start: 0; inset-inline: 0; padding: 0 0 14px; border-bottom: var(--ds-border) solid color-mix(in srgb, var(--a-fg) 10%, transparent); color: color-mix(in srgb, var(--a-fg) 48%, transparent); font-family: var(--font-heading); font-size: 11px; font-weight: var(--ds-label-weight); letter-spacing: .16em; text-transform: uppercase; }
+.run-steps::after { content: "Tokens     Time"; position: absolute; inset-block-start: 0; inset-inline-end: 0; color: color-mix(in srgb, var(--a-fg) 48%, transparent); font-family: var(--font-heading); font-size: 11px; font-weight: var(--ds-label-weight); letter-spacing: .16em; text-transform: uppercase; white-space: pre; }
+.step-row { display: grid; grid-template-columns: minmax(0, 1fr) 76px 60px; align-items: center; gap: 12px; width: 100%; padding: 14px 0; border: 0; border-bottom: var(--ds-border) solid color-mix(in srgb, var(--a-fg) 8%, transparent); background: transparent; color: color-mix(in srgb, var(--a-fg) 58%, transparent); font: inherit; text-align: left; cursor: pointer; transition: color .16s ease, background-color .16s ease; }
+.step-row:hover, .step-row.is-linked { color: var(--a-fg); }
+.step-name { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: var(--font-heading); font-size: 15px; font-weight: 800; letter-spacing: -.03em; }
+.step-name::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-inline-end: 12px; background: color-mix(in srgb, currentColor 72%, transparent); vertical-align: -.02em; }
+.step-tokens { text-align: right; font-family: var(--font-mono); font-size: 13px; font-variant-numeric: tabular-nums; }
+.step-ms { text-align: right; font-family: var(--font-mono); font-size: 13px; font-variant-numeric: tabular-nums; }
 /* The row that is chosen, banded the same way and held until it is chosen again or
    another takes its place: the reader can see which row the card across the chat
    belongs to without going back to the pointer. */
-.step-row.is-pointed { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+.step-row.is-pointed { outline: 2px solid var(--color-accent); outline-offset: -2px; }
 .step-row.is-pointed .step-name { color: var(--a-fg); }
 .step-row.slow .step-name, .step-row.slow .step-ms { color: var(--color-accent); }
 /* Reasoning, drawn two ways. Dev Mode renders the element as it ships: its
