@@ -938,7 +938,7 @@ function usageOf(payload: unknown): UsageTotals | null {
     completionTokens: completion ?? 0,
     totalTokens: total ?? 0,
     ...(reasoningTokens !== undefined ? { reasoningTokens } : {}),
-    ...(cachedTokens !== undefined ? { cachedTokens } : {}),
+    cachedTokens: cachedTokens ?? null,
   };
 }
 
@@ -956,13 +956,13 @@ function recordUsage(state: DeltaState, payload: unknown, round: number): boolea
 
 function addUsage(a: UsageTotals, b: UsageTotals): UsageTotals {
   const reasoning = a.reasoningTokens !== undefined || b.reasoningTokens !== undefined ? (a.reasoningTokens ?? 0) + (b.reasoningTokens ?? 0) : undefined;
-  const cached = a.cachedTokens !== undefined || b.cachedTokens !== undefined ? (a.cachedTokens ?? 0) + (b.cachedTokens ?? 0) : undefined;
+  const cached = [a.cachedTokens, b.cachedTokens].reduce<number | null>((sum, value) => (typeof value === "number" ? (sum ?? 0) + value : sum), null);
   return {
     promptTokens: a.promptTokens + b.promptTokens,
     completionTokens: a.completionTokens + b.completionTokens,
     totalTokens: a.totalTokens + b.totalTokens,
     ...(reasoning !== undefined ? { reasoningTokens: reasoning } : {}),
-    ...(cached !== undefined ? { cachedTokens: cached } : {}),
+    cachedTokens: cached,
   };
 }
 

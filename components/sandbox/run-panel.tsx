@@ -2,7 +2,7 @@
 
 import { BrainIcon, ChevronRightIcon, HammerIcon, MessageSquareTextIcon, TimerIcon, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefCallback } from "react";
-import { formatRunIndex, formatSpan, formatTokenCount, isMeasurable, isStandout } from "@/lib/turn-stats";
+import { formatRunIndex, formatSpan, formatTokenCount, isMeasurable, isStandout, type UsageTotals } from "@/lib/turn-stats";
 import { marked, useStepLink } from "./step-link";
 import type { Run, RunStep } from "./runs";
 
@@ -69,7 +69,7 @@ function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
   const total = useWalked(e2eMs, asSpan);
   const asked = useWalked(usage?.promptTokens, asCompact);
   const answered = useWalked(usage?.completionTokens, asCompact);
-  const cached = useWalked(usage?.cachedTokens, asCompact);
+  const cached = useWalked(usage?.cachedTokens ?? undefined, asCompact);
   const callCount = useWalked(calls.length, asWhole);
 
   return (
@@ -118,8 +118,8 @@ function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
           <dd>{usage === null ? "—" : <span ref={asked} />}</dd>
         </div>
         <div>
-          <dt title="The part of the input the provider served from its own cache, in whichever shape it sent it: prompt_tokens_details.cached_tokens, prompt_cache_hit_tokens, or cache_read_input_tokens. A dash means this provider reported none.">Cached</dt>
-          <dd>{usage?.cachedTokens === undefined ? "—" : <span ref={cached} />}</dd>
+          <dt title={cachedTitle(usage)}>Cached</dt>
+          <dd>{usage?.cachedTokens == null ? "—" : <span ref={cached} />}</dd>
         </div>
         <div>
           <dt title="Provider completion_tokens/output_tokens for the assistant answer.">Output</dt>
@@ -195,6 +195,19 @@ const asWhole = (value: number): string => String(Math.round(value));
 const asSpan = (value: number): string => formatSpan(value);
 const asTokens = (value: number): string => `${formatTokenCount(Math.round(value))} tok`;
 const asCompact = (value: number): string => formatTokenCount(Math.round(value));
+
+/**
+ * What the dash means, which is not one thing. A provider that answered before the proxy
+ * asked about caching filed nothing at all, and a provider that was asked and had nothing to
+ * say files a null: the reader is told which of the two they are looking at. A figure is
+ * spelled out against the input it came out of, so it cannot be read as a miss count.
+ */
+function cachedTitle(usage: UsageTotals | null): string {
+  if (usage === null) return "This turn reported no usage at all.";
+  if (usage.cachedTokens === undefined) return "This turn was recorded before the panel read cached input, so it has no figure either way. New turns report one.";
+  if (usage.cachedTokens === null) return "This provider said nothing about prompt caching. One that caches reports a number here, and zero when a prompt was served without a cache hit.";
+  return `${usage.cachedTokens.toLocaleString("en-US")} of this turn's ${usage.promptTokens.toLocaleString("en-US")} input tokens were served from the provider's cache.`;
+}
 
 /**
  * The run as one sequence: the steps the wire measured, and the waits the span draws

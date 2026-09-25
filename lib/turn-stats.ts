@@ -13,9 +13,12 @@ export type UsageTotals = {
   totalTokens: number;
   /** Present only where the provider splits thinking out of the completion count. */
   reasoningTokens?: number;
-  /** Present only where the provider says how much of the prompt it served from its own
-   *  cache. Absent means the provider does not report caching, not that none was used. */
-  cachedTokens?: number;
+  /**
+   * How much of the prompt the provider served from its own cache. Null is the provider
+   * saying nothing about caching; absent is a turn recorded before the proxy asked, so the
+   * two are told apart rather than sharing one dash.
+   */
+  cachedTokens?: number | null;
 };
 
 /** What a measured work window was spent on. The output is measured separately. */
