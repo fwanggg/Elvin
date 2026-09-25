@@ -81,16 +81,21 @@ function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
         <>
           {/* The run's whole span, and inside it every window where it sat. The ground
               the windows do not cover is the request in flight, drawn hatched here and
-              named under the span — hovering a window says which step it measures. */}
+              named under the span — hovering or choosing a window says which step it
+              measures, the same as its row below. */}
           <div className="run-e2e">
             {run.steps.map((step, index) => {
               const spot = place(leadMs + step.startMs, step.ms, e2eMs);
               return (
-                <span
+                <button
                   key={step.key}
+                  type="button"
                   className={marked(step.role === "call" && isStandout(step.ms, longestCallMs) && calls.length > 1 ? "e2e-span slow" : "e2e-span", step.key, link)}
                   data-span={step.key}
                   data-role={step.role}
+                  aria-pressed={link.chosen === step.key}
+                  aria-label={`Select ${step.label}`}
+                  onClick={() => link.choose(step.key)}
                   onPointerEnter={() => link.mark(step.key)}
                   onPointerLeave={link.leave}
                   style={{ insetInlineStart: `${spot.start}%`, inlineSize: `${spot.size}%`, animationDelay: `${index * 45}ms` }}

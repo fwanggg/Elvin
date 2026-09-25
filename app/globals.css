@@ -1029,7 +1029,7 @@ h6 {
    one, and named under the span. The windows sweep in one after the other, so a run
    arrives as a shape rather than as blocks that were always there. */
 .run-e2e { position: relative; height: 10px; margin: 14px 0 0; background-color: color-mix(in srgb, var(--a-fg) 4%, transparent); background-image: repeating-linear-gradient(45deg, color-mix(in srgb, var(--a-fg) 9%, transparent) 0 2px, transparent 2px 5px); }
-.e2e-span { display: block; position: absolute; inset-block: 0; transform-origin: left center; background: color-mix(in srgb, var(--a-fg) 32%, transparent); animation: span-in .5s cubic-bezier(.23, 1, .32, 1) both; transition: inset-inline-start .24s linear, inline-size .24s linear; }
+.e2e-span { display: block; position: absolute; inset-block: 0; padding: 0; border: 0; transform-origin: left center; background: color-mix(in srgb, var(--a-fg) 32%, transparent); color: inherit; cursor: pointer; font: inherit; animation: span-in .5s cubic-bezier(.23, 1, .32, 1) both; transition: inset-inline-start .24s linear, inline-size .24s linear; }
 .e2e-span[data-role="call"] { background: color-mix(in srgb, var(--a-fg) 58%, transparent); }
 .e2e-span.slow { background: var(--color-accent); }
 .e2e-span.is-linked, .e2e-span.is-pointed { outline: 2px solid var(--a-accent); outline-offset: 1px; }
