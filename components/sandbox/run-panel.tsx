@@ -2,7 +2,7 @@
 
 import { BrainIcon, ChevronRightIcon, HammerIcon, MessageSquareTextIcon, TimerIcon, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefCallback } from "react";
-import { formatRunIndex, formatSpan, formatTokenCount, isMeasurable, isStandout, type UsageTotals } from "@/lib/turn-stats";
+import { MIN_READING_MS, formatRunIndex, formatSpan, formatTokenCount, isMeasurable, isStandout, type UsageTotals } from "@/lib/turn-stats";
 import { marked, useStepLink } from "./step-link";
 import type { Run, RunStep } from "./runs";
 
@@ -243,13 +243,6 @@ function withWaits(run: number, steps: readonly RunStep[], leadMs: number, e2eMs
 
 /** How long a figure takes to walk to its value. */
 const WALK_MS = 320;
-
-/**
- * The smallest reading a row reports. One decimal of a second is what this panel measures to, so
- * a stretch shorter than that is said as this rather than as nothing: a row with a blank where
- * its figure goes reads as a row that failed rather than as a stretch too short to name.
- */
-const MIN_READING_MS = 100;
 
 /**
  * The narrowest a stretch of the span is ever drawn, as a percentage of it — the same reasoning
