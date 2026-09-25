@@ -1067,10 +1067,14 @@ h6 {
 .e2e-wait.is-linked, .e2e-wait.is-pointed { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 @keyframes span-in { from { transform: scaleX(0); } }
 .run-facts { display: flex; margin: 0; border-bottom: var(--ds-border) solid color-mix(in srgb, var(--a-fg) 10%, transparent); }
-.run-facts div { flex: 1 1 0; display: flex; flex-direction: column; justify-content: space-between; min-width: 0; padding: 12px 8px 14px; border-left: var(--ds-border) solid color-mix(in srgb, var(--a-fg) 8%, transparent); }
+.run-facts div { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: space-between; min-width: 0; padding: 12px 8px 14px; border-left: var(--ds-border) solid color-mix(in srgb, var(--a-fg) 8%, transparent); }
 .run-facts div:first-child { border-left: 0; }
 .run-facts dt { margin: 0; overflow: hidden; color: color-mix(in srgb, var(--a-fg) 70%, transparent); font-family: var(--font-body); font-size: 10px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; overflow-wrap: break-word; }
-.run-facts dd { margin: 8px 0 0; overflow: hidden; color: var(--a-fg); font-family: var(--font-mono); font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+/* A reading and its note sit on one line while the cell has room and drop the note to its
+   own line when it does not, so a figure is never truncated to make space for its own
+   breakdown. */
+.run-facts dd { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 6px; margin: 8px 0 0; color: var(--a-fg); font-family: var(--font-mono); font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.run-fact-note { color: color-mix(in srgb, var(--a-fg) 62%, transparent); font-size: 11px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; }
 .run-steps { position: relative; list-style: none; margin: 22px 0 0; padding: 30px 0 0; display: flex; flex-direction: column; gap: 0; }
 .run-steps::before { content: "Sequence"; position: absolute; inset-block-start: 0; inset-inline: 0; padding: 0 0 12px; border-bottom: var(--ds-border) solid color-mix(in srgb, var(--a-fg) 10%, transparent); color: color-mix(in srgb, var(--a-fg) 48%, transparent); font-family: var(--font-heading); font-size: 10px; font-weight: var(--ds-label-weight); letter-spacing: .15em; text-transform: uppercase; }
 .run-steps::after { content: "Tokens     Time"; position: absolute; inset-block-start: 0; inset-inline-end: 0; color: color-mix(in srgb, var(--a-fg) 48%, transparent); font-family: var(--font-heading); font-size: 10px; font-weight: var(--ds-label-weight); letter-spacing: .15em; text-transform: uppercase; white-space: pre; }

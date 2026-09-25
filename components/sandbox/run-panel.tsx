@@ -114,12 +114,13 @@ function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
           <dd ref={total} />
         </div>
         <div>
-          <dt title="Provider prompt_tokens/input_tokens: everything the model was sent, which is the system prompt, the history, the tools, and any session context.">Input</dt>
-          <dd>{usage === null ? "—" : <span ref={asked} />}</dd>
-        </div>
-        <div>
-          <dt title={cachedTitle(usage)}>Cached</dt>
-          <dd>{usage?.cachedTokens == null ? "—" : <span ref={cached} />}</dd>
+          <dt title={inputTitle(usage)}>Input</dt>
+          <dd>
+            {usage === null ? "—" : <span ref={asked} />}
+            <span className="run-fact-note">
+              cached {usage === null || usage.cachedTokens == null ? "—" : <span ref={cached} />}
+            </span>
+          </dd>
         </div>
         <div>
           <dt title="Provider completion_tokens/output_tokens for the assistant answer.">Output</dt>
@@ -197,16 +198,19 @@ const asTokens = (value: number): string => `${formatTokenCount(Math.round(value
 const asCompact = (value: number): string => formatTokenCount(Math.round(value));
 
 /**
- * What the dash means, which is not one thing. A provider that answered before the proxy
- * asked about caching filed nothing at all, and a provider that was asked and had nothing to
- * say files a null: the reader is told which of the two they are looking at. A figure is
- * spelled out against the input it came out of, so it cannot be read as a miss count.
+ * The cell's two figures on one hover: the input, and how much of it the provider served
+ * from its own cache. The dash in the note is not one thing — a provider that was asked and
+ * said nothing files a null, and a turn recorded before the proxy asked files nothing at all
+ * — so the reader is told which of the two they are looking at, and a real figure is spelled
+ * out against the input it came out of rather than left to be read as a miss count.
  */
-function cachedTitle(usage: UsageTotals | null): string {
-  if (usage === null) return "This turn reported no usage at all.";
-  if (usage.cachedTokens === undefined) return "This turn was recorded before the panel read cached input, so it has no figure either way. New turns report one.";
-  if (usage.cachedTokens === null) return "This provider said nothing about prompt caching. One that caches reports a number here, and zero when a prompt was served without a cache hit.";
-  return `${usage.cachedTokens.toLocaleString("en-US")} of this turn's ${usage.promptTokens.toLocaleString("en-US")} input tokens were served from the provider's cache.`;
+function inputTitle(usage: UsageTotals | null): string {
+  const input = "Everything the model was sent: the system prompt, the history, the tools, and any session context.";
+  if (usage === null) return input;
+  const shapes = "The cached line reads prompt_tokens_details.cached_tokens, prompt_cache_hit_tokens, or cache_read_input_tokens, whichever the provider sends.";
+  if (usage.cachedTokens === undefined) return `${input} ${shapes} This turn was recorded before the panel read cached input, so it has no figure either way.`;
+  if (usage.cachedTokens === null) return `${input} ${shapes} This provider said nothing about caching.`;
+  return `${input} ${shapes} ${usage.cachedTokens.toLocaleString("en-US")} of these ${usage.promptTokens.toLocaleString("en-US")} were served from cache.`;
 }
 
 /**
