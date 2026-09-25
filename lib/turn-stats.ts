@@ -56,7 +56,12 @@ export type TurnSpan = {
 
 export type TurnStats = {
   spans: TurnSpan[];
-  /** The output's own window: first visible answer token to last. */
+  /**
+   * The output's own window: how long the answer's words were arriving, summed over every run
+   * of them. Not the span from its first word to its last — a turn that speaks, goes and works,
+   * then speaks again did not spend the ground between the two writing, and calling that span
+   * the output is what let an agentic turn claim its own tool rounds as writing time.
+   */
   answerMs?: number;
   /**
    * The work window the spans are laid out against: where the first window opens

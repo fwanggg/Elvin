@@ -126,9 +126,12 @@ type DeltaState = {
   startedAt: number | null;
   /** Where the next window starts — the end of the one before it. */
   cursorAt: number | null;
-  /** The answer's own window, which is not a span: it is the turn's output. */
-  answerStartedAt: number | null;
-  answerEndedAt: number | null;
+  /** How long the answer's words were arriving, summed over every run of them: the writing
+   *  itself, which is not the span between its first word and its last. */
+  answerMs: number;
+  /** When the last word landed, while a run of them is still open. Cleared when the turn does
+   *  anything else, so the ground between two runs is not counted as writing. */
+  answerLastAt: number | null;
   /** The window still open, if any. */
   openSpan: OpenSpan | null;
   /** The thinking window each round filed, so that round's own count can be handed
@@ -565,8 +568,8 @@ function eventStream(upstream: Response, sessionId: string | null, continueAfter
         spans: [],
         startedAt: null,
         cursorAt: null,
-        answerStartedAt: null,
-        answerEndedAt: null,
+        answerMs: 0,
+        answerLastAt: null,
         openSpan: null,
         reasoningWindow: new Map(),
         roundTokens: new Map(),
@@ -802,12 +805,16 @@ function stamp(state: DeltaState, before: { reasoning: number; text: number; cal
   if (grewText) {
     // The answer is the turn's output rather than a window of work: it closes
     // the run before it, moves the cursor past itself, and is measured on its
-    // own so a surface can say how long the writing took.
+    // own so a surface can say how long the writing took. Measured per run of
+    // words, like every other window here: a turn that speaks, works, then
+    // speaks again was not writing during the work.
     closeSpan(state, state.openSpan?.lastAt ?? now, round);
     state.cursorAt = now;
-    state.answerStartedAt ??= now;
-    state.answerEndedAt = now;
+    if (state.answerLastAt !== null) state.answerMs += now - state.answerLastAt;
+    state.answerLastAt = now;
   }
+  // A run of words ends wherever the turn does something else.
+  if (grewReasoning || grewCalls) state.answerLastAt = null;
 
   if (grewReasoning) {
     if (state.openSpan === null) {
@@ -883,15 +890,14 @@ function pushSpan(state: DeltaState, span: { kind: SpanKind; id?: string; starte
 function turnStats(state: DeltaState): TurnStats {
   // The window the rows are laid out against is the work the turn did, so it
   // ends where the last row ends. The answer is the turn's output rather than
-  // another window: it is what the message badge measures, and stretching this
-  // track to cover it would leave every row ending in dead air that is not dead
-  // air at all. The stretches no row claims — a tool running, the provider
+  // another window, and it is measured the way every other window here is: the
+  // time its words were arriving, summed over each run of them. An agentic turn
+  // speaks, works, then speaks again, so the span between its first word and its
+  // last is the whole run — which is what made the output row claim the tool
+  // rounds inside it. The stretches no row claims — a tool running, the provider
   // thinking before its next token — stay gaps inside this window, which is why
   // the bars still do not add up to it.
-  const answerMs =
-    state.answerStartedAt !== null && state.answerEndedAt !== null && state.answerEndedAt > state.answerStartedAt
-      ? state.answerEndedAt - state.answerStartedAt
-      : undefined;
+  const answerMs = state.answerMs > 0 ? state.answerMs : undefined;
   return {
     spans: state.spans,
     ...(answerMs !== undefined ? { answerMs } : {}),
