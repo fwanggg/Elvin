@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { CheckIcon, ChevronRightIcon, CopyIcon } from "lucide-react";
 import { Dropdown } from "@/components/dropdown";
 import { ModelPicker } from "@/components/model-picker";
 import { type AppTheme, type Design, type Pattern, type Toggle, type ViewMode, type Viewport } from "@/components/sandbox/knobs";
 import { type TurnStats, type UsageTotals } from "@/lib/turn-stats";
+import { GATEWAY_PROMPT } from "@/lib/gateway-prompt";
 import { DevModeAssistantMessage, DevModeUserMessage, UserModeAssistantMessage, UserModeUserMessage } from "@/components/sandbox/messages";
 import { RunPanel } from "@/components/sandbox/run-panel";
 import { useRuns } from "@/components/sandbox/runs";
@@ -656,6 +658,8 @@ function PreviewStage({
 
 function ConnectEmptyState({ baseUrl, apiKey, connecting, error, onBaseUrlChange, onApiKeyChange, onConnect }: ConnectEmptyStateProps): ReactNode {
   const urlField = useRef<HTMLInputElement>(null);
+  const [copied, setCopied] = useState(false);
+  const [showPrompt, setShowPrompt] = useState(false);
 
   // The state exists to be filled in and starts with the field that matters, so
   // that field takes focus the moment the state appears — pasting a URL connects
@@ -665,6 +669,38 @@ function ConnectEmptyState({ baseUrl, apiKey, connecting, error, onBaseUrlChange
   // where nobody has clicked anything yet. The ring is requested explicitly:
   // focus nobody can see does not tell anyone where to type.
   useEffect(() => { urlField.current?.focus({ focusVisible: true }); }, []);
+
+  // One acknowledgement per copy, then back to offering the prompt: a button that stays on
+  // a state stops saying anything. Cleared on unmount so a reconnect mid-countdown cannot
+  // leave a timer running against a state that is gone.
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 1800);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+
+  // The prompt belongs in another repository, and nobody selects ninety lines by hand. The
+  // async clipboard is absent outside a secure context, which a testbed served over http on
+  // a LAN address is — so the older selection copy stays as the fallback, and a fallback
+  // that fails too reports nothing rather than claiming a copy that never happened.
+  async function copyPrompt(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(GATEWAY_PROMPT);
+    } catch {
+      const scratch = document.createElement("textarea");
+      scratch.value = GATEWAY_PROMPT;
+      scratch.setAttribute("readonly", "");
+      scratch.style.position = "fixed";
+      scratch.style.top = "0";
+      scratch.style.opacity = "0";
+      document.body.append(scratch);
+      scratch.select();
+      const bySelection = document.execCommand("copy");
+      scratch.remove();
+      if (!bySelection) return;
+    }
+    setCopied(true);
+  }
 
   return (
     <div className="connect-empty">
@@ -696,7 +732,28 @@ function ConnectEmptyState({ baseUrl, apiKey, connecting, error, onBaseUrlChange
           />
         </label>
         <div className="connect-run">
-          <button className="btn btn-primary" type="button" disabled={connecting} onClick={onConnect}>{connecting ? "Checking…" : "Run ↵"}</button>
+          <button className="btn btn-primary" type="button" disabled={connecting} onClick={onConnect}>
+            <span>{connecting ? "Checking…" : "Run"}</span>
+            <span aria-hidden="true">↵</span>
+          </button>
+        </div>
+        <div className="connect-alt">
+          <div className="connect-alt-rule" aria-hidden="true" />
+          <p className="connect-alt-note">{"No API Yet? give your agent this prompt"}</p>
+          <div className="connect-alt-box" data-open={showPrompt}>
+            <div className="connect-alt-row">
+              <button className="connect-alt-line" type="button" aria-expanded={showPrompt} onClick={() => setShowPrompt((wasOpen) => !wasOpen)}>
+                <ChevronRightIcon className="connect-alt-chevron" aria-hidden="true" />
+                <span>Convert Your Agent into OpenAI Compatible API</span>
+              </button>
+              <button className={copied ? "connect-copy is-copied" : "connect-copy"} type="button" onClick={copyPrompt}>
+                {copied ? <CheckIcon /> : <CopyIcon />}
+                <span>{copied ? "Copied" : "Copy prompt"}</span>
+              </button>
+            </div>
+            {showPrompt && <pre className="connect-alt-prompt">{GATEWAY_PROMPT}</pre>}
+          </div>
+          <span className="connect-status" role="status">{copied ? "Prompt copied to the clipboard." : ""}</span>
         </div>
       </div>
       {error && <p className="connect-error">{error}</p>}
