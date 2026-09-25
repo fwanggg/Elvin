@@ -620,68 +620,6 @@
       ]
     }
   },
-  "source": {
-    "pattern=thread&theme=dark&view=dev&open=collapsed&stream=true&model=mock-model": {
-      "status": 200,
-      "digest": "80109f241237e2ab",
-      "files": [
-        "package.json",
-        "tsconfig.json",
-        "next-env.d.ts",
-        ".env.example",
-        "elvin.config.ts",
-        "app/layout.tsx",
-        "app/globals.css",
-        "app/page.tsx",
-        "app/api/chat/route.ts",
-        "components/assistant/ElvinAssistant.tsx",
-        "components/assistant/reasoning-group.tsx",
-        "components/assistant/tool-card.tsx",
-        "components/assistant/tool-call-row.tsx",
-        "components/assistant/step-label.ts"
-      ]
-    },
-    "pattern=sidebar&theme=light&view=user&open=expanded&stream=false&model=mock-model&capability=x": {
-      "status": 200,
-      "digest": "517b3ed01529f685",
-      "files": [
-        "package.json",
-        "tsconfig.json",
-        "next-env.d.ts",
-        ".env.example",
-        "elvin.config.ts",
-        "app/layout.tsx",
-        "app/globals.css",
-        "app/page.tsx",
-        "app/api/chat/route.ts",
-        "components/assistant/ElvinAssistant.tsx",
-        "components/assistant/reasoning-group.tsx",
-        "components/assistant/tool-card.tsx",
-        "components/assistant/tool-call-row.tsx",
-        "components/assistant/step-label.ts"
-      ]
-    },
-    "pattern=modal&theme=dark&view=dev&open=collapsed&stream=true&model=mock-model": {
-      "status": 200,
-      "digest": "a636f3e8b0767b8c",
-      "files": [
-        "package.json",
-        "tsconfig.json",
-        "next-env.d.ts",
-        ".env.example",
-        "elvin.config.ts",
-        "app/layout.tsx",
-        "app/globals.css",
-        "app/page.tsx",
-        "app/api/chat/route.ts",
-        "components/assistant/ElvinAssistant.tsx",
-        "components/assistant/reasoning-group.tsx",
-        "components/assistant/tool-card.tsx",
-        "components/assistant/tool-call-row.tsx",
-        "components/assistant/step-label.ts"
-      ]
-    }
-  },
   "check": {
     "status": 200,
     "body": {
