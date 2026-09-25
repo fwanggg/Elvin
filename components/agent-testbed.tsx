@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { Dropdown } from "@/components/dropdown";
 import { ModelPicker } from "@/components/model-picker";
-import { type Segment } from "@/components/assistant-ui/elements/streaming-text";
 import { type AppTheme, type Design, type Pattern, type Toggle, type ViewMode, type Viewport } from "@/components/sandbox/knobs";
 import { type TurnStats, type UsageTotals } from "@/lib/turn-stats";
 import { DevModeAssistantMessage, DevModeUserMessage, UserModeAssistantMessage, UserModeUserMessage } from "@/components/sandbox/messages";
