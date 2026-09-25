@@ -128,6 +128,14 @@ export function formatSpan(ms: number): string {
 }
 
 /**
+ * The smallest reading a surface reports, shared so the chat and the panel say the same thing
+ * about one window. One decimal of a second is what these figures measure to, so a stretch
+ * shorter than that is said as this rather than as nothing: a row with a blank where its figure
+ * goes reads as a row that failed rather than as a stretch too short to name.
+ */
+export const MIN_READING_MS = 100;
+
+/**
  * Whether a window is long enough to claim. One decimal of a second is what the
  * rows read at, so anything under half of that prints as "0.0s" — a reading the
  * wire never gave, whether the part arrived in one frame or the whole turn did.

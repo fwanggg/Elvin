@@ -11,7 +11,7 @@ import { ToolCall } from "@/components/assistant-ui/elements/tool-call";
 import { TooltipIconButton } from "@/components/assistant-ui/elements/tooltip-icon-button";
 import { chipOf, describeResult, describeStep } from "@/lib/step-labels";
 import { pointed, useStepLink } from "@/components/sandbox/step-link";
-import { formatRunIndex, formatSpan, formatTokens, isMeasurable, isStandout, outputKey, spanKey, spanKeys, spansOf, turnStatsOf, type TurnStats, type TurnSpan } from "@/lib/turn-stats";
+import { MIN_READING_MS, formatRunIndex, formatSpan, formatTokens, isMeasurable, isStandout, outputKey, spanKey, spanKeys, spansOf, turnStatsOf, type TurnStats, type TurnSpan } from "@/lib/turn-stats";
 import { type Toggle } from "@/components/sandbox/knobs";
 import {
   AuiIf,
@@ -522,6 +522,10 @@ function ToolCard({ name, args, label, result, defaultOpen, run, span, totalMs, 
   const running = result === undefined;
   const slow = !running && span !== undefined && slowestCallMs !== undefined && isStandout(span.ms, slowestCallMs);
   const keys = span !== undefined ? spanKey(run, span) : "";
+  // One decimal is what these readings measure to, so a window under it is said as 0.1s rather
+  // than left blank — the panel beside the chat floors the same figure the same way, because a
+  // card with no duration beside all the ones that have one reads as a call that failed.
+  const lasted = span !== undefined ? Math.max(span.ms, MIN_READING_MS) : undefined;
   // What the provider says the call is for, what it was called with, and what came back. A call
   // whose arguments nobody quoted says so: an empty object reads as an empty call, and that
   // distinction is the whole reason this line exists.
@@ -537,9 +541,9 @@ function ToolCard({ name, args, label, result, defaultOpen, run, span, totalMs, 
         {running
           ? <span className="part-running">Running tool <strong>{name}</strong></span>
           : <span>✓ Used tool <strong>{name}</strong></span>}
-        {!running && span && isMeasurable(span.ms) && (
-          <span className={slow ? "row-stat slow" : "row-stat"} title={`${formatSpan(span.ms)} of the ${formatSpan(totalMs)} the turn spent working`}>
-            {formatSpan(span.ms)}
+        {!running && lasted !== undefined && (
+          <span className={slow ? "row-stat slow" : "row-stat"} title={`${formatSpan(lasted)} of the ${formatSpan(totalMs)} the turn spent working`}>
+            {formatSpan(lasted)}
           </span>
         )}
         <span className="part-chevron">{open ? "⌄" : "›"}</span>
