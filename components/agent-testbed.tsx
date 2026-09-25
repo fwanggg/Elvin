@@ -7,8 +7,10 @@ import { ModelPicker } from "@/components/model-picker";
 import { type AppTheme, type Design, type Pattern, type Toggle, type ViewMode, type Viewport } from "@/components/sandbox/knobs";
 import { type TurnStats, type UsageTotals } from "@/lib/turn-stats";
 import { GATEWAY_PROMPT } from "@/lib/gateway-prompt";
+import { COMPOSER_ATTACHMENTS } from "@/lib/attachments";
 import { forgetSession, localHistory, readApiKey, readConnection, readSessionMessages, rememberSession, writeApiKey, writeConnection } from "@/lib/session-store";
 import { DevModeAssistantMessage, DevModeUserMessage, UserModeAssistantMessage, UserModeUserMessage } from "@/components/sandbox/messages";
+import { ComposerAttachment } from "@/components/sandbox/attachments";
 import { RunPanel } from "@/components/sandbox/run-panel";
 import { SessionList } from "@/components/session-list";
 import { useRuns } from "@/components/sandbox/runs";
@@ -298,7 +300,7 @@ export function AgentTestbed(): ReactNode {
           capability: capability || undefined,
           threadId: sessionId || undefined,
           owner: owner || undefined,
-          messages: messages.map((message) => ({ role: message.role, content: readableMessageContent(message) })),
+          messages: messages.map((message) => ({ role: message.role, content: wireContentOf(message) })),
         }),
         signal: abortSignal,
       });
@@ -388,7 +390,12 @@ export function AgentTestbed(): ReactNode {
    * as messages land.
    */
   const history = useMemo(() => localHistory(storedThreadId), []);
-  const runtime = useLocalRuntime(modelAdapter, { adapters: { history } });
+  /**
+   * `attachments` is what turns the composer's paste, drop and file picker on: the runtime asks the
+   * adapter whether it takes files before it looks at any, so without one a pasted picture is
+   * ignored rather than refused.
+   */
+  const runtime = useLocalRuntime(modelAdapter, { adapters: { history, attachments: COMPOSER_ATTACHMENTS } });
 
   /**
    * The conversation the sandbox is on: a new one, or one picked out of the rail.
@@ -944,19 +951,28 @@ function AssistantSandbox({ pattern, modelName, viewMode, emoji, threadKey }: As
         {/* Its own row, outside the scroller: the thread scrolls above the
             composer rather than passing behind it. */}
         <ThreadPrimitive.ViewportFooter className="composer-wrap">
-          <ComposerPrimitive.Root className="composer">
-            <ComposerPrimitive.Input placeholder="Send a message…" rows={1} />
-            <div className="composer-footer">
-              <span>＋</span>
-              <span>{modelName}</span>
-              <AuiIf condition={(state) => !state.thread.isRunning}>
-                <ComposerPrimitive.Send className="send-dot">↑</ComposerPrimitive.Send>
-              </AuiIf>
-              <AuiIf condition={(state) => state.thread.isRunning}>
-                <ComposerPrimitive.Cancel className="send-dot running">■</ComposerPrimitive.Cancel>
-              </AuiIf>
-            </div>
-          </ComposerPrimitive.Root>
+          <ComposerPrimitive.AttachmentDropzone className="composer-drop">
+            <ComposerPrimitive.Root className="composer">
+              <ComposerPrimitive.Attachments>
+                {() => <ComposerAttachment />}
+              </ComposerPrimitive.Attachments>
+              <ComposerPrimitive.Input placeholder="Send a message…" rows={1} />
+              <div className="composer-footer">
+                <ComposerPrimitive.AddAttachment
+                  render={<button className="composer-plus" type="button" aria-label="Add attachment" />}
+                >＋
+                  
+                </ComposerPrimitive.AddAttachment>
+                <span>{modelName}</span>
+                <AuiIf condition={(state) => !state.thread.isRunning}>
+                  <ComposerPrimitive.Send className="send-dot">↑</ComposerPrimitive.Send>
+                </AuiIf>
+                <AuiIf condition={(state) => state.thread.isRunning}>
+                  <ComposerPrimitive.Cancel className="send-dot running">■</ComposerPrimitive.Cancel>
+                </AuiIf>
+              </div>
+            </ComposerPrimitive.Root>
+          </ComposerPrimitive.AttachmentDropzone>
         </ThreadPrimitive.ViewportFooter>
       </ThreadPrimitive.Root>
       {/* The step debugger is one Dev Mode feature: the stats rail, the run span,
@@ -1113,6 +1129,31 @@ function readableMessageContent(message: ThreadMessage): string {
     if (part.type === "tool-call") return `[tool:${part.toolName}] ${JSON.stringify(part.result ?? part.args)}`;
     return "";
   }).filter(Boolean).join("\n");
+}
+
+/** One piece of a message as the OpenAI wire spells it. */
+type WirePart = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
+
+/**
+ * A message as the provider should receive it.
+ *
+ * Text, and the debug rendering of tool calls, become one string — which is what every provider
+ * understands and what the route has always sent. A user message carrying pictures becomes parts
+ * instead: the text it was sent with, then each picture as the data URL the composer holds. Only
+ * that case changes shape, so a provider that knows nothing of images still receives the string it
+ * did before.
+ */
+function wireContentOf(message: ThreadMessage): string | WirePart[] {
+  const attached = (message.attachments ?? []).flatMap((attachment) => attachment.content ?? []);
+  const pictures = attached.filter((part) => part.type === "image").map((part) => part.image);
+  const files = attached.map((part) => (part.type === "text" ? part.text : "")).filter(Boolean);
+  const text = [readableMessageContent(message), ...files].filter((piece) => piece.length > 0).join("\n");
+
+  if (message.role !== "user" || pictures.length === 0) return text;
+  return [
+    ...(text.length > 0 ? [{ type: "text" as const, text }] : []),
+    ...pictures.map((url) => ({ type: "image_url" as const, image_url: { url } })),
+  ];
 }
 
 function toJsonObject(value: unknown): JsonObject {

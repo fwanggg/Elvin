@@ -11,6 +11,7 @@ import { ToolCall } from "@/components/assistant-ui/elements/tool-call";
 import { TooltipIconButton } from "@/components/assistant-ui/elements/tooltip-icon-button";
 import { chipOf, describeResult, describeStep } from "@/lib/step-labels";
 import { pointed, useStepLink } from "@/components/sandbox/step-link";
+import { MessageAttachment } from "@/components/sandbox/attachments";
 import { MIN_READING_MS, formatRunIndex, formatSpan, formatTokens, isMeasurable, isStandout, outputKey, spanKey, spanKeys, spansOf, turnStatsOf, type TurnStats, type TurnSpan } from "@/lib/turn-stats";
 import { type Toggle } from "@/components/sandbox/knobs";
 import {
@@ -109,6 +110,9 @@ export function UserModeUserMessage({ emoji }: UserRuntimeMessageProps): ReactNo
       <MessagePrimitive.Parts>
         {({ part }) => part.type === "text" ? part.text : null}
       </MessagePrimitive.Parts>
+      <MessagePrimitive.Attachments>
+        {() => <MessageAttachment />}
+      </MessagePrimitive.Attachments>
     </MessagePrimitive.Root>
   );
 }
@@ -130,6 +134,9 @@ export function DevModeUserMessage({ emoji, activeRun }: UserRuntimeMessageProps
         <MessagePrimitive.Parts>
           {({ part }) => part.type === "text" ? part.text : null}
         </MessagePrimitive.Parts>
+        <MessagePrimitive.Attachments>
+          {() => <MessageAttachment />}
+        </MessagePrimitive.Attachments>
       </MessagePrimitive.Root>
     </div>
   );
