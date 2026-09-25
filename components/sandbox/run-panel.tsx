@@ -2,119 +2,21 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefCallback } from "react";
 import { formatRunIndex, formatSpan, formatTokenCount, isMeasurable, isStandout } from "@/lib/turn-stats";
+import { marked, useStepLink } from "./step-link";
 import type { Run, RunStep } from "./runs";
-
-/** Every card in the chat that answers to a step, in the order they are drawn. */
-function cardsFor(key: string): HTMLElement[] {
-  return [...document.querySelectorAll<HTMLElement>("[data-steps]")].filter((card) => (card.dataset.steps ?? "").split(" ").includes(key));
-}
-
-/**
- * The exact thing a step names. A card is only ever the outermost answer to a key:
- * a window of thinking is drawn inside its card as its own block of the trace, and
- * that block is what a row about thinking means. A card that has not been opened
- * draws no trace yet, so there the card is all there is to point at — as it is for
- * a call, which has nothing inside it to point at instead.
- */
-function exactFor(key: string): HTMLElement | undefined {
-  return cardsFor(key).at(-1);
-}
-
-/**
- * Lighting a step's card. The card's markup lives in the chat, so the panel asks
- * the document for what answers to the key rather than being handed a node: the
- * attribute is the whole contract between the two surfaces, and a step with no
- * card beside it — a run in a pattern that draws no chat — lights nothing.
- */
-function lightStep(key: string | null): void {
-  const exact = key === null ? undefined : exactFor(key);
-  for (const card of document.querySelectorAll<HTMLElement>("[data-steps]")) {
-    const linked = card === exact;
-    card.classList.toggle("is-linked", linked);
-    // A mark off the viewport would be invisible, so the chat gives up the least
-    // it can: `nearest` moves nothing that is already in sight.
-    if (linked) card.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }
-  // The run's own span carries the same step: a row and the stretch of the run it
-  // measured are one thing said twice, so the pointer says it on both.
-  for (const mark of document.querySelectorAll<HTMLElement>("[data-span]")) {
-    mark.classList.toggle("is-linked", key !== null && mark.dataset.span === key);
-  }
-}
-
-/**
- * Taking the mark off what the row before this one named, and closing the card it
- * opened — unless the row now chosen is another window of the same card. Then the
- * card stays open: it is one trace, and its two rows are two stretches of it, so
- * closing it to open it again would blink away the block being pointed at.
- */
-function closeStep(key: string, keeping: string | null): void {
-  const kept = keeping === null ? [] : cardsFor(keeping);
-  for (const part of cardsFor(key)) {
-    part.classList.remove("is-pointed");
-    if (!kept.includes(part)) part.querySelector<HTMLElement>('[aria-expanded="true"]')?.click();
-  }
-  for (const mark of document.querySelectorAll<HTMLElement>("[data-span]")) {
-    if (mark.dataset.span === key) mark.classList.remove("is-pointed");
-  }
-}
-
-/**
- * How long a card takes to open. The pointer waits it out: the box grows while the
- * trace opens, so a scroll taken during the animation lands where the content will
- * no longer be.
- */
-function openMs(card: HTMLElement): number {
-  const declared = getComputedStyle(card).getPropertyValue("--animation-duration").trim();
-  const value = Number.parseFloat(declared);
-  if (!Number.isFinite(value) || value <= 0) return 260;
-  return (declared.endsWith("ms") ? value : value * 1000) + 60;
-}
-
-/**
- * Opening a step. A row asks where that step happened, so choosing it opens the
- * card that made it, marks it, and points at the exact part of it: a call's card is
- * one call, so the card is the whole answer, while a window of thinking is one
- * stretch of a trace its card draws in full — that stretch answers to the same key,
- * so it is marked along with the card and scrolled to in the card's place.
- */
-function openStep(key: string): void {
-  const card = cardsFor(key)[0];
-  if (card === undefined) return;
-  for (const marked of document.querySelectorAll<HTMLElement>(".is-pointed")) marked.classList.remove("is-pointed");
-  for (const mark of document.querySelectorAll<HTMLElement>("[data-span]")) {
-    mark.classList.toggle("is-pointed", mark.dataset.span === key);
-  }
-  // A card that is already open has nothing to wait for.
-  const closed = card.querySelector<HTMLElement>('[aria-expanded="false"]');
-  closed?.click();
-  setTimeout(() => {
-    // Only the exact block takes the band: on a card drawing a whole trace, a band
-    // around the card would say no more than the row already does, and would claim
-    // the windows beside the one that was asked for.
-    const exact = exactFor(key) ?? card;
-    for (const part of cardsFor(key)) part.classList.toggle("is-pointed", part === exact);
-    exact.scrollIntoView({ block: exact === card ? "nearest" : "center", behavior: "smooth" });
-  }, closed ? openMs(card) : 0);
-}
 
 /**
  * The thread's telemetry, in its own plane beside the chat.
  *
- * Runs at the top, each with what it cost; under them the selected run taken
- * apart — its headline, its facts, and one row per step with a bar drawn from
- * that step's window. The bars are the same clock the chat's rows read: this panel
- * is where the shape of a turn belongs, so the chat can stay a transcript.
+ * Runs at the top, each with what it cost; under them the selected run taken apart —
+ * its span, its facts, and one row per step. The span is the run's own clock with every
+ * window on it, and the rows are those windows said as readings, so this panel is where
+ * the shape of a turn belongs and the chat can stay a transcript. A row, a window on
+ * the span and a card in the thread are one step: see `step-link`.
  */
 export function RunPanel({ runs, active, onSelect }: Readonly<{ runs: readonly Run[]; active: number | null; onSelect: (index: number) => void }>): ReactNode {
   const run = runs.find((entry) => entry.index === active) ?? runs.at(-1);
   const longestRunMs = runs.reduce((longest, entry) => Math.max(longest, entry.ms ?? 0), 0);
-  // One row at a time: the row a reader has opened is held until they open another
-  // or close it, and what is chosen belongs to the run that lists it — so a panel
-  // turned to another run is showing no choice rather than a row's key without its
-  // row. The choice is kept, so coming back to that run comes back to it.
-  const [chosen, setChosen] = useState<string | null>(null);
-  const chosenKey = chosen !== null && run?.steps.some((step) => step.key === chosen) === true ? chosen : null;
 
   return (
     <aside className="run-panel" aria-label="Runs">
@@ -140,29 +42,14 @@ export function RunPanel({ runs, active, onSelect }: Readonly<{ runs: readonly R
           </li>
         ))}
       </ol>
-      {run && <RunDetail run={run} chosen={chosenKey} onChoose={(key) => setChosen((current) => (current === key ? null : key))} />}
+      {run && <RunDetail run={run} />}
     </aside>
   );
 }
 
-/** One run taken apart: its headline, its facts, then its steps. */
-function RunDetail({ run, chosen, onChoose }: Readonly<{ run: Run; chosen: string | null; onChoose: (key: string) => void }>): ReactNode {
-  // The row under the pointer is gone when the panel turns to another run, and no
-  // pointerleave arrives for a node that unmounted, so the mark it left behind is
-  // cleared here.
-  useEffect(() => () => lightStep(null), [run.index]);
-  // The chosen row owns the chat from here: choosing one opens its card and points
-  // at the exact part of it, choosing another closes the first, and choosing the
-  // same one closes it again. The disclosure belongs to the card rather than to any
-  // state of ours, so it is opened and closed by asking the card itself.
-  const opened = useRef<string | null>(null);
-  useEffect(() => {
-    const previous = opened.current;
-    opened.current = chosen;
-    if (previous !== null && previous !== chosen) closeStep(previous, chosen);
-    if (chosen !== null) openStep(chosen);
-  }, [chosen, run.index]);
-
+/** One run taken apart: its shape on the run's own span, its facts, then its steps. */
+function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
+  const link = useStepLink();
   const usage = run.stats?.usage ?? null;
   const calls = run.steps.filter((step) => step.role === "call");
   const longestCallMs = calls.reduce((longest, step) => Math.max(longest, step.ms), 0);
@@ -175,30 +62,48 @@ function RunDetail({ run, chosen, onChoose }: Readonly<{ run: Run; chosen: strin
   const leadMs = run.stats?.leadMs ?? 0;
   const e2eMs = run.ms ?? leadMs + (run.stats?.totalMs ?? 0);
 
+  // What no window claims: the request in flight — the wait before the first word, the
+  // calls running between the windows, the answer being written. It is the rest of the
+  // run, which is what the span's hatching draws and what this figure counts.
+  const inFlightMs = Math.max(0, e2eMs - run.steps.reduce((sum, step) => sum + step.ms, 0));
+
   const total = useWalked(e2eMs, asSpan);
   const duration = useWalked(isMeasurable(reasoningMs) ? reasoningMs : undefined, asSpan);
   const asked = useWalked(usage?.promptTokens, asCompact);
   const answered = useWalked(usage?.completionTokens, asCompact);
   const callCount = useWalked(calls.length, asWhole);
+  const inFlight = useWalked(isMeasurable(inFlightMs) ? inFlightMs : undefined, asSpan);
 
   return (
     <section className="run-detail">
       <h6 className="run-panel-title">{`Run ${formatRunIndex(run.index)} timing`}</h6>
       {run.steps.length > 0 && (
-        <div className="run-e2e" aria-hidden="true">
-          {run.steps.map((step, index) => {
-            const spot = place(leadMs + step.startMs, step.ms, e2eMs);
-            return (
-              <span
-                key={step.key}
-                className={step.role === "call" && isStandout(step.ms, longestCallMs) && calls.length > 1 ? "e2e-span slow" : "e2e-span"}
-                data-span={step.key}
-                data-role={step.role}
-                style={{ insetInlineStart: `${spot.start}%`, inlineSize: `${spot.size}%`, animationDelay: `${index * 45}ms` }}
-              />
-            );
-          })}
-        </div>
+        <>
+          {/* The run's whole span, and inside it every window where it sat. The ground
+              the windows do not cover is the request in flight, drawn hatched here and
+              named under the span — hovering a window says which step it measures. */}
+          <div className="run-e2e">
+            {run.steps.map((step, index) => {
+              const spot = place(leadMs + step.startMs, step.ms, e2eMs);
+              return (
+                <span
+                  key={step.key}
+                  className={marked(step.role === "call" && isStandout(step.ms, longestCallMs) && calls.length > 1 ? "e2e-span slow" : "e2e-span", step.key, link)}
+                  data-span={step.key}
+                  data-role={step.role}
+                  onPointerEnter={() => link.mark(step.key)}
+                  onPointerLeave={link.leave}
+                  style={{ insetInlineStart: `${spot.start}%`, inlineSize: `${spot.size}%`, animationDelay: `${index * 45}ms` }}
+                />
+              );
+            })}
+          </div>
+          <p className="run-e2e-key">
+            <span className="run-e2e-swatch" aria-hidden="true" />
+            <span>In flight</span>
+            <span className="run-e2e-key-ms" ref={inFlight} />
+          </p>
+        </>
       )}
       <dl className="run-facts">
         <div>
@@ -221,7 +126,7 @@ function RunDetail({ run, chosen, onChoose }: Readonly<{ run: Run; chosen: strin
       {run.steps.length > 0 && (
         <ol className="run-steps">
           {run.steps.map((step) => (
-            <StepRow key={step.key} step={step} chosen={step.key === chosen} slow={step.role === "call" && isStandout(step.ms, longestCallMs) && calls.length > 1} onChoose={onChoose} />
+            <StepRow key={step.key} step={step} slow={step.role === "call" && isStandout(step.ms, longestCallMs) && calls.length > 1} />
           ))}
         </ol>
       )}
@@ -230,11 +135,13 @@ function RunDetail({ run, chosen, onChoose }: Readonly<{ run: Run; chosen: strin
 }
 
 /**
- * One step: what it was, what its thinking cost, and how long it ran. Both figures
- * walk to their values as the panel opens on a run, so the row reads as a reading
- * being taken rather than as numbers that were always there.
+ * One step: what it was, what its thinking cost, and how long it ran. Both figures walk
+ * to their values as the panel opens on a run, so the row reads as a reading being taken
+ * rather than as numbers that were always there. Hovering it — here, on its window of
+ * the span, or on the card it came from — marks all three.
  */
-function StepRow({ step, chosen, slow, onChoose }: Readonly<{ step: RunStep; chosen: boolean; slow: boolean; onChoose: (key: string) => void }>): ReactNode {
+function StepRow({ step, slow }: Readonly<{ step: RunStep; slow: boolean }>): ReactNode {
+  const link = useStepLink();
   // Thinking is counted by the provider where the provider splits it out, and by the
   // window's own words where it does not — the mark says which of the two a figure is.
   const estimated = step.tokens === undefined && step.chars !== undefined && step.chars > 0;
@@ -244,16 +151,16 @@ function StepRow({ step, chosen, slow, onChoose }: Readonly<{ step: RunStep; cho
 
   return (
     <li>
-      {/* The row is a way into the card it measures: hovered it is marked, chosen it
-          is opened and pointed at. */}
+      {/* The row is a way into the card it measures: marked when the pointer is on it —
+          from either surface — and held when it is the chosen one. */}
       <button
         type="button"
-        className={`step-row${slow ? " slow" : ""}${chosen ? " selected" : ""}`}
+        className={marked(`step-row${slow ? " slow" : ""}`, step.key, link)}
         data-step={step.key}
-        aria-pressed={chosen}
-        onClick={() => onChoose(step.key)}
-        onPointerEnter={() => lightStep(step.key)}
-        onPointerLeave={() => lightStep(null)}
+        aria-pressed={link.chosen === step.key}
+        onClick={() => link.choose(step.key)}
+        onPointerEnter={() => link.mark(step.key)}
+        onPointerLeave={link.leave}
       >
         <span className="step-name">{step.label}</span>
         <span className="step-tokens">

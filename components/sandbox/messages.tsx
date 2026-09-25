@@ -10,6 +10,7 @@ import { ThinkingIndicator } from "@/components/assistant-ui/elements/thinking-i
 import { ToolCall } from "@/components/assistant-ui/elements/tool-call";
 import { TooltipIconButton } from "@/components/assistant-ui/elements/tooltip-icon-button";
 import { chipOf, describeResult, describeStep } from "@/lib/step-labels";
+import { pointed, useStepLink } from "@/components/sandbox/step-link";
 import { formatRunIndex, formatSpan, formatTokens, isMeasurable, isStandout, spanKey, spanKeys, spansOf, turnStatsOf, type TurnStats, type TurnSpan } from "@/lib/turn-stats";
 import { type Toggle, type ViewMode } from "@/components/sandbox/knobs";
 import {
@@ -126,6 +127,7 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen }: Assist
   // starts where its own first activity was, so two turns file thinking windows at
   // the same offsets and a key without the run would answer on both.
   const runIndex = useRunIndex();
+  const link = useStepLink();
   const spans = turnStats?.spans ?? [];
   const totalMs = turnStats?.totalMs ?? 0;
   // The accent marks a call, never a thought: a turn that spends itself thinking
@@ -219,9 +221,10 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen }: Assist
                 // The model thinks between calls as well as before them, so this
                 // row draws every window reasoning ran, not just the first.
                 const reasoningSpans = spansOf(turnStats, "reasoning");
+                const reasoningKeys = spanKeys(runIndex, reasoningSpans);
                 const reasoningLabelText = reasoningLabel(turnStats, reasoningChars, reasoningSpans.reduce((sum, span) => sum + span.ms, 0));
                 return (
-                  <ReasoningRoot key={`${part.indices[0]}-${defaultOpen}`} className="reasoning-root" data-steps={spanKeys(runIndex, reasoningSpans)} streaming={streaming} defaultOpen={defaultOpen}>
+                  <ReasoningRoot key={`${part.indices[0]}-${defaultOpen}`} className={pointed("reasoning-root", reasoningKeys, link)} data-steps={reasoningKeys} onPointerOver={link.enter} onPointerLeave={link.leave} streaming={streaming} defaultOpen={defaultOpen}>
                     {reasoningLabelText !== undefined && <span className="row-stat">{reasoningLabelText}</span>}
                     <ReasoningTrigger className="reasoning-trigger" active={streaming} />
                     <ReasoningContent aria-busy={streaming}>
@@ -284,6 +287,7 @@ type ThoughtGroupProps = Readonly<{
  * are built on; and what opens inside is those elements themselves.
  */
 function ThoughtGroup({ label, seconds, running, defaultOpen, steps, children }: ThoughtGroupProps): ReactNode {
+  const link = useStepLink();
   const [initialOpen] = useState(defaultOpen);
   const [userOpen, setUserOpen] = useState<boolean | null>(null);
   // The row rests where the sidebar puts it. A turn in flight does not open it:
@@ -293,7 +297,7 @@ function ThoughtGroup({ label, seconds, running, defaultOpen, steps, children }:
   const counted = seconds !== undefined && seconds >= 1;
 
   return (
-    <Collapsible className="thought-group" data-steps={steps} open={open} onOpenChange={setUserOpen}>
+    <Collapsible className={pointed("thought-group", steps, link)} data-steps={steps} onPointerOver={link.enter} onPointerLeave={link.leave} open={open} onOpenChange={setUserOpen}>
       <CollapsibleTrigger className="thought-trigger">
         <ThinkingIndicator label={label} active={running} elapsed={running && counted ? `${seconds}s` : undefined} />
         <span aria-hidden className="thought-chevron">{open ? "⌄" : "›"}</span>
@@ -467,6 +471,7 @@ function AssistantActionBar(): ReactNode {
 const ReasoningPart: ReasoningMessagePartComponent = ({ text }) => {
   const turnStats = useTurnStats();
   const runIndex = useRunIndex();
+  const link = useStepLink();
 
   const windows = useMemo(() => {
     const found: { key?: string; text: string }[] = [];
@@ -485,7 +490,7 @@ const ReasoningPart: ReasoningMessagePartComponent = ({ text }) => {
   return (
     <p className="reasoning-line">
       {windows.map((window, index) => (
-        <span className="reasoning-window" data-steps={window.key} key={index}>
+        <span key={index} className={pointed("reasoning-window", window.key ?? "", link)} data-steps={window.key}>
           {window.text.split(/(\s+)/).map((token, position) => (
             token.trim().length === 0 ? token : <span className="reasoning-word" key={position}>{token}</span>
           ))}
@@ -497,10 +502,12 @@ const ReasoningPart: ReasoningMessagePartComponent = ({ text }) => {
 
 function ToolCard({ name, args, result, defaultOpen, run, span, totalMs, slowestCallMs }: ToolCardProps): ReactNode {
   const [open, setOpen] = useState(defaultOpen);
+  const link = useStepLink();
   const slow = span !== undefined && slowestCallMs !== undefined && isStandout(span.ms, slowestCallMs);
+  const keys = span !== undefined ? spanKey(run, span) : "";
 
   return (
-    <div className="part-card" data-steps={span !== undefined ? spanKey(run, span) : undefined}>
+    <div className={pointed("part-card", keys, link)} data-steps={keys.length > 0 ? keys : undefined} onPointerOver={link.enter} onPointerLeave={link.leave}>
       <button className="part-head" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
         <span>✓ Used tool <strong>{name}</strong></span>
         {span && isMeasurable(span.ms) && (
