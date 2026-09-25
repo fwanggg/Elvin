@@ -10,6 +10,7 @@
             "spans": 0,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": false,
             "usage": false,
             "estimated": true
           }
@@ -29,6 +30,7 @@
             "spans": 1,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -48,6 +50,7 @@
             "spans": 1,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -67,29 +70,7 @@
             "spans": 1,
             "totalMs": true,
             "answerMs": false,
-            "usage": false,
-            "estimated": true
-          }
-        },
-        {
-          "type": "tool-call",
-          "toolCallId": "call_fixed_1",
-          "toolName": "get_order_status",
-          "args": {
-            "order_id": "4821"
-          },
-          "status": "completed"
-        },
-        {
-          "type": "text",
-          "text": "Answer after the tool."
-        },
-        {
-          "type": "stats",
-          "has": {
-            "spans": 1,
-            "totalMs": true,
-            "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -113,6 +94,7 @@
             "spans": 1,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -136,6 +118,31 @@
             "spans": 1,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": true,
+            "usage": false,
+            "estimated": true
+          }
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "stats",
+          "has": {
+            "spans": 1,
+            "totalMs": true,
+            "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -156,6 +163,7 @@
             "spans": 0,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": false,
             "usage": false,
             "estimated": true
           }
@@ -175,6 +183,7 @@
             "spans": 1,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -194,6 +203,7 @@
             "spans": 1,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -213,29 +223,7 @@
             "spans": 1,
             "totalMs": true,
             "answerMs": false,
-            "usage": false,
-            "estimated": true
-          }
-        },
-        {
-          "type": "tool-call",
-          "toolCallId": "call_fixed_1",
-          "toolName": "get_order_status",
-          "args": {
-            "order_id": "4821"
-          },
-          "status": "completed"
-        },
-        {
-          "type": "text",
-          "text": "Answer after the tool."
-        },
-        {
-          "type": "stats",
-          "has": {
-            "spans": 1,
-            "totalMs": true,
-            "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -259,6 +247,7 @@
             "spans": 1,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -282,6 +271,31 @@
             "spans": 1,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": true,
+            "usage": false,
+            "estimated": true
+          }
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "stats",
+          "has": {
+            "spans": 1,
+            "totalMs": true,
+            "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -302,6 +316,7 @@
             "spans": 0,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": false,
             "usage": false,
             "estimated": true
           }
@@ -321,6 +336,7 @@
             "spans": 1,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -340,6 +356,7 @@
             "spans": 1,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -359,29 +376,7 @@
             "spans": 1,
             "totalMs": true,
             "answerMs": false,
-            "usage": false,
-            "estimated": true
-          }
-        },
-        {
-          "type": "tool-call",
-          "toolCallId": "call_fixed_1",
-          "toolName": "get_order_status",
-          "args": {
-            "order_id": "4821"
-          },
-          "status": "completed"
-        },
-        {
-          "type": "text",
-          "text": "Answer after the tool."
-        },
-        {
-          "type": "stats",
-          "has": {
-            "spans": 1,
-            "totalMs": true,
-            "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -405,6 +400,7 @@
             "spans": 1,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -428,6 +424,31 @@
             "spans": 1,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": true,
+            "usage": false,
+            "estimated": true
+          }
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "call_fixed_1",
+          "toolName": "get_order_status",
+          "args": {
+            "order_id": "4821"
+          },
+          "status": "completed"
+        },
+        {
+          "type": "text",
+          "text": "Answer after the tool."
+        },
+        {
+          "type": "stats",
+          "has": {
+            "spans": 1,
+            "totalMs": true,
+            "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -448,6 +469,7 @@
             "spans": 0,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": false,
             "usage": false,
             "estimated": true
           }
@@ -467,6 +489,7 @@
             "spans": 1,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -486,6 +509,7 @@
             "spans": 1,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -505,6 +529,7 @@
             "spans": 1,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -528,6 +553,7 @@
             "spans": 1,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -555,6 +581,7 @@
             "spans": 2,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -582,6 +609,7 @@
             "spans": 2,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }
@@ -609,6 +637,7 @@
             "spans": 2,
             "totalMs": true,
             "answerMs": false,
+            "leadMs": true,
             "usage": false,
             "estimated": true
           }

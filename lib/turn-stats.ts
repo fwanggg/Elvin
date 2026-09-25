@@ -58,6 +58,13 @@ export type TurnStats = {
    * that generation is the message badge's number, not a row's.
    */
   totalMs: number;
+  /**
+   * How long the turn had been running when its first window opened: the wait before
+   * its first token, which the message badge's clock counts and the windows' offsets
+   * do not. A surface drawing the run end to end adds it, so the windows sit where
+   * they sat on the turn rather than a token early.
+   */
+  leadMs?: number;
   usage: UsageTotals | null;
   /** True while no usage has arrived: any token figure is an estimate. */
   estimated: boolean;

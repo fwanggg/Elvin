@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode, type RefCallback } from "react";
 import { formatRunIndex, formatSpan, formatTokenCount, isMeasurable, isStandout } from "@/lib/turn-stats";
 import type { Run, RunStep } from "./runs";
 
@@ -35,6 +35,11 @@ function lightStep(key: string | null): void {
     // it can: `nearest` moves nothing that is already in sight.
     if (linked) card.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
+  // The run's own span carries the same step: a row and the stretch of the run it
+  // measured are one thing said twice, so the pointer says it on both.
+  for (const mark of document.querySelectorAll<HTMLElement>("[data-span]")) {
+    mark.classList.toggle("is-linked", key !== null && mark.dataset.span === key);
+  }
 }
 
 /**
@@ -48,6 +53,9 @@ function closeStep(key: string, keeping: string | null): void {
   for (const part of cardsFor(key)) {
     part.classList.remove("is-pointed");
     if (!kept.includes(part)) part.querySelector<HTMLElement>('[aria-expanded="true"]')?.click();
+  }
+  for (const mark of document.querySelectorAll<HTMLElement>("[data-span]")) {
+    if (mark.dataset.span === key) mark.classList.remove("is-pointed");
   }
 }
 
@@ -74,6 +82,9 @@ function openStep(key: string): void {
   const card = cardsFor(key)[0];
   if (card === undefined) return;
   for (const marked of document.querySelectorAll<HTMLElement>(".is-pointed")) marked.classList.remove("is-pointed");
+  for (const mark of document.querySelectorAll<HTMLElement>("[data-span]")) {
+    mark.classList.toggle("is-pointed", mark.dataset.span === key);
+  }
   // A card that is already open has nothing to wait for.
   const closed = card.querySelector<HTMLElement>('[aria-expanded="false"]');
   closed?.click();
@@ -156,63 +167,62 @@ function RunDetail({ run, chosen, onChoose }: Readonly<{ run: Run; chosen: strin
   const calls = run.steps.filter((step) => step.role === "call");
   const longestCallMs = calls.reduce((longest, step) => Math.max(longest, step.ms), 0);
   const reasoningMs = run.steps.reduce((sum, step) => sum + (step.role === "reasoning" ? step.ms : 0), 0);
-  const longestStepMs = run.steps.reduce((longest, step) => Math.max(longest, step.ms), 0);
+  // The run end to end: the turn as its own badge measures it, from the request to
+  // the last token, with the wait for that first token and the answer it wrote
+  // inside it. Every window is drawn on that one clock at the offset it sat at, so
+  // the shape here is the record's own rather than a second telling of it — which is
+  // also why this figure and the run's own total are the same number.
+  const leadMs = run.stats?.leadMs ?? 0;
+  const e2eMs = run.ms ?? leadMs + (run.stats?.totalMs ?? 0);
+
+  const total = useWalked(e2eMs, asSpan);
+  const duration = useWalked(isMeasurable(reasoningMs) ? reasoningMs : undefined, asSpan);
+  const asked = useWalked(usage?.promptTokens, asCompact);
+  const answered = useWalked(usage?.completionTokens, asCompact);
+  const callCount = useWalked(calls.length, asWhole);
 
   return (
     <section className="run-detail">
-      <h6 className="run-panel-title">
-        <span>{`Run ${formatRunIndex(run.index)} timing`}</span>
-        {run.ms !== undefined && <span className="run-detail-ms">{formatSpan(run.ms)}</span>}
-      </h6>
+      <h6 className="run-panel-title">{`Run ${formatRunIndex(run.index)} timing`}</h6>
+      {run.steps.length > 0 && (
+        <div className="run-e2e" aria-hidden="true">
+          {run.steps.map((step, index) => {
+            const spot = place(leadMs + step.startMs, step.ms, e2eMs);
+            return (
+              <span
+                key={step.key}
+                className={step.role === "call" && isStandout(step.ms, longestCallMs) && calls.length > 1 ? "e2e-span slow" : "e2e-span"}
+                data-span={step.key}
+                data-role={step.role}
+                style={{ insetInlineStart: `${spot.start}%`, inlineSize: `${spot.size}%`, animationDelay: `${index * 45}ms` }}
+              />
+            );
+          })}
+        </div>
+      )}
       <dl className="run-facts">
         <div>
           <dt>Tool calls</dt>
-          <dd>{calls.length}</dd>
+          <dd ref={callCount} />
         </div>
         <div>
           <dt>Reasoning</dt>
-          <dd>{isMeasurable(reasoningMs) ? formatSpan(reasoningMs) : "—"}</dd>
+          <dd>{isMeasurable(reasoningMs) ? <span ref={duration} /> : "—"}</dd>
         </div>
         <div>
-          <dt>Tok reason / out</dt>
-          <dd>
-            {usage?.reasoningTokens !== undefined ? formatTokenCount(usage.reasoningTokens) : "—"}
-            {run.stats?.estimated ? " est." : ""}
-            {" / "}
-            {usage !== null ? formatTokenCount(usage.completionTokens) : "—"}
-          </dd>
+          <dt>Tok In / Out</dt>
+          <dd>{usage === null ? "—" : <><span ref={asked} />{" / "}<span ref={answered} /></>}</dd>
+        </div>
+        <div>
+          <dt>Run Total Time</dt>
+          <dd ref={total} />
         </div>
       </dl>
       {run.steps.length > 0 && (
         <ol className="run-steps">
-          {run.steps.map((step) => {
-            // Only calls are ever marked: a turn that spends itself thinking is the
-            // ordinary case, and reasoning reads in the same ink as the rows above it.
-            const slow = step.role === "call" && isStandout(step.ms, longestCallMs) && calls.length > 1;
-            const isChosen = step.key === chosen;
-            return (
-              <li key={step.key}>
-                {/* The row is a way into the card it measures: hovered it is
-                    marked, clicked it is opened and pointed at. */}
-                <button
-                  type="button"
-                  className={`step-row${slow ? " slow" : ""}${isChosen ? " selected" : ""}`}
-                  data-step={step.key}
-                  aria-pressed={isChosen}
-                  onClick={() => onChoose(step.key)}
-                  onPointerEnter={() => lightStep(step.key)}
-                  onPointerLeave={() => lightStep(null)}
-                >
-                  <span className="step-name">{step.label}</span>
-                  <span className="step-tokens">{stepTokens(step)}</span>
-                  <span className="step-bar" aria-hidden="true">
-                    <span style={{ width: `${pct(step.ms, longestStepMs)}%` }} />
-                  </span>
-                  <span className="step-ms">{isMeasurable(step.ms) ? formatSpan(step.ms) : ""}</span>
-                </button>
-              </li>
-            );
-          })}
+          {run.steps.map((step) => (
+            <StepRow key={step.key} step={step} chosen={step.key === chosen} slow={step.role === "call" && isStandout(step.ms, longestCallMs) && calls.length > 1} onChoose={onChoose} />
+          ))}
         </ol>
       )}
     </section>
@@ -220,15 +230,117 @@ function RunDetail({ run, chosen, onChoose }: Readonly<{ run: Run; chosen: strin
 }
 
 /**
- * What a thinking window cost, as its own row reads it: the count the provider gave
- * for the response it ran in, or — where the provider keeps thinking inside the
- * answer's count — the window's own words read as tokens, said as the estimate they
- * are. Calls read nothing: a call's cost is in the answer the round returned.
+ * One step: what it was, what its thinking cost, and how long it ran. Both figures
+ * walk to their values as the panel opens on a run, so the row reads as a reading
+ * being taken rather than as numbers that were always there.
  */
-function stepTokens(step: RunStep): string {
-  if (step.tokens !== undefined) return `${formatTokenCount(step.tokens)} tok`;
-  if (step.chars === undefined || step.chars === 0) return "";
-  return `≈${formatTokenCount(Math.ceil(step.chars / 4))} tok`;
+function StepRow({ step, chosen, slow, onChoose }: Readonly<{ step: RunStep; chosen: boolean; slow: boolean; onChoose: (key: string) => void }>): ReactNode {
+  // Thinking is counted by the provider where the provider splits it out, and by the
+  // window's own words where it does not — the mark says which of the two a figure is.
+  const estimated = step.tokens === undefined && step.chars !== undefined && step.chars > 0;
+  const counted = step.tokens ?? (estimated ? Math.ceil((step.chars ?? 0) / 4) : undefined);
+  const tokens = useWalked(counted, asTokens);
+  const lasted = useWalked(isMeasurable(step.ms) ? step.ms : undefined, asSpan);
+
+  return (
+    <li>
+      {/* The row is a way into the card it measures: hovered it is marked, chosen it
+          is opened and pointed at. */}
+      <button
+        type="button"
+        className={`step-row${slow ? " slow" : ""}${chosen ? " selected" : ""}`}
+        data-step={step.key}
+        aria-pressed={chosen}
+        onClick={() => onChoose(step.key)}
+        onPointerEnter={() => lightStep(step.key)}
+        onPointerLeave={() => lightStep(null)}
+      >
+        <span className="step-name">{step.label}</span>
+        <span className="step-tokens">
+          {estimated && <span aria-hidden="true">≈</span>}
+          <span ref={tokens} />
+        </span>
+        <span className="step-ms" ref={lasted} />
+      </button>
+    </li>
+  );
+}
+
+/** Every figure the panel walks is written the same way, wherever it walks. */
+const asWhole = (value: number): string => String(Math.round(value));
+const asSpan = (value: number): string => formatSpan(value);
+const asTokens = (value: number): string => `${formatTokenCount(Math.round(value))} tok`;
+const asCompact = (value: number): string => formatTokenCount(Math.round(value));
+
+/** How long a figure takes to walk to its value. */
+const WALK_MS = 320;
+
+/**
+ * A figure that walks to its value rather than being replaced by it. Every reading
+ * here arrives either a delta at a time or all at once when a run is chosen, and the
+ * walk suits both: the panel reads as a clock being read rather than as numbers
+ * being swapped. Written straight to the node, because a dozen rows walking together
+ * have no business re-rendering the tree once a frame — and skipped, straight to the
+ * value, when motion is reduced.
+ */
+function useWalked(value: number | undefined, format: (value: number) => string): RefCallback<HTMLSpanElement> {
+  const node = useRef<HTMLSpanElement | null>(null);
+  const shown = useRef(0);
+  const frame = useRef(0);
+
+  useEffect(() => {
+    const element = node.current;
+    if (element === null) return;
+    if (value === undefined) {
+      cancelAnimationFrame(frame.current);
+      element.textContent = "";
+      return;
+    }
+    const from = shown.current;
+    // Nothing to walk from, and nothing to walk through: a hidden tab has no frames
+    // to walk on, and a reader who asked for less motion did not ask for a count-up.
+    if (from === value || document.hidden || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      shown.current = value;
+      element.textContent = format(value);
+      return;
+    }
+    const finish = () => {
+      cancelAnimationFrame(frame.current);
+      shown.current = value;
+      element.textContent = format(value);
+    };
+    const started = performance.now();
+    const step = (now: number) => {
+      const walked = Math.min(1, (now - started) / WALK_MS);
+      // The curve the panel's own spans move on, so figures and bars settle together.
+      shown.current = from + (value - from) * (1 - (1 - walked) ** 3);
+      element.textContent = format(shown.current);
+      if (walked < 1) {
+        frame.current = requestAnimationFrame(step);
+      } else {
+        finish();
+      }
+    };
+    frame.current = requestAnimationFrame(step);
+    // A reading left half-walked would be a reading that never arrived, so the walk
+    // also has a deadline that does not depend on frames coming.
+    const deadline = setTimeout(finish, WALK_MS + 120);
+    return () => {
+      cancelAnimationFrame(frame.current);
+      clearTimeout(deadline);
+    };
+  }, [value, format]);
+
+  return useCallback((element: HTMLSpanElement | null) => {
+    node.current = element;
+  }, []);
+}
+
+/** Where a window sat on the run's own span, as percentages of it. */
+function place(startMs: number, ms: number, e2eMs: number): { start: number; size: number } {
+  if (e2eMs <= 0) return { start: 0, size: 0 };
+  const start = Math.min(100, Math.max(0, (startMs / e2eMs) * 100));
+  return { start, size: Math.min(100 - start, Math.max(0, (ms / e2eMs) * 100)) };
 }
 
 /** A width against the longest of its row: the bars are read relatively. */

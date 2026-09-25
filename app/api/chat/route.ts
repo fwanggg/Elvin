@@ -885,6 +885,10 @@ function turnStats(state: DeltaState): TurnStats {
     spans: state.spans,
     ...(answerMs !== undefined ? { answerMs } : {}),
     totalMs: state.spans.reduce((end, span) => Math.max(end, span.startMs + span.ms), 0),
+    // The turn's own clock starts when the request did; the windows' clock starts at
+    // the first thing the provider said. A surface that draws the run end to end
+    // needs both, so the difference is filed rather than left to be guessed.
+    ...(state.startedAt !== null ? { leadMs: Math.max(0, state.startedAt - state.roundStartedAt) } : {}),
     usage: state.usage,
     estimated: state.usage === null,
   };

@@ -11,6 +11,8 @@ export type RunStep = {
   role: "reasoning" | "call";
   label: string;
   ms: number;
+  /** Where the window sat on the turn's clock, for drawing it on the run's span. */
+  startMs: number;
   /** What the provider said this window's thinking cost, where it said anything. */
   tokens?: number;
   /** How many characters the window's words took, for counting them when it did not. */
@@ -49,6 +51,7 @@ function stepsOf(run: number, stats: TurnStats | undefined, names: Record<string
     role: span.kind === "reasoning" ? "reasoning" : "call",
     label: span.kind === "reasoning" ? "reasoning" : names[span.id ?? ""] ?? span.id ?? "call",
     ms: span.ms,
+    startMs: span.startMs,
     ...(span.tokens !== undefined ? { tokens: span.tokens } : {}),
     ...(span.textFrom !== undefined && span.textTo !== undefined ? { chars: span.textTo - span.textFrom } : {}),
   }));
