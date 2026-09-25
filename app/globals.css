@@ -944,6 +944,8 @@ h6 {
    the sticky footer needs that same scrollport to hold against. */
 .messages { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .message-col { flex: 1; min-height: 0; overflow: auto; width: 100%; max-width: 680px; margin: 0 auto; padding: 32px 24px; display: flex; flex-direction: column; gap: 18px; }
+.message-col { scrollbar-width: none; }
+.message-col::-webkit-scrollbar { width: 0; height: 0; }
 .assistant-frame.sidebar .message-col, .assistant-frame.modal .message-col { max-width: none; padding: 16px; }
 .user-bubble { align-self: flex-end; max-width: 80%; padding: 10px 16px; border: var(--ds-border) solid var(--a-border); border-radius: var(--ds-radius-card); background: var(--a-surface); font-size: var(--ds-body-size); line-height: 1.5; }
 /* Turn markers. LobeChat renders a message's avatar as an emoji beside it; we
@@ -1010,6 +1012,8 @@ h6 {
   color: var(--a-fg);
   font-size: 13px;
 }
+.run-panel { scrollbar-width: none; }
+.run-panel::-webkit-scrollbar { width: 0; height: 0; }
 .run-panel-title { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0 20px; color: color-mix(in srgb, var(--a-fg) 54%, transparent); font-family: var(--font-heading); font-size: 11px; font-weight: var(--ds-label-weight); letter-spacing: .16em; text-transform: var(--ds-label-transform); }
 .run-list { list-style: none; margin: 24px 0 0; padding: 0 0 22px; display: flex; flex-direction: column; gap: 0; border-block: var(--ds-border) solid color-mix(in srgb, var(--a-fg) 10%, transparent); }
 .run-list > li { min-width: 0; }
