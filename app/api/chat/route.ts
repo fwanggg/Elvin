@@ -2,9 +2,13 @@ import { NextResponse } from "next/server";
 import { unreachableProviderError } from "@/lib/provider-errors";
 import type { SpanKind, TurnSpan, TurnStats, UsageTotals } from "@/lib/turn-stats";
 
+/** A part of a user message as the OpenAI wire spells it. */
+type WirePart = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
+
 type IncomingMessage = {
   role: "user" | "assistant" | "system";
-  content: string;
+  /** Parts when the turn carried a picture; one string otherwise, as it always was. */
+  content: string | WirePart[];
 };
 
 type RequestBody = {
@@ -21,7 +25,7 @@ type RequestBody = {
 
 type OpenAIMessage = {
   role: "system" | "user" | "assistant" | "tool";
-  content: string | null;
+  content: string | WirePart[] | null;
   tool_calls?: Array<{ id: string; type: "function"; function: { name: string; arguments: string } }>;
   tool_call_id?: string;
 };
@@ -291,9 +295,19 @@ async function parseRequestBody(request: Request): Promise<ParsedRequestBody> {
   }
 }
 
+/** The words of an incoming message, whether it arrived as a string or as parts. */
+function textOf(content: string | WirePart[] | undefined): string {
+  if (content === undefined) return "";
+  if (typeof content === "string") return content;
+  return content
+    .filter((part) => part.type === "text")
+    .map((part) => part.text)
+    .join(" ");
+}
+
 function normalizeChatRequest(body: RequestBody): ChatRequest {
   const messages = Array.isArray(body.messages) ? body.messages : [];
-  const latestUserMessage = [...messages].reverse().find((message) => message.role === "user")?.content ?? "";
+  const latestUserMessage = textOf([...messages].reverse().find((message) => message.role === "user")?.content);
 
   return {
     body,
