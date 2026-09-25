@@ -809,6 +809,17 @@ h6 {
 .metric-action:hover { background: color-mix(in srgb, var(--color-text) 6%, transparent); }
 .metric-action.solid { background: var(--color-accent); color: var(--color-bg); }
 .metric-action.solid:hover { background: var(--color-accent-600); }
+/* New Thread, the one stage cell that starts something. A press tints it under
+   the finger, and the click leaves a wash of the accent fading back out while
+   the plus turns a quarter — a quarter leaves the glyph a plus, so the mark has
+   a beginning and a settled end instead of a jump. */
+.thread-new { position: relative; overflow: hidden; }
+.thread-new:active { background: color-mix(in srgb, var(--color-text) 12%, transparent); }
+.thread-wash { position: absolute; inset: 0; pointer-events: none; background: var(--color-accent); animation: thread-wash .45s ease-out both; }
+.thread-plus { display: inline-block; animation: thread-plus-turn .45s cubic-bezier(.23,1,.32,1) both; }
+@keyframes thread-wash { from { opacity: .3; } to { opacity: 0; } }
+@keyframes thread-plus-turn { from { transform: rotate(0deg); } to { transform: rotate(90deg); } }
+@media (prefers-reduced-motion: reduce) { .thread-wash, .thread-plus { animation: none; } }
 .canvas {
   flex: 1;
   min-height: 0;
@@ -916,7 +927,6 @@ h6 {
   max-width: 520px;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
   padding: 32px 16px;
   text-align: center;
 }
@@ -928,29 +938,12 @@ h6 {
   line-height: 1;
   letter-spacing: var(--ds-heading-tracking);
 }
-.suggestions {
-  display: grid;
-  width: min(420px, 100%);
-  gap: 8px;
-}
-.suggestion-card {
-  display: flex;
-  width: 100%;
-  flex-direction: column;
-  gap: 3px;
-  padding: 10px 12px;
-  border: var(--ds-border) solid var(--a-border);
-  border-radius: var(--ds-radius-card);
-  background: var(--a-surface);
-  color: var(--a-fg);
-  box-shadow: var(--ds-shadow);
-  cursor: pointer;
-  text-align: left;
-}
-.suggestion-card span {
-  color: var(--a-fg);
-  font-size: 12px;
-}
+/* The line arrives with the thread it belongs to: a new thread re-draws it
+   rather than leaving the previous thread's line standing, so the entrance
+   settles the text out of a blur and back to the design's own tracking. */
+.thread-empty h3 { animation: thread-empty-in .55s cubic-bezier(.23,1,.32,1) both; }
+@keyframes thread-empty-in { from { opacity: 0; transform: translateY(12px); filter: blur(6px); letter-spacing: .1em; } }
+@media (prefers-reduced-motion: reduce) { .thread-empty h3 { animation: none; } }
 .assistant-frame {
   display: flex;
   flex-direction: column;

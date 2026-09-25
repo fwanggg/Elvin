@@ -9,17 +9,12 @@ import { type AppTheme, type OpenMode, type Pattern, type Toggle, type ViewMode,
 import { AssistantRuntimeMessage, UserRuntimeMessage } from "@/components/sandbox/messages";
 import {
   AssistantRuntimeProvider,
-  AuiConfig,
-  AuiProvider,
   ComposerPrimitive,
   ErrorPrimitive,
   groupPartByType,
   MessagePrimitive,
-  SuggestionPrimitive,
-  Suggestions,
   ThreadPrimitive,
   AuiIf,
-  useAui,
   useAuiState,
   useLocalRuntime,
   type AssistantRuntime,
@@ -129,6 +124,7 @@ type PreviewStageProps = Readonly<{
   onModelChange: (value: string) => void;
   viewMode: ViewMode;
   defaultOpen: boolean;
+  threadKey: number;
   baseUrl: string;
   apiKey: string;
   connecting: boolean;
@@ -159,6 +155,7 @@ type AssistantSandboxProps = Readonly<{
   emoji: Toggle;
   viewMode: ViewMode;
   defaultOpen: boolean;
+  threadKey: number;
 }>;
 
 
@@ -248,6 +245,7 @@ export function AgentTestbed(): ReactNode {
   const [showExportPanel, setShowExportPanel] = useState(false);
   const [exportFiles, setExportFiles] = useState<readonly SourceFile[]>([]);
   const [selectedFile, setSelectedFile] = useState(DEFAULT_SOURCE_FILE);
+  const [threadGeneration, setThreadGeneration] = useState(0);
   const sessionRef = useRef("");
 
   useEffect(() => {
@@ -350,6 +348,7 @@ export function AgentTestbed(): ReactNode {
     const id = `elvin-${crypto.randomUUID().slice(0, 8)}`;
     window.localStorage.setItem(THREAD_STORAGE_KEY, id);
     sessionRef.current = id;
+    setThreadGeneration((generation) => generation + 1);
     void runtime.threads.switchToNewThread();
   }
   const { host: statusHost, state: statusState } = getStatusLabel(connection, baseUrl, connectionError);
@@ -469,6 +468,7 @@ export function AgentTestbed(): ReactNode {
             viewMode={viewMode}
             emoji={emoji}
             defaultOpen={openMode === "expanded"}
+            threadKey={threadGeneration}
             baseUrl={baseUrl}
             apiKey={apiKey}
             connecting={connection === "connecting"}
@@ -586,6 +586,7 @@ function PreviewStage({
   models,
   viewMode,
   defaultOpen,
+  threadKey,
   baseUrl,
   apiKey,
   connecting,
@@ -600,6 +601,16 @@ function PreviewStage({
   onApiKeyChange,
   onConnect,
 }: PreviewStageProps): ReactNode {
+  // The click has to read even when the thread was already empty and nothing
+  // else on screen moves, so the cell washes and the plus turns before the
+  // thread underneath it is replaced.
+  const [threadPulse, setThreadPulse] = useState(0);
+
+  function startNewThread(): void {
+    setThreadPulse((pulse) => pulse + 1);
+    onStartThread();
+  }
+
   return (
     <section className="stage">
       <div className="metric-bar">
@@ -627,8 +638,9 @@ function PreviewStage({
             onValueChange={onModelChange}
           />
         </div>
-        <button className="metric-cell metric-action" type="button" onClick={onStartThread}>
-          <span className="metric-cell-head metric-icon" aria-hidden="true">+</span>
+        <button className="metric-cell metric-action thread-new" type="button" onClick={startNewThread}>
+          {threadPulse > 0 && <span className="thread-wash" key={`wash-${threadPulse}`} aria-hidden="true" />}
+          <span className={threadPulse > 0 ? "metric-cell-head metric-icon thread-plus" : "metric-cell-head metric-icon"} key={`plus-${threadPulse}`} aria-hidden="true">+</span>
           <span className="metric-value">New Thread</span>
         </button>
         <button className="metric-cell metric-action solid" type="button" aria-haspopup="dialog" aria-controls="export" onClick={onExport}>
@@ -648,7 +660,7 @@ function PreviewStage({
               {pattern !== "thread" && <MockApplication />}
               {pattern === "modal" && <div className="modal-launcher">⌄</div>}
               <AssistantRuntimeProvider runtime={runtime}>
-                <AssistantSandbox pattern={pattern} modelName={modelName} viewMode={viewMode} emoji={emoji} defaultOpen={defaultOpen} />
+                <AssistantSandbox pattern={pattern} modelName={modelName} viewMode={viewMode} emoji={emoji} defaultOpen={defaultOpen} threadKey={threadKey} />
               </AssistantRuntimeProvider>
             </>
           ) : (
@@ -797,71 +809,45 @@ function ConnectEmptyState({ baseUrl, apiKey, connecting, error, onBaseUrlChange
   );
 }
 
-function AssistantSandbox({ pattern, modelName, viewMode, emoji, defaultOpen }: AssistantSandboxProps): ReactNode {
-  const aui = useAui();
-  const config = AuiConfig({
-    suggestions: Suggestions([
-      {
-        title: "Test the agent",
-        label: "with a short prompt",
-        prompt: "Reply with one sentence confirming this agent is connected.",
-      },
-      {
-        title: "Try tool rendering",
-        label: "with an order lookup",
-        prompt: "Where is order #4821?",
-      },
-    ]),
-  });
-
+function AssistantSandbox({ pattern, modelName, viewMode, emoji, defaultOpen, threadKey }: AssistantSandboxProps): ReactNode {
   return (
-    <AuiProvider extends={aui} config={config}>
-      <div className={`assistant-frame ${pattern}`}>
-        {pattern !== "thread" && <div className="assistant-header"><span>Acme Support</span><span>×</span></div>}
-        <ThreadPrimitive.Root className="messages">
-          <ThreadPrimitive.Viewport className="message-col">
-            <AuiIf condition={(state) => state.thread.isEmpty}>
-              <div className="thread-empty">
-                <span className="connect-kicker">Connected</span>
-                <h3>Ask your agent anything</h3>
-                <div className="suggestions">
-                  <ThreadPrimitive.Suggestions>
-                    {({ suggestion }) => (
-                      <SuggestionPrimitive.Trigger className="suggestion-card" send>
-                        <strong>{suggestion.title}</strong>
-                        <span>{suggestion.label}</span>
-                      </SuggestionPrimitive.Trigger>
-                    )}
-                  </ThreadPrimitive.Suggestions>
-                </div>
-              </div>
-            </AuiIf>
-            <ThreadPrimitive.Messages>
-              {({ message }) => message.role === "user"
-                ? <UserRuntimeMessage emoji={emoji} />
-                : <AssistantRuntimeMessage viewMode={viewMode} emoji={emoji} defaultOpen={defaultOpen} />}
-            </ThreadPrimitive.Messages>
-          </ThreadPrimitive.Viewport>
-          {/* Its own row, outside the scroller: the thread scrolls above the
-              composer rather than passing behind it. */}
-          <ThreadPrimitive.ViewportFooter className="composer-wrap">
-            <ComposerPrimitive.Root className="composer">
-              <ComposerPrimitive.Input placeholder="Send a message…" rows={1} />
-              <div className="composer-footer">
-                <span>＋</span>
-                <span>{modelName}</span>
-                <AuiIf condition={(state) => !state.thread.isRunning}>
-                  <ComposerPrimitive.Send className="send-dot">↑</ComposerPrimitive.Send>
-                </AuiIf>
-                <AuiIf condition={(state) => state.thread.isRunning}>
-                  <ComposerPrimitive.Cancel className="send-dot running">■</ComposerPrimitive.Cancel>
-                </AuiIf>
-              </div>
-            </ComposerPrimitive.Root>
-          </ThreadPrimitive.ViewportFooter>
-        </ThreadPrimitive.Root>
-      </div>
-    </AuiProvider>
+    <div className={`assistant-frame ${pattern}`}>
+      {pattern !== "thread" && <div className="assistant-header"><span>Acme Support</span><span>×</span></div>}
+      <ThreadPrimitive.Root className="messages">
+        <ThreadPrimitive.Viewport className="message-col">
+          {/* The line belongs to the thread, so a fresh thread draws it again:
+              the key is the thread's own generation, which New Thread bumps —
+              mounting alone would not replay it on an already-empty thread. */}
+          <AuiIf condition={(state) => state.thread.isEmpty}>
+            <div className="thread-empty" key={threadKey}>
+              <h3>Ask your agent anything</h3>
+            </div>
+          </AuiIf>
+          <ThreadPrimitive.Messages>
+            {({ message }) => message.role === "user"
+              ? <UserRuntimeMessage emoji={emoji} />
+              : <AssistantRuntimeMessage viewMode={viewMode} emoji={emoji} defaultOpen={defaultOpen} />}
+          </ThreadPrimitive.Messages>
+        </ThreadPrimitive.Viewport>
+        {/* Its own row, outside the scroller: the thread scrolls above the
+            composer rather than passing behind it. */}
+        <ThreadPrimitive.ViewportFooter className="composer-wrap">
+          <ComposerPrimitive.Root className="composer">
+            <ComposerPrimitive.Input placeholder="Send a message…" rows={1} />
+            <div className="composer-footer">
+              <span>＋</span>
+              <span>{modelName}</span>
+              <AuiIf condition={(state) => !state.thread.isRunning}>
+                <ComposerPrimitive.Send className="send-dot">↑</ComposerPrimitive.Send>
+              </AuiIf>
+              <AuiIf condition={(state) => state.thread.isRunning}>
+                <ComposerPrimitive.Cancel className="send-dot running">■</ComposerPrimitive.Cancel>
+              </AuiIf>
+            </div>
+          </ComposerPrimitive.Root>
+        </ThreadPrimitive.ViewportFooter>
+      </ThreadPrimitive.Root>
+    </div>
   );
 }
 
