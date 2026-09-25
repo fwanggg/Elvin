@@ -81,6 +81,8 @@ type CheckResponse = {
   model?: string;
   models?: string[];
   capabilities?: string[];
+  /** What the endpoint declared in `/models` — `hermes` is the one name acted on. */
+  owner?: string;
   error?: string;
 };
 
@@ -241,6 +243,7 @@ export function AgentTestbed(): ReactNode {
   const [model, setModel] = useState("");
   const [models, setModels] = useState<string[]>([]);
   const [capabilities, setCapabilities] = useState<string[]>([]);
+  const [owner, setOwner] = useState("");
   const [capability, setCapability] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [connection, setConnection] = useState<ConnectionState>("demo");
@@ -266,6 +269,7 @@ export function AgentTestbed(): ReactNode {
           stream: true,
           capability: capability || undefined,
           threadId: sessionId || undefined,
+          owner: owner || undefined,
           messages: messages.map((message) => ({ role: message.role, content: readableMessageContent(message) })),
         }),
         signal: abortSignal,
@@ -348,7 +352,7 @@ export function AgentTestbed(): ReactNode {
 
       yield { content: assembleContent({ text, reasoning, toolCalls }), metadata: { timing, ...(stats ? { custom: { stats } } : {}) } };
     },
-  }), [apiKey, baseUrl, capability, model]);
+  }), [apiKey, baseUrl, capability, model, owner]);
   const runtime = useLocalRuntime(modelAdapter);
 
   /**
@@ -374,6 +378,7 @@ export function AgentTestbed(): ReactNode {
     setModels([]);
     setCapabilities([]);
     setCapability("");
+    setOwner("");
   }
 
   function disconnect(): void {
@@ -411,6 +416,7 @@ export function AgentTestbed(): ReactNode {
       setConnection("live");
       setModels(nextModels);
       setCapabilities(nextCapabilities);
+      setOwner(data.owner ?? "");
       // Anything chosen for the previous agent may not exist on this one.
       setCapability((current) => (nextCapabilities.includes(current) ? current : nextCapabilities[0] ?? ""));
       // The check echoes back the model it was sent, so a model only survives if
