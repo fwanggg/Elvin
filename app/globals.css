@@ -600,10 +600,10 @@ a { color: inherit; }
   flex: 0 0 264px;
   display: flex;
   align-items: center;
-  padding: 0 12px;
+  padding: 0 14px;
   border-right: var(--ds-border) solid var(--ds-edge-soft);
   font-family: var(--font-heading);
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
   letter-spacing: -.03em;
   line-height: 1;
@@ -674,6 +674,15 @@ h6 {
 .seg-opt input { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; }
 .seg-opt:has(input:checked) { border-color: var(--color-accent); background: var(--color-accent); color: var(--color-bg); }
 .seg-opt:not(:has(input:checked)):hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.seg[data-muted="true"] {
+  opacity: .42;
+}
+.seg[data-muted="true"] .seg-opt {
+  cursor: not-allowed;
+}
+.seg-opt:has(input:disabled):hover {
+  background: transparent;
+}
 /* Select control for the app's own chrome: a bordered value box over a square
    menu. House tokens only — the sandboxed renderer's language never reaches it. */
 .dropdown { width: 100%; }
@@ -745,17 +754,16 @@ h6 {
   padding: 0;
   color: var(--color-text);
   font-family: var(--font-heading);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 800;
-  line-height: 1.05;
 }
 .model-picker input[data-slot="input-group-control"]::placeholder { color: var(--color-neutral-600); font-weight: 400; opacity: 1; }
 .model-picker:has(input:focus-visible) { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .model-picker input[data-slot="input-group-control"]:focus-visible { outline: none; }
-.model-picker [data-slot="input-group-addon"] { padding: 0 0 0 8px; }
+.model-picker [data-slot="input-group-addon"] { padding: 0 0 0 10px; }
 .model-picker button { width: auto; height: auto; padding: 0; background: transparent; color: var(--color-text); }
 .model-picker button:hover { background: transparent; }
-.model-picker [data-slot="input-group-addon"] svg { width: 14px; height: 14px; }
+.model-picker [data-slot="input-group-addon"] svg { width: 16px; height: 16px; }
 .model-picker-list {
   width: 320px;
   padding: 0;
@@ -788,13 +796,14 @@ h6 {
    the two stage actions — so the renderer's own inputs sit on the line above
    it instead of in the control column. */
 .metric-bar { flex: 1; min-width: 0; display: flex; align-items: stretch; background: var(--color-bg); }
-.metric-cell { display: flex; flex-direction: column; justify-content: center; gap: 3px; min-width: 0; padding: 7px 14px; }
+.metric-cell { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 12px; min-width: 0; padding: 8px 16px; }
 .metric-cell + .metric-cell { border-left: var(--ds-border) solid var(--ds-edge); }
 .metric-agent, .metric-model { flex: 1 1 0; }
-.metric-cell-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; color: var(--color-neutral-600); font-family: var(--font-heading); font-size: 9px; font-weight: var(--ds-label-weight); letter-spacing: var(--ds-label-tracking); line-height: 1.05; text-transform: var(--ds-label-transform); }
-.metric-icon { font-size: 13px; }
-.metric-value { display: flex; align-items: center; min-width: 0; overflow: hidden; font-family: var(--font-heading); font-size: 13px; font-weight: 800; line-height: 1.05; white-space: nowrap; }
-.metric-swatch { flex: none; width: 8px; height: 8px; margin-right: 7px; }
+.metric-cell-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; color: var(--color-neutral-600); font-family: var(--font-heading); font-size: 10px; font-weight: var(--ds-label-weight); letter-spacing: var(--ds-label-tracking); text-transform: var(--ds-label-transform); white-space: nowrap; }
+.metric-icon { font-size: 14px; }
+.metric-value { display: flex; align-items: center; min-width: 0; overflow: hidden; font-family: var(--font-heading); font-size: 14px; font-weight: 800; white-space: nowrap; }
+.metric-agent .metric-value, .metric-model .model-picker { flex: 1 1 auto; }
+.metric-swatch { flex: none; width: 11px; height: 11px; margin-right: 9px; }
 .metric-host { overflow: hidden; text-overflow: ellipsis; }
 .metric-state { overflow: hidden; font-weight: 400; color: var(--color-neutral-600); text-overflow: ellipsis; }
 .metric-disconnect { flex: none; padding: 0; border: 0; background: transparent; color: var(--color-accent); font: inherit; font-weight: 800; letter-spacing: var(--ds-label-tracking); text-transform: uppercase; cursor: pointer; }
@@ -806,10 +815,9 @@ h6 {
    the finger, and the click leaves a wash of the accent fading back out while
    the plus turns a quarter — a quarter leaves the glyph a plus, so the mark has
    a beginning and a settled end instead of a jump. */
-.thread-new { position: relative; overflow: hidden; }
-.thread-new:active { background: color-mix(in srgb, var(--color-text) 12%, transparent); }
-.thread-wash { position: absolute; inset: 0; pointer-events: none; background: var(--color-accent); animation: thread-wash .45s ease-out both; }
-.thread-plus { display: inline-block; animation: thread-plus-turn .45s cubic-bezier(.23,1,.32,1) both; }
+.thread-new { position: relative; overflow: hidden; background: var(--color-accent); color: var(--color-bg); }
+.thread-new:hover { background: var(--color-accent-600); }
+.thread-new:active { background: var(--color-accent-700); }
 @keyframes thread-wash { from { opacity: .3; } to { opacity: 0; } }
 @keyframes thread-plus-turn { from { transform: rotate(0deg); } to { transform: rotate(90deg); } }
 @media (prefers-reduced-motion: reduce) { .thread-wash, .thread-plus { animation: none; } }
@@ -998,20 +1006,37 @@ h6 {
    neither has to make room for the other and nothing is left over. Only the
    thread pattern has the room — the copilot and floating shells do not. */
 .assistant-frame.thread { flex-direction: row; }
-.assistant-frame.thread .messages { min-width: 0; }
+.assistant-frame.thread .messages { flex: 1 1 0; min-width: 280px; }
 .assistant-frame.thread .message-col { max-width: none; }
+.run-resizer {
+  flex: none;
+  position: relative;
+  z-index: 2;
+  width: 10px;
+  margin-inline: -5px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.run-resizer::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 50%;
+  width: var(--ds-border);
+  transform: translateX(-50%);
+  background: color-mix(in srgb, var(--a-fg) 18%, transparent);
+}
+.run-resizer:hover::before,
+.run-resizer:focus-visible::before { width: 3px; background: var(--color-accent); }
+.run-resizer:focus-visible { outline: 0; }
 .run-panel {
   flex: none;
-  /* A share of the frame rather than a fixed rail: the panel and the chat are the
-     two halves of one layout, so a wider stage gives the panel more of the room
-     its bars can use. */
-  width: clamp(340px, 30%, 480px);
+  width: var(--run-panel-width, clamp(340px, 30%, 480px));
   min-width: 0;
   display: flex;
   flex-direction: column;
   overflow: auto;
   padding: 18px 0 24px;
-  border-left: var(--ds-border) solid color-mix(in srgb, var(--a-fg) 14%, transparent);
   background: color-mix(in srgb, var(--a-bg) 92%, #2b2626 8%);
   color: var(--a-fg);
   font-family: var(--font-body);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { Dropdown } from "@/components/dropdown";
 import { ModelPicker } from "@/components/model-picker";
 import { type Segment } from "@/components/assistant-ui/elements/streaming-text";
@@ -174,6 +174,7 @@ type SegmentProps<T extends string> = Readonly<{
   options: T[];
   labels: Record<T, string>;
   onChange: (value: T) => void;
+  disabled?: boolean;
 }>;
 
 type SegmentedPanelProps<T extends string> = SegmentProps<T> & Readonly<{
@@ -223,6 +224,9 @@ const STATUS_COLORS: Record<ConnectionState, string> = {
   live: "var(--color-ok)",
   error: "var(--color-accent-700)",
 };
+const RUN_PANEL_DEFAULT_WIDTH = 380;
+const RUN_PANEL_MIN_WIDTH = 300;
+const CHAT_MIN_WIDTH = 360;
 
 export function AgentTestbed(): ReactNode {
   const [pattern, setPattern] = useState<Pattern>("thread");
@@ -356,6 +360,9 @@ export function AgentTestbed(): ReactNode {
     setThreadGeneration((generation) => generation + 1);
     void runtime.threads.switchToNewThread();
   }
+  const devMode = viewMode === "dev";
+  const effectivePattern: Pattern = devMode ? "thread" : pattern;
+  const effectiveViewport: Viewport = devMode ? "desktop" : viewport;
   const { host: statusHost, state: statusState } = getStatusLabel(connection, baseUrl, connectionError);
   const statusColor = STATUS_COLORS[connection];
   const isConnected = connection === "live";
@@ -438,8 +445,8 @@ export function AgentTestbed(): ReactNode {
         <div className="main-grid">
           <ControlSidebar
             appTheme={appTheme}
-            pattern={pattern}
-            viewport={viewport}
+            pattern={devMode ? "thread" : pattern}
+            viewport={devMode ? "desktop" : viewport}
             design={design}
             viewMode={viewMode}
             emoji={emoji}
@@ -453,9 +460,9 @@ export function AgentTestbed(): ReactNode {
           <PreviewStage
             isConnected={isConnected}
             appTheme={appTheme}
-            viewport={viewport}
+            viewport={effectiveViewport}
             design={design}
-            pattern={pattern}
+            pattern={effectivePattern}
             runtime={runtime}
             modelName={model.trim() || "connected-agent"}
             viewMode={viewMode}
@@ -492,6 +499,17 @@ function ControlSidebar({
 }: ControlSidebarProps): ReactNode {
   return (
     <aside className="sidebar">
+      <PanelSection title="View mode">
+        <Segment
+          name="view"
+          value={viewMode}
+          options={["dev", "user"]}
+          labels={VIEW_MODE_LABELS}
+          onChange={onViewModeChange}
+        />
+        <p className="hint">{getViewModeHint(viewMode)}</p>
+      </PanelSection>
+      <div className="section-rule" />
       <PanelSection title="Design language">
         <Dropdown label="Design language" value={design} options={DESIGN_LANGUAGES} onChange={(value) => onDesignChange(value as Design)} />
         <p className="hint">Changes palette, type, shape, and elevation.</p>
@@ -509,35 +527,28 @@ function ControlSidebar({
       <SegmentedPanel
         title="UI pattern"
         name="pattern"
-        value={pattern}
+        value={viewMode === "dev" ? "thread" : pattern}
         options={["thread", "sidebar", "modal"]}
         labels={PATTERN_SEGMENT_LABELS}
         onChange={onPatternChange}
+        disabled={viewMode === "dev"}
       >
-        <p className="hint">Changes the assistant shell.</p>
+        <p className="hint">{viewMode === "dev" ? "Fixed to Thread in Dev Mode." : "Changes the assistant shell."}</p>
       </SegmentedPanel>
       <div className="section-rule" />
       <SegmentedPanel
         title="Viewport"
         name="viewport"
-        value={viewport}
+        value={viewMode === "dev" ? "desktop" : viewport}
         options={["desktop", "mobile"]}
         labels={VIEWPORT_LABELS}
         onChange={onViewportChange}
+        disabled={viewMode === "dev"}
       >
-        <p className="hint">Frames desktop or phone.</p>
+        <p className="hint">{viewMode === "dev" ? "Fixed to Desktop in Dev Mode." : "Frames desktop or phone."}</p>
       </SegmentedPanel>
       <div className="section-rule" />
       <PanelSection title="Message parts">
-        <SegmentedControlBlock
-          label="View mode"
-          name="view"
-          value={viewMode}
-          options={["dev", "user"]}
-          labels={VIEW_MODE_LABELS}
-          onChange={onViewModeChange}
-          hint={getViewModeHint(viewMode)}
-        />
         <SegmentedControlBlock
           label="Emoji"
           name="emoji"
@@ -562,6 +573,11 @@ function StageToolbar({ statusColor, statusHost, statusState, isConnected, model
 
   return (
     <div className="metric-bar">
+      <button className="metric-cell metric-action thread-new" type="button" onClick={startNewThread}>
+        {threadPulse > 0 && <span className="thread-wash" key={`wash-${threadPulse}`} aria-hidden="true" />}
+        <span className={threadPulse > 0 ? "metric-cell-head metric-icon thread-plus" : "metric-cell-head metric-icon"} key={`plus-${threadPulse}`} aria-hidden="true">+</span>
+        <span className="metric-value">New Thread</span>
+      </button>
       <div className="metric-cell metric-agent">
         <div className="metric-cell-head">
           <span>Agent</span>
@@ -586,11 +602,6 @@ function StageToolbar({ statusColor, statusHost, statusState, isConnected, model
           onValueChange={onModelChange}
         />
       </div>
-      <button className="metric-cell metric-action thread-new" type="button" onClick={startNewThread}>
-        {threadPulse > 0 && <span className="thread-wash" key={`wash-${threadPulse}`} aria-hidden="true" />}
-        <span className={threadPulse > 0 ? "metric-cell-head metric-icon thread-plus" : "metric-cell-head metric-icon"} key={`plus-${threadPulse}`} aria-hidden="true">+</span>
-        <span className="metric-value">New Thread</span>
-      </button>
     </div>
   );
 }
@@ -699,15 +710,49 @@ function AssistantSandbox({ pattern, modelName, viewMode, emoji, threadKey }: As
   // looked at, and scrolls the chat to it when the panel asks for one.
   const runs = useRuns();
   const [chosenRun, setChosenRun] = useState<number | null>(null);
+  const [runPanelWidth, setRunPanelWidth] = useState(RUN_PANEL_DEFAULT_WIDTH);
   const activeRun = chosenRun ?? runs.at(-1)?.index ?? null;
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const frameRef = useRef<HTMLDivElement | null>(null);
   const surface = VIEW_SURFACES[viewMode];
   const showStepDebug = surface.stepDebug === "enabled" && pattern === "thread";
   const UserMessage = surface.UserMessage;
   const AssistantMessage = surface.AssistantMessage;
+  const frameStyle = showStepDebug ? ({ "--run-panel-width": `${runPanelWidth}px` } as CSSProperties) : undefined;
   function selectRun(index: number): void {
     setChosenRun(index);
     document.querySelector(`[data-run="${index}"]`)?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }
+
+  function resizeRunPanel(nextWidth: number): void {
+    const frameWidth = frameRef.current?.getBoundingClientRect().width ?? RUN_PANEL_DEFAULT_WIDTH + CHAT_MIN_WIDTH;
+    setRunPanelWidth(clampRunPanelWidth(nextWidth, frameWidth));
+  }
+
+  function startRunPanelResize(event: ReactPointerEvent<HTMLDivElement>): void {
+    if (!showStepDebug) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const frame = frameRef.current;
+    if (!frame) return;
+    const frameBox = frame.getBoundingClientRect();
+    const resize = (pointerEvent: PointerEvent) => {
+      setRunPanelWidth(clampRunPanelWidth(frameBox.right - pointerEvent.clientX, frameBox.width));
+    };
+    const stop = () => {
+      window.removeEventListener("pointermove", resize);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+    };
+    window.addEventListener("pointermove", resize);
+    window.addEventListener("pointerup", stop, { once: true });
+    window.addEventListener("pointercancel", stop, { once: true });
+  }
+
+  function resizeRunPanelWithKeys(event: KeyboardEvent<HTMLDivElement>): void {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    resizeRunPanel(runPanelWidth + (event.key === "ArrowLeft" ? 24 : -24));
   }
 
   // Reading the chat moves the panel with it. The turn to show is the latest run
@@ -749,7 +794,7 @@ function AssistantSandbox({ pattern, modelName, viewMode, emoji, threadKey }: As
   }, [runs.length]);
 
   const frame = (
-    <div className={`assistant-frame ${pattern}`}>
+    <div className={`assistant-frame ${pattern}`} ref={frameRef} style={frameStyle}>
       {pattern !== "thread" && <div className="assistant-header"><span>Acme Support</span><span>×</span></div>}
       <ThreadPrimitive.Root className="messages">
         <ThreadPrimitive.Viewport className="message-col" ref={viewportRef}>
@@ -789,6 +834,19 @@ function AssistantSandbox({ pattern, modelName, viewMode, emoji, threadKey }: As
           and the panel-to-chat hover/choice link. User Mode is the product
           surface, so it gets none of that right-column debugger behavior. The
           narrow shells have no room for the rail either. */}
+      {showStepDebug && (
+        <div
+          className="run-resizer"
+          role="separator"
+          aria-label="Resize stats panel"
+          aria-orientation="vertical"
+          aria-valuemin={RUN_PANEL_MIN_WIDTH}
+          aria-valuenow={runPanelWidth}
+          tabIndex={0}
+          onKeyDown={resizeRunPanelWithKeys}
+          onPointerDown={startRunPanelResize}
+        />
+      )}
       {showStepDebug && <RunPanel runs={runs} active={activeRun} onSelect={selectRun} />}
     </div>
   );
@@ -825,6 +883,10 @@ function streamTiming({ streamStartTime, firstTokenTime, totalChunks, toolCallCo
     toolCallCount,
   };
 }
+
+function clampRunPanelWidth(width: number, frameWidth: number): number {
+  return Math.min(Math.max(width, RUN_PANEL_MIN_WIDTH), Math.max(RUN_PANEL_MIN_WIDTH, frameWidth - CHAT_MIN_WIDTH));
+}
 function PanelSection({ title, children }: PanelSectionProps): ReactNode {
   return <div className="panel-section"><h6>{title}</h6>{children}</div>;
 }
@@ -833,12 +895,12 @@ function ControlBlock({ label, children }: ControlBlockProps): ReactNode {
   return <div style={{ display: "flex", flexDirection: "column", gap: 6 }}><span className="top-label" style={{ paddingLeft: 0 }}>{label}</span>{children}</div>;
 }
 
-function Segment<T extends string>({ name, value, options, labels, onChange }: SegmentProps<T>): ReactNode {
+function Segment<T extends string>({ name, value, options, labels, onChange, disabled = false }: SegmentProps<T>): ReactNode {
   return (
-    <div className="seg">
+    <div className="seg" data-muted={disabled ? "true" : undefined}>
       {options.map((option) => (
         <label className="seg-opt" key={option}>
-          <input type="radio" name={name} checked={value === option} onChange={() => onChange(option)} />
+          <input type="radio" name={name} checked={value === option} disabled={disabled} onChange={() => onChange(option)} />
           {labels[option]}
         </label>
       ))}
@@ -846,10 +908,10 @@ function Segment<T extends string>({ name, value, options, labels, onChange }: S
   );
 }
 
-function SegmentedPanel<T extends string>({ title, children, name, value, options, labels, onChange }: SegmentedPanelProps<T>): ReactNode {
+function SegmentedPanel<T extends string>({ title, children, name, value, options, labels, onChange, disabled }: SegmentedPanelProps<T>): ReactNode {
   return (
     <PanelSection title={title}>
-      <Segment name={name} value={value} options={options} labels={labels} onChange={onChange} />
+      <Segment name={name} value={value} options={options} labels={labels} onChange={onChange} disabled={disabled} />
       {children}
     </PanelSection>
   );
