@@ -7,7 +7,7 @@ import { ModelPicker } from "@/components/model-picker";
 import { type AppTheme, type Design, type Pattern, type Toggle, type ViewMode, type Viewport } from "@/components/sandbox/knobs";
 import { type TurnStats, type UsageTotals } from "@/lib/turn-stats";
 import { GATEWAY_PROMPT } from "@/lib/gateway-prompt";
-import { localHistory, readApiKey, readConnection, writeApiKey, writeConnection } from "@/lib/session-store";
+import { localHistory, readApiKey, readConnection, readSessionMessages, rememberSession, writeApiKey, writeConnection } from "@/lib/session-store";
 import { DevModeAssistantMessage, DevModeUserMessage, UserModeAssistantMessage, UserModeUserMessage } from "@/components/sandbox/messages";
 import { RunPanel } from "@/components/sandbox/run-panel";
 import { SessionList } from "@/components/session-list";
@@ -393,18 +393,31 @@ export function AgentTestbed(): ReactNode {
   /**
    * The conversation the sandbox is on: a new one, or one picked out of the rail.
    *
-   * The id is written before the switch, because the history adapter reads it from storage — the
-   * load the switch triggers has to find the chosen thread rather than the one being left — and
-   * it goes on the wire as the session, so a provider that remembers threads remembers the right
-   * one. What the thread being left holds stays where it is.
+   * The id is written before the switch, because the history adapter reads it from storage, and it
+   * goes on the wire as the session, so a provider that remembers threads remembers the right one.
+   * What the thread being left holds stays where it is.
    */
   function openThread(id: string): void {
     if (id === sessionRef.current) return;
     window.localStorage.setItem(THREAD_STORAGE_KEY, id);
+    rememberSession(id);
     sessionRef.current = id;
     setThreadId(id);
     setThreadGeneration((generation) => generation + 1);
-    void runtime.threads.switchToNewThread();
+    void replayThread(id);
+  }
+
+  /**
+   * Put a conversation back on screen.
+   *
+   * Switching creates a thread, and a thread that has just been created has no history to load —
+   * that is what new means to the runtime. So the messages this browser kept of it are handed back
+   * here. They are the messages the turn was made of, timings and calls included, which is what
+   * the runs panel reads and what lets the conversation be continued rather than only looked at.
+   */
+  async function replayThread(id: string): Promise<void> {
+    await runtime.threads.switchToNewThread();
+    runtime.thread.reset(readSessionMessages(id));
   }
 
   /** A thread nothing has been said in yet: a fresh session id and an empty transcript. */
