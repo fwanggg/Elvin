@@ -7,8 +7,12 @@ import { outputKey, spanKey, turnStatsOf, type TurnStats } from "@/lib/turn-stat
 /** One step of a run, ready to draw: what it was, and its window on the clock. */
 export type RunStep = {
   key: string;
-  /** Which drawing in the panel it is. */
-  role: "reasoning" | "call" | "output";
+  /**
+   * Which drawing in the panel it is. A wait is the odd one: not a step measured on the
+   * wire but the ground between two of them, derived by the panel, and it answers to no card
+   * in the thread.
+   */
+  role: "reasoning" | "call" | "output" | "wait";
   label: string;
   ms: number;
   /** Where the window sat on the turn's clock, for drawing it on the run's span. */

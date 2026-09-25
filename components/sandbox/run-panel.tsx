@@ -1,7 +1,7 @@
 "use client";
 
-import { BrainIcon, ChevronRightIcon, HammerIcon, MessageSquareTextIcon, type LucideIcon } from "lucide-react";
-import { useCallback, useEffect, useRef, useState, type ReactNode, type RefCallback } from "react";
+import { BrainIcon, ChevronRightIcon, HammerIcon, MessageSquareTextIcon, TimerIcon, type LucideIcon } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefCallback } from "react";
 import { formatRunIndex, formatSpan, formatTokenCount, isMeasurable, isStandout } from "@/lib/turn-stats";
 import { marked, useStepLink } from "./step-link";
 import type { Run, RunStep } from "./runs";
@@ -52,7 +52,6 @@ export function RunPanel({ runs, active, onSelect }: Readonly<{ runs: readonly R
 function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
   const link = useStepLink();
   const usage = run.stats?.usage ?? null;
-  const ttfts = run.stats?.ttftMs ?? [];
   const calls = run.steps.filter((step) => step.role === "call");
   const longestCallMs = calls.reduce((longest, step) => Math.max(longest, step.ms), 0);
   const reasoningMs = run.steps.reduce((sum, step) => sum + (step.role === "reasoning" ? step.ms : 0), 0);
@@ -62,42 +61,39 @@ function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
   const leadMs = run.stats?.leadMs ?? 0;
   const e2eMs = run.ms ?? leadMs + (run.stats?.totalMs ?? 0) + (run.stats?.answerMs ?? 0);
 
-  // What no row claims is the wait for the model: the first call's before it spoke, and
-  // every later call's after a tool answered. Nothing on this side of the wire runs during
-  // it, so it is not an unknown to be filed as one — an agent turn spends its unclaimed
-  // time waiting, and a tool's own work is a window like any other. It is the run less
-  // what the windows claimed, because a window is the only thing the turn can time
-  // directly.
-  const modelWaitMs = Math.max(0, e2eMs - run.steps.reduce((sum, step) => sum + step.ms, 0));
+  // The run as one sequence: the steps the wire measured, and the waits the span draws
+  // around and between them. Both surfaces read this list, so a stretch of the span and a
+  // row below it are the same stretch, and neither can be missing without the other.
+  const sequence = useMemo(() => withWaits(run.index, run.steps, leadMs, e2eMs), [run.index, run.steps, leadMs, e2eMs]);
 
   const total = useWalked(e2eMs, asSpan);
-  const ttft = useWalked(ttfts[0], asSpan);
   const asked = useWalked(usage?.promptTokens, asCompact);
   const answered = useWalked(usage?.completionTokens, asCompact);
+  const cached = useWalked(usage?.cachedTokens, asCompact);
   const callCount = useWalked(calls.length, asWhole);
-  const modelWait = useWalked(isMeasurable(modelWaitMs) ? modelWaitMs : undefined, asSpan);
 
   return (
     <section className="run-detail">
       <h6 className="run-panel-title">{`Run ${formatRunIndex(run.index)} timing`}</h6>
-      {run.steps.length > 0 && (
+      {sequence.length > 0 && (
         <>
-          {/* The run's whole span, and inside it every window where it sat. What the
-              windows do not cover is drawn hatched and named under the span: whichever
-              wait it was, the turn spent it waiting on the model. Hovering or choosing a
-              window says which step it measures, the same as its row below. */}
+          {/* The run's whole span, and inside it every stretch the run had: the steps the
+              wire measured, and the waits between them. A wait is hatched because nothing
+              was measured in it, and it answers to its own row below rather than to a card
+              in the thread — there is no card for waiting. */}
           <div className="run-e2e">
-            {run.steps.map((step, index) => {
+            {sequence.map((step, index) => {
               const spot = place(leadMs + step.startMs, step.ms, e2eMs);
+              const base = step.role === "wait" ? "e2e-wait" : step.role === "call" && isStandout(step.ms, longestCallMs) && calls.length > 1 ? "e2e-span slow" : "e2e-span";
               return (
                 <button
                   key={step.key}
                   type="button"
-                  className={marked(step.role === "call" && isStandout(step.ms, longestCallMs) && calls.length > 1 ? "e2e-span slow" : "e2e-span", step.key, link)}
+                  className={marked(base, step.key, link)}
                   data-span={step.key}
                   data-role={step.role}
                   aria-pressed={link.chosen === step.key}
-                  aria-label={`Select ${step.label}`}
+                  aria-label={`Select ${stepLabel(step)}`}
                   onClick={() => link.choose(step.key)}
                   onPointerEnter={() => link.mark(step.key)}
                   onPointerLeave={link.leave}
@@ -106,13 +102,6 @@ function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
               );
             })}
           </div>
-          {isMeasurable(modelWaitMs) && (
-            <p className="run-e2e-key">
-              <span className="run-e2e-swatch" aria-hidden="true" />
-              <span>Model wait</span>
-              <span className="run-e2e-key-ms" ref={modelWait} />
-            </p>
-          )}
         </>
       )}
       <dl className="run-facts">
@@ -125,21 +114,23 @@ function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
           <dd ref={total} />
         </div>
         <div>
-          <dt title={ttftTitle(ttfts)}>TTFT</dt>
-          <dd>{ttfts.length === 0 ? "—" : <span ref={ttft} />}</dd>
-        </div>
-        <div>
-          <dt title="Provider prompt_tokens/input_tokens. Includes system prompt, history, tools, and provider session context.">Prompt ctx</dt>
+          <dt title="Provider prompt_tokens/input_tokens: everything the model was sent, which is the system prompt, the history, the tools, and any session context.">Input</dt>
           <dd>{usage === null ? "—" : <span ref={asked} />}</dd>
         </div>
+        {usage?.cachedTokens !== undefined && (
+          <div>
+            <dt title="The part of the input the provider served from its own cache, as it reported it. Absent where a provider reports no caching at all.">Cached</dt>
+            <dd><span ref={cached} /></dd>
+          </div>
+        )}
         <div>
           <dt title="Provider completion_tokens/output_tokens for the assistant answer.">Output tok</dt>
           <dd>{usage === null ? "—" : <span ref={answered} />}</dd>
         </div>
       </dl>
-      {run.steps.length > 0 && (
+      {sequence.length > 0 && (
         <ol className="run-steps">
-          {run.steps.map((step) => (
+          {sequence.map((step) => (
             <StepRow key={step.key} step={step} slow={step.role === "call" && isStandout(step.ms, longestCallMs) && calls.length > 1} />
           ))}
         </ol>
@@ -188,7 +179,7 @@ function StepRow({ step, slow }: Readonly<{ step: RunStep; slow: boolean }>): Re
 }
 
 function StepIcon({ role }: Readonly<{ role: RunStep["role"] }>): ReactNode {
-  const Icon: LucideIcon = role === "reasoning" ? BrainIcon : role === "call" ? HammerIcon : MessageSquareTextIcon;
+  const Icon: LucideIcon = role === "reasoning" ? BrainIcon : role === "call" ? HammerIcon : role === "wait" ? TimerIcon : MessageSquareTextIcon;
   return (
     <>
       <ChevronRightIcon className="step-chevron" aria-hidden="true" />
@@ -208,16 +199,26 @@ const asTokens = (value: number): string => `${formatTokenCount(Math.round(value
 const asCompact = (value: number): string => formatTokenCount(Math.round(value));
 
 /**
- * The model's own first-token wait, named in full on the hover: the turn's figure is
- * its first call's, and a turn that ran tools made more than one, so the rest are
- * listed rather than dropped. A turn with none says why, rather than leaving a dash
- * to be read as a broken figure.
+ * The run as one sequence: the steps the wire measured, and the waits the span draws
+ * around and between them. A wait is derived from the clock rather than measured on the
+ * wire — it is the ground the steps left — so it is keyed by where it sits, and it answers
+ * to no card in the thread. Its offset is filed the way a step's is, against the turn's
+ * first activity, which is what lets the span place both with one expression.
  */
-function ttftTitle(ttfts: readonly number[]): string {
-  if (ttfts.length === 0) return "No first token to time: the provider answered in one piece rather than streaming.";
-  const definition = "Time from the request to the first streamed token, measured at the proxy.";
-  if (ttfts.length === 1) return definition;
-  return `${definition} This turn made ${ttfts.length} model calls: ${ttfts.map((ms, index) => `${index + 1}) ${formatSpan(ms)}`).join(", ")}.`;
+function withWaits(run: number, steps: readonly RunStep[], leadMs: number, e2eMs: number): RunStep[] {
+  const sequence: RunStep[] = [];
+  let cursor = 0;
+  const file = (start: number, ms: number) => {
+    sequence.push({ key: `${run}-wait-${Math.round(start)}`, role: "wait", label: "model wait", ms, startMs: start - leadMs });
+  };
+  for (const step of steps) {
+    const start = leadMs + step.startMs;
+    if (isMeasurable(start - cursor)) file(cursor, start - cursor);
+    sequence.push(step);
+    cursor = Math.max(cursor, start + step.ms);
+  }
+  if (isMeasurable(e2eMs - cursor)) file(cursor, e2eMs - cursor);
+  return sequence;
 }
 
 /** How long a figure takes to walk to its value. */

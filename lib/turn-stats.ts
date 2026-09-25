@@ -13,6 +13,9 @@ export type UsageTotals = {
   totalTokens: number;
   /** Present only where the provider splits thinking out of the completion count. */
   reasoningTokens?: number;
+  /** Present only where the provider says how much of the prompt it served from its own
+   *  cache. Absent means the provider does not report caching, not that none was used. */
+  cachedTokens?: number;
 };
 
 /** What a measured work window was spent on. The output is measured separately. */
@@ -65,14 +68,6 @@ export type TurnStats = {
    * they sat on the turn rather than a token early.
    */
   leadMs?: number;
-  /**
-   * How long each model call took to its first content chunk, in call order: from
-   * the request leaving the proxy to the first chunk that carried text, thinking,
-   * or a tool call. One entry per provider call, so a turn that runs tools files
-   * the first call's wait and each continuation's after it. Anchored at the proxy,
-   * so it is the model's own wait rather than the app's.
-   */
-  ttftMs?: number[];
   usage: UsageTotals | null;
   /** True while no usage has arrived: any token figure is an estimate. */
   estimated: boolean;

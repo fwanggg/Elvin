@@ -31,7 +31,7 @@ type ToolCallSummary = {
 };
 
 type ProviderCall =
-  | { ok: true; response: Response; sentAt: number }
+  | { ok: true; response: Response }
   | { ok: false; error: string; status: number };
 
 type ContinueAfterTools = (calls: ToolCallSummary[]) => Promise<ProviderCall>;
@@ -140,8 +140,6 @@ type DeltaState = {
   /** Provider usage reported per response round. Latest wins because some
    *  streaming providers repeat cumulative usage before the final chunk. */
   roundUsage: Map<number, UsageTotals>;
-  /** Time each model call took to its first content chunk, by round. */
-  roundTtft: Map<number, number>;
   /** Call keys already on the timeline, so a fragment cannot file a second span. */
   spanned: Set<string>;
   usage: UsageTotals | null;
@@ -211,7 +209,7 @@ export async function POST(request: Request) {
 
   const sessionId = sessionIdOf(call.response, chatRequest.body.threadId);
   if (chatRequest.body.stream) {
-    return eventStream(call.response, sessionId, continueAfterTools, call.sentAt);
+    return eventStream(call.response, sessionId, continueAfterTools);
   }
 
   return nonStreamingResponse({
@@ -310,11 +308,8 @@ function createProviderCaller(options: {
       usage: Boolean(options.body.stream) && !usageRejected.has(cacheKey),
     };
 
-    // The attempt's own send time, so the first token is measured from the request
-    // rather than from the response head: queueing and prefill happen before it.
-    let sentAt = Date.now();
     let attempt = await fetchProvider(options, payload, include);
-    if (attempt.ok) return { ok: true, response: attempt, sentAt };
+    if (attempt.ok) return { ok: true, response: attempt };
 
     let failureText = await attempt.text();
     let failureStatus = attempt.status;
@@ -323,9 +318,8 @@ function createProviderCaller(options: {
       if (extra === "reasoning") reasoningRejected.add(cacheKey);
       else usageRejected.add(cacheKey);
       include[extra] = false;
-      sentAt = Date.now();
       attempt = await fetchProvider(options, payload, include);
-      if (attempt.ok) return { ok: true, response: attempt, sentAt };
+      if (attempt.ok) return { ok: true, response: attempt };
       failureText = await attempt.text();
       failureStatus = attempt.status;
     }
@@ -471,7 +465,7 @@ function toolStateFromNormalizedCall(call: NormalizedToolCall, status: ToolState
  * Consumes one provider turn into `state`, emitting snapshots as it goes, and
  * returns the tool calls that turn asked for.
  */
-async function consumeStream(upstream: Response, round: number, state: DeltaState, emit: () => void, sentAt: number): Promise<ToolCallSummary[]> {
+async function consumeStream(upstream: Response, round: number, state: DeltaState, emit: () => void): Promise<ToolCallSummary[]> {
   state.roundStartedAt = Date.now();
   const isEventStream = (upstream.headers.get("content-type") ?? "").includes("text/event-stream");
 
@@ -532,12 +526,6 @@ async function consumeStream(upstream: Response, round: number, state: DeltaStat
           changed = true;
         }
       }
-      // The first chunk that carried something is this call's first token. A stream
-      // often opens with a role-only or usage-only frame, which is no token: counting
-      // that as the first would read the wait short.
-      if (!state.roundTtft.has(round) && (state.reasoning.length > before.reasoning || state.text.length > before.text || state.toolCalls.size > before.calls)) {
-        state.roundTtft.set(round, Date.now() - sentAt);
-      }
       if (changed) stamp(state, before, round);
       // A usage-only chunk draws nothing, but it is the one frame carrying the
       // provider's own token counts, so it is forwarded rather than dropped.
@@ -561,7 +549,7 @@ async function consumeStream(upstream: Response, round: number, state: DeltaStat
  * Normalizes any provider response into one event per update, so the client
  * adapter only has to accumulate snapshots instead of parsing provider deltas.
  */
-function eventStream(upstream: Response, sessionId: string | null, continueAfterTools: ContinueAfterTools, firstSentAt: number) {
+function eventStream(upstream: Response, sessionId: string | null, continueAfterTools: ContinueAfterTools) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -583,7 +571,6 @@ function eventStream(upstream: Response, sessionId: string | null, continueAfter
         reasoningWindow: new Map(),
         roundTokens: new Map(),
         roundUsage: new Map(),
-        roundTtft: new Map(),
         spanned: new Set(),
         usage: null,
       };
@@ -593,9 +580,8 @@ function eventStream(upstream: Response, sessionId: string | null, continueAfter
 
       try {
         let current = upstream;
-        let sentAt = firstSentAt;
         for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
-          const produced = await consumeStream(current, round, state, emit, sentAt);
+          const produced = await consumeStream(current, round, state, emit);
           if (produced.length === 0 || !continueAfterTools) break;
 
           const next = await continueAfterTools(produced);
@@ -604,7 +590,6 @@ function eventStream(upstream: Response, sessionId: string | null, continueAfter
             break;
           }
           current = next.response;
-          sentAt = next.sentAt;
         }
         send({ type: "done", sessionId: sessionId ?? undefined });
       } catch (error) {
@@ -915,13 +900,6 @@ function turnStats(state: DeltaState): TurnStats {
     // the first thing the provider said. A surface that draws the run end to end
     // needs both, so the difference is filed rather than left to be guessed.
     ...(state.startedAt !== null ? { leadMs: Math.max(0, state.startedAt - state.turnStartedAt) } : {}),
-    // The model's own first-token wait, per call, in call order: the first entry is
-    // the one a reader waited on, and a turn that ran tools files each continuation
-    // after it. Absent where nothing streamed, since a figure that arrives whole has
-    // no first token to time.
-    ...(state.roundTtft.size > 0
-      ? { ttftMs: [...state.roundTtft.entries()].sort(([a], [b]) => a - b).map(([, ms]) => ms) }
-      : {}),
     usage: state.usage,
     estimated: state.usage === null,
   };
@@ -946,11 +924,21 @@ function usageOf(payload: unknown): UsageTotals | null {
 
   const details = "completion_tokens_details" in usage ? usage.completion_tokens_details : "output_tokens_details" in usage ? usage.output_tokens_details : undefined;
   const reasoningTokens = details && typeof details === "object" && "reasoning_tokens" in details ? numberOr(details.reasoning_tokens) : undefined;
+  // Prompt caching arrives in three shapes in the wild: OpenAI nests the hit under
+  // prompt_tokens_details, DeepSeek names it outright, and some shims pass Anthropic's
+  // cache read through. Whichever it is, it is the part of the input the provider did not
+  // have to read again.
+  const promptDetails = "prompt_tokens_details" in usage ? usage.prompt_tokens_details : "input_tokens_details" in usage ? usage.input_tokens_details : undefined;
+  const cachedTokens =
+    (promptDetails && typeof promptDetails === "object" && "cached_tokens" in promptDetails ? numberOr(promptDetails.cached_tokens) : undefined) ??
+    numberOr("prompt_cache_hit_tokens" in usage ? usage.prompt_cache_hit_tokens : undefined) ??
+    numberOr("cache_read_input_tokens" in usage ? usage.cache_read_input_tokens : undefined);
   return {
     promptTokens: prompt ?? 0,
     completionTokens: completion ?? 0,
     totalTokens: total ?? 0,
     ...(reasoningTokens !== undefined ? { reasoningTokens } : {}),
+    ...(cachedTokens !== undefined ? { cachedTokens } : {}),
   };
 }
 
@@ -968,11 +956,13 @@ function recordUsage(state: DeltaState, payload: unknown, round: number): boolea
 
 function addUsage(a: UsageTotals, b: UsageTotals): UsageTotals {
   const reasoning = a.reasoningTokens !== undefined || b.reasoningTokens !== undefined ? (a.reasoningTokens ?? 0) + (b.reasoningTokens ?? 0) : undefined;
+  const cached = a.cachedTokens !== undefined || b.cachedTokens !== undefined ? (a.cachedTokens ?? 0) + (b.cachedTokens ?? 0) : undefined;
   return {
     promptTokens: a.promptTokens + b.promptTokens,
     completionTokens: a.completionTokens + b.completionTokens,
     totalTokens: a.totalTokens + b.totalTokens,
     ...(reasoning !== undefined ? { reasoningTokens: reasoning } : {}),
+    ...(cached !== undefined ? { cachedTokens: cached } : {}),
   };
 }
 
