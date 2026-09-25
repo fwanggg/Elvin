@@ -796,9 +796,9 @@ function AssistantSandbox({ pattern, modelName, viewMode, emoji, defaultOpen, th
         </ThreadPrimitive.ViewportFooter>
       </ThreadPrimitive.Root>
       {/* The step debugger is one Dev Mode feature: the stats rail, the run span,
-          and the three-way hover/choice link between rows, spans and cards.
-          User Mode is the product surface, so it gets none of that right-column
-          debugger behavior. The narrow shells have no room for the rail either. */}
+          and the panel-to-chat hover/choice link. User Mode is the product
+          surface, so it gets none of that right-column debugger behavior. The
+          narrow shells have no room for the rail either. */}
       {showStepDebug && <RunPanel runs={runs} active={activeRun} onSelect={selectRun} />}
     </div>
   );

@@ -8,7 +8,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
 
@@ -17,10 +16,9 @@ import {
  *
  * A step is drawn three times over — a row in the stats panel, a stretch of the run's
  * own span, and the card, or the block of a trace, it happened in — and all three are
- * the same step. So Dev Mode keeps them as one piece of state rather than three marks
- * kept in step by hand: put the pointer on any of them and the other two say so, and
- * choose one and it stays marked while the card that owns it opens onto the block it
- * measured.
+ * the same step. Dev Mode keeps that state in the panel: put the pointer on a row or a
+ * stretch and the chat answers, choose one and it stays marked while the card that owns
+ * it opens onto the block it measured.
  *
  * Every drawing addresses itself in the DOM — `data-steps` for a card or a block of a
  * trace, `data-span` for a stretch of the run, `data-step` for a row — because neither
@@ -28,14 +26,12 @@ import {
  * the marks themselves are this state.
  */
 type StepLink = {
-  /** The keys under the pointer: one step's, or a whole card's. */
+  /** The panel keys under the pointer. */
   hovered: readonly string[];
   /** The step that was chosen, held until it is chosen again. */
   chosen: string | null;
-  /** Marks the steps an element answers to, for a surface that knows its own key. */
+  /** Marks the steps a panel row or span answers to. */
   mark: (keys: string) => void;
-  /** Marks what the pointer is over inside the card whose handler this is. */
-  enter: (event: ReactPointerEvent<HTMLElement>) => void;
   /** Takes the pointer's mark off. */
   leave: () => void;
   /** Chooses a step, or gives it up when it is the one already chosen. */
@@ -46,7 +42,6 @@ const DISABLED_STEP_LINK: StepLink = {
   hovered: [],
   chosen: null,
   mark: () => {},
-  enter: () => {},
   leave: () => {},
   choose: () => {},
 };
@@ -71,20 +66,12 @@ function StepLinkProvider({ activeRun, children }: Readonly<{ activeRun: number 
 
   const show = useCallback((keys: string) => {
     const next = keys.split(" ").filter((key) => key.length > 0);
-    // The same marks twice in a row are not news: a pointer crossing a card fires this
-    // for every element it crosses, and none of them should cost a render.
+    // The same mark twice in a row is not news: a pointer crossing a row's children
+    // should not cost a render.
     setHovered((current) => (current.join(" ") === next.join(" ") ? current : next));
   }, []);
 
   const mark = useCallback((keys: string) => show(keys), [show]);
-
-  const enter = useCallback((event: ReactPointerEvent<HTMLElement>) => {
-    // The deepest drawing under the pointer is the one meant: a card may hold a whole
-    // trace, and the block inside it is the step the pointer is really on.
-    const target = event.target as HTMLElement | null;
-    const block = target?.closest?.("[data-steps]") as HTMLElement | null | undefined;
-    show(block?.dataset.steps ?? (event.currentTarget as HTMLElement).dataset.steps ?? "");
-  }, [show]);
 
   const leave = useCallback(() => {
     setHovered((current) => (current.length === 0 ? current : []));
@@ -124,10 +111,9 @@ function StepLinkProvider({ activeRun, children }: Readonly<{ activeRun: number 
     hovered,
     chosen,
     mark,
-    enter,
     leave,
     choose: (key: string) => setChosen((current) => (current === key ? null : key)),
-  }), [hovered, chosen, mark, enter, leave]);
+  }), [hovered, chosen, mark, leave]);
 
   return <StepLinkContext.Provider value={value}>{children}</StepLinkContext.Provider>;
 }
@@ -144,20 +130,18 @@ export function touches(keys: readonly string[], answering: string): boolean {
 }
 
 /**
- * The class a row or a stretch of the run wears: banded while any step it names is the
- * one under the pointer, or the one being held. Several keys are marked at once here,
- * because a hovered card is a hover over every step that card holds.
+ * The class a row or a stretch of the run wears: banded while that panel piece is the
+ * one under the pointer, or the one being held.
  */
 export function marked(base: string, answering: string, link: Pick<StepLink, "hovered" | "chosen">): string {
   return `${base}${touches(link.hovered, answering) ? " is-linked" : ""}${heldBy(answering, link) ? " is-pointed" : ""}`;
 }
 
 /**
- * The class a drawing in the thread wears. The chat marks the drawing the pointer is on
- * rather than everything it contains: a card and one block of the trace inside it are
- * different things to point at, so a pointer on the card marks the card, a pointer on a
- * block marks that block, and a choice marks whichever of the two the chat is drawing —
- * the stylesheet gives the band to the innermost marking, which is what decides that.
+ * The class a drawing in the thread wears. The thread is no longer a source for the
+ * panel — hovering cards made the stats rail too noisy — but it still answers panel
+ * hover and choice. A panel row points to the deepest drawing for its key: a block when
+ * the trace is open, otherwise the card that owns it.
  */
 export function pointed(base: string, answering: string, link: Pick<StepLink, "hovered" | "chosen">): string {
   const on = link.hovered.length === 1 ? touches(link.hovered, answering) : link.hovered.join(" ") === answering;

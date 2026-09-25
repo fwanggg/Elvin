@@ -224,7 +224,7 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen }: Assist
                 const reasoningKeys = spanKeys(runIndex, reasoningSpans);
                 const reasoningLabelText = reasoningLabel(turnStats, reasoningChars, reasoningSpans.reduce((sum, span) => sum + span.ms, 0));
                 return (
-                  <ReasoningRoot key={`${part.indices[0]}-${defaultOpen}`} className={pointed("reasoning-root", reasoningKeys, link)} data-steps={reasoningKeys} onPointerOver={link.enter} onPointerLeave={link.leave} streaming={streaming} defaultOpen={defaultOpen}>
+                  <ReasoningRoot key={`${part.indices[0]}-${defaultOpen}`} className={pointed("reasoning-root", reasoningKeys, link)} data-steps={reasoningKeys} streaming={streaming} defaultOpen={defaultOpen}>
                     {reasoningLabelText !== undefined && <span className="row-stat">{reasoningLabelText}</span>}
                     <ReasoningTrigger className="reasoning-trigger" active={streaming} />
                     <ReasoningContent aria-busy={streaming}>
@@ -297,7 +297,7 @@ function ThoughtGroup({ label, seconds, running, defaultOpen, steps, children }:
   const counted = seconds !== undefined && seconds >= 1;
 
   return (
-    <Collapsible className={pointed("thought-group", steps, link)} data-steps={steps} onPointerOver={link.enter} onPointerLeave={link.leave} open={open} onOpenChange={setUserOpen}>
+    <Collapsible className={pointed("thought-group", steps, link)} data-steps={steps} open={open} onOpenChange={setUserOpen}>
       <CollapsibleTrigger className="thought-trigger">
         <ThinkingIndicator label={label} active={running} elapsed={running && counted ? `${seconds}s` : undefined} />
         <span aria-hidden className="thought-chevron">{open ? "⌄" : "›"}</span>
@@ -507,7 +507,7 @@ function ToolCard({ name, args, result, defaultOpen, run, span, totalMs, slowest
   const keys = span !== undefined ? spanKey(run, span) : "";
 
   return (
-    <div className={pointed("part-card", keys, link)} data-steps={keys.length > 0 ? keys : undefined} onPointerOver={link.enter} onPointerLeave={link.leave}>
+    <div className={pointed("part-card", keys, link)} data-steps={keys.length > 0 ? keys : undefined}>
       <button className="part-head" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
         <span>✓ Used tool <strong>{name}</strong></span>
         {span && isMeasurable(span.ms) && (
