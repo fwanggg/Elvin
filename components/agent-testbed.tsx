@@ -10,6 +10,7 @@ import { GATEWAY_PROMPT } from "@/lib/gateway-prompt";
 import { localHistory, readApiKey, readConnection, writeApiKey, writeConnection } from "@/lib/session-store";
 import { DevModeAssistantMessage, DevModeUserMessage, UserModeAssistantMessage, UserModeUserMessage } from "@/components/sandbox/messages";
 import { RunPanel } from "@/components/sandbox/run-panel";
+import { SessionList } from "@/components/session-list";
 import { useRuns } from "@/components/sandbox/runs";
 import { StepDebugBoundary } from "@/components/sandbox/step-link";
 import {
@@ -105,6 +106,8 @@ type ControlSidebarProps = Readonly<{
   design: Design;
   viewMode: ViewMode;
   emoji: Toggle;
+  /** The rail's own block, above the knobs: filled by the shell, which holds the runtime. */
+  sessions: ReactNode;
   onAppThemeChange: (value: AppTheme) => void;
   onPatternChange: (value: Pattern) => void;
   onViewportChange: (value: Viewport) => void;
@@ -141,7 +144,6 @@ type StageToolbarProps = Readonly<{
   model: string;
   models: string[];
   onDisconnect: () => void;
-  onStartThread: () => void;
   onModelChange: (value: string) => void;
 }>;
 
@@ -250,10 +252,12 @@ export function AgentTestbed(): ReactNode {
   const [connection, setConnection] = useState<ConnectionState>("demo");
   const [connectionError, setConnectionError] = useState("");
   const [threadGeneration, setThreadGeneration] = useState(0);
+  const [threadId, setThreadId] = useState("");
   const sessionRef = useRef("");
 
   useEffect(() => {
     if (sessionRef.current.length === 0) sessionRef.current = storedThreadId();
+    setThreadId(sessionRef.current);
   }, []);
 
   /**
@@ -387,16 +391,25 @@ export function AgentTestbed(): ReactNode {
   const runtime = useLocalRuntime(modelAdapter, { adapters: { history } });
 
   /**
-   * A new thread on the connection that is already open: a fresh session id for
-   * the provider and an empty transcript. Reloading here would drop the agent,
-   * the key and the model list with it.
+   * The conversation the sandbox is on: a new one, or one picked out of the rail.
+   *
+   * The id is written before the switch, because the history adapter reads it from storage — the
+   * load the switch triggers has to find the chosen thread rather than the one being left — and
+   * it goes on the wire as the session, so a provider that remembers threads remembers the right
+   * one. What the thread being left holds stays where it is.
    */
-  function startThread(): void {
-    const id = `elvin-${crypto.randomUUID().slice(0, 8)}`;
+  function openThread(id: string): void {
+    if (id === sessionRef.current) return;
     window.localStorage.setItem(THREAD_STORAGE_KEY, id);
     sessionRef.current = id;
+    setThreadId(id);
     setThreadGeneration((generation) => generation + 1);
     void runtime.threads.switchToNewThread();
+  }
+
+  /** A thread nothing has been said in yet: a fresh session id and an empty transcript. */
+  function startThread(): void {
+    openThread(`elvin-${crypto.randomUUID().slice(0, 8)}`);
   }
   const devMode = viewMode === "dev";
   const effectivePattern: Pattern = devMode ? "thread" : pattern;
@@ -477,7 +490,6 @@ export function AgentTestbed(): ReactNode {
             model={model}
             models={models}
             onDisconnect={disconnect}
-            onStartThread={startThread}
             onModelChange={setModel}
           />
         </nav>
@@ -496,6 +508,7 @@ export function AgentTestbed(): ReactNode {
             onDesignChange={setDesign}
             onViewModeChange={setViewMode}
             onEmojiChange={setEmoji}
+            sessions={<SessionList currentId={threadId} onSelect={openThread} onNewThread={startThread} />}
           />
           <PreviewStage
             isConnected={isConnected}
@@ -536,9 +549,12 @@ function ControlSidebar({
   onDesignChange,
   onViewModeChange,
   onEmojiChange,
+  sessions,
 }: ControlSidebarProps): ReactNode {
   return (
     <aside className="sidebar">
+      {sessions}
+      <div className="section-rule" />
       <PanelSection title="View mode">
         <Segment
           name="view"
@@ -605,21 +621,9 @@ function ControlSidebar({
   );
 }
 
-function StageToolbar({ statusColor, statusHost, statusState, isConnected, model, models, onDisconnect, onStartThread, onModelChange }: StageToolbarProps): ReactNode {
-  const [threadPulse, setThreadPulse] = useState(0);
-
-  function startNewThread(): void {
-    setThreadPulse((pulse) => pulse + 1);
-    onStartThread();
-  }
-
+function StageToolbar({ statusColor, statusHost, statusState, isConnected, model, models, onDisconnect, onModelChange }: StageToolbarProps): ReactNode {
   return (
     <div className="metric-bar">
-      <button className="metric-cell metric-action thread-new" type="button" onClick={startNewThread}>
-        {threadPulse > 0 && <span className="thread-wash" key={`wash-${threadPulse}`} aria-hidden="true" />}
-        <span className={threadPulse > 0 ? "metric-cell-head metric-icon thread-plus" : "metric-cell-head metric-icon"} key={`plus-${threadPulse}`} aria-hidden="true">+</span>
-        <span className="metric-value">New Thread</span>
-      </button>
       <div className="metric-cell metric-agent">
         <div className="metric-cell-head">
           <span>Agent</span>

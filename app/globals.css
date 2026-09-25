@@ -654,6 +654,66 @@ h6 {
   line-height: 1.12;
   text-transform: var(--ds-label-transform);
 }
+/* Sessions: the conversations this browser has, read from the same store the
+   sandbox writes its transcript to. The row in use is marked and stays on top,
+   because it is a conversation even when nothing has been said in it yet. */
+.sessions { display: flex; flex-direction: column; }
+.sessions-head { display: flex; align-items: center; gap: 8px; padding: var(--ds-space-section); }
+.sessions-count {
+  color: var(--color-neutral-500);
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: var(--ds-label-weight);
+  letter-spacing: var(--ds-label-tracking);
+}
+.sessions-new { margin-left: auto; min-height: 30px; padding: 4px 10px; box-shadow: none; font-size: 13px; }
+.sessions-list { margin: 0; padding: 0; list-style: none; }
+.sessions-list li + li { border-top: var(--ds-border) solid var(--ds-edge-soft); }
+.session {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  padding: 9px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+.session:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.session.is-live { background: var(--color-neutral-100); cursor: default; }
+.session:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.session-line { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.session-mark { flex: none; width: 7px; height: 7px; background: var(--color-accent); border-radius: var(--ds-radius); }
+.session-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: var(--ds-heading-weight);
+  letter-spacing: var(--ds-heading-tracking);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.session-when {
+  flex: none;
+  color: var(--color-neutral-500);
+  font-family: var(--font-heading);
+  font-size: 11px;
+  font-weight: var(--ds-label-weight);
+  letter-spacing: var(--ds-label-tracking);
+}
+.session.is-live .session-when { color: var(--color-accent); }
+.session-meta {
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--color-neutral-600);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .seg { display: flex; }
 /* Each segment carries the border so its box is the same 34px as .select; the
    group outline is the outer borders of the first and last segment. */
@@ -802,16 +862,6 @@ h6 {
 .metric-action { flex: none; border: 0; background: transparent; color: var(--color-text); font: inherit; cursor: pointer; text-align: left; }
 .metric-action .metric-cell-head { color: inherit; }
 .metric-action:hover { background: color-mix(in srgb, var(--color-text) 6%, transparent); }
-/* New Thread, the one stage cell that starts something. A press tints it under
-   the finger, and the click leaves a wash of the accent fading back out while
-   the plus turns a quarter — a quarter leaves the glyph a plus, so the mark has
-   a beginning and a settled end instead of a jump. */
-.thread-new { position: relative; overflow: hidden; background: var(--color-accent); color: var(--color-bg); }
-.thread-new:hover { background: var(--color-accent-600); }
-.thread-new:active { background: var(--color-accent-700); }
-@keyframes thread-wash { from { opacity: .3; } to { opacity: 0; } }
-@keyframes thread-plus-turn { from { transform: rotate(0deg); } to { transform: rotate(90deg); } }
-@media (prefers-reduced-motion: reduce) { .thread-wash, .thread-plus { animation: none; } }
 .canvas {
   flex: 1;
   min-height: 0;

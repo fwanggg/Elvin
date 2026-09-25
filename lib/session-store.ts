@@ -1,4 +1,4 @@
-import type { ExportedMessageRepository, ExportedMessageRepositoryItem, ThreadHistoryAdapter } from "@assistant-ui/react";
+import type { ExportedMessageRepository, ExportedMessageRepositoryItem, ThreadHistoryAdapter, ThreadMessage } from "@assistant-ui/react";
 
 /**
  * What the browser keeps so a reload comes back to the conversation it was on.
@@ -19,9 +19,13 @@ import type { ExportedMessageRepository, ExportedMessageRepositoryItem, ThreadHi
 
 const TRANSCRIPT_PREFIX = "elvin.transcript.";
 const CONNECTION_KEY = "elvin.connection";
+const THREAD_KEY = "elvin.threadId";
 const API_KEY = "elvin.apiKey";
 const VERSION = 1;
-const KEEP_THREADS = 3;
+const KEEP_THREADS = 12;
+
+/** Listeners wanting to hear about a transcript being written; see `subscribeToTranscripts`. */
+const listeners = new Set<() => void>();
 
 type StoredThread = {
   version: number;
@@ -66,8 +70,81 @@ export function localHistory(threadId: () => string): ThreadHistoryAdapter {
       stored.savedAt = Date.now();
       write(TRANSCRIPT_PREFIX + id, JSON.stringify(stored));
       prune();
+      for (const listener of listeners) listener();
     },
   };
+}
+
+/** One conversation in the list: what it was about, and what it cost. */
+export type SessionSummary = {
+  id: string;
+  /** The first thing asked, or empty for a thread nothing has been said in yet. */
+  title: string;
+  /** How many turns were taken in it. */
+  runs: number;
+  /** What its answers took, summed over the turns that reported a window. */
+  ms: number;
+  savedAt: number;
+};
+
+/**
+ * Notified whenever a transcript is written. The adapter writes as messages land, outside React's
+ * view, so this is how a list of transcripts keeps up with the thread it is describing.
+ */
+export function subscribeToTranscripts(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+/** The thread the sandbox is on, or empty if this browser has never started one. */
+export function currentThreadId(): string {
+  return read(THREAD_KEY);
+}
+
+/**
+ * Every conversation this browser has, the one in use first — including a thread nothing has been
+ * said in yet, which is a session too and the one the list would otherwise be missing.
+ */
+export function listSessions(): SessionSummary[] {
+  const current = currentThreadId();
+  const sessions: SessionSummary[] = [];
+
+  for (let index = 0; index < window.localStorage.length; index += 1) {
+    const key = window.localStorage.key(index);
+    if (!key?.startsWith(TRANSCRIPT_PREFIX)) continue;
+    const id = key.slice(TRANSCRIPT_PREFIX.length);
+    const stored = readThread(id);
+    if (stored) sessions.push({ id, ...summarize(stored) });
+  }
+
+  sessions.sort((left, right) => (left.id === current ? -1 : right.id === current ? 1 : 0) || right.savedAt - left.savedAt);
+  if (sessions.some((session) => session.id === current)) return sessions;
+  return [{ id: current, title: "", runs: 0, ms: 0, savedAt: Date.now() }, ...sessions];
+}
+
+function summarize(stored: StoredThread): Omit<SessionSummary, "id"> {
+  const messages = stored.messages.map((entry) => entry.message);
+  return {
+    title: titleOf(messages),
+    runs: messages.filter((message) => message.role === "user").length,
+    ms: messages.reduce((total, message) => total + (message.role === "assistant" ? message.metadata?.timing?.totalStreamTime ?? 0 : 0), 0),
+    savedAt: stored.savedAt,
+  };
+}
+
+function titleOf(messages: readonly ThreadMessage[]): string {
+  const asked = messages.find((message) => message.role === "user" && partsOf(message).length > 0);
+  return asked ? partsOf(asked) : "";
+}
+
+function partsOf(message: ThreadMessage): string {
+  return message.content
+    .map((part) => (part.type === "text" ? part.text : ""))
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export function readConnection(): StoredConnection | null {
