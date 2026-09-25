@@ -15,7 +15,7 @@ export type UsageTotals = {
   reasoningTokens?: number;
 };
 
-/** What a window was spent on. The answer is not a span: it is the turn's output. */
+/** What a measured work window was spent on. The output is measured separately. */
 export type SpanKind = "reasoning" | "tool";
 
 /**
@@ -50,7 +50,7 @@ export type TurnSpan = {
 
 export type TurnStats = {
   spans: TurnSpan[];
-  /** The answer's own window: first token to last. Not a span — it is the output. */
+  /** The output's own window: first visible answer token to last. */
   answerMs?: number;
   /**
    * The work window the spans are laid out against: where the first window opens
@@ -104,6 +104,11 @@ export function spanKey(run: number | undefined, span: TurnSpan): string {
 /** Those keys as one card carries them: what the panel's hover puts to the document. */
 export function spanKeys(run: number | undefined, spans: readonly TurnSpan[]): string {
   return spans.map((span) => spanKey(run, span)).join(" ");
+}
+
+/** The answer text's key: one output drawing in the panel, one visible answer in chat. */
+export function outputKey(run: number | undefined): string {
+  return `${run ?? 0}-output`;
 }
 
 /** Row stats read in seconds, one decimal: "0.3s", "12.6s". */

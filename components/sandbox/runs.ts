@@ -2,13 +2,13 @@
 
 import { useMemo } from "react";
 import { useAuiState } from "@assistant-ui/react";
-import { spanKey, turnStatsOf, type TurnStats } from "@/lib/turn-stats";
+import { outputKey, spanKey, turnStatsOf, type TurnStats } from "@/lib/turn-stats";
 
 /** One step of a run, ready to draw: what it was, and its window on the clock. */
 export type RunStep = {
   key: string;
-  /** Which of the two kinds of work it was, for the panel's own rules. */
-  role: "reasoning" | "call";
+  /** Which drawing in the panel it is. */
+  role: "reasoning" | "call" | "output";
   label: string;
   ms: number;
   /** Where the window sat on the turn's clock, for drawing it on the run's span. */
@@ -32,7 +32,7 @@ export type Run = {
   /** The turn's wall clock, as the message's timing badge measures it. */
   ms?: number;
   stats?: TurnStats;
-  /** The thinking runs and the calls, in the order they happened. */
+  /** The thinking, calls, and visible output in the order they happened. */
   steps: RunStep[];
 };
 
@@ -44,9 +44,9 @@ function promptOf(message: { readonly content: readonly { readonly type: string;
     .trim();
 }
 
-function stepsOf(run: number, stats: TurnStats | undefined, names: Record<string, string>): RunStep[] {
+function stepsOf(run: number, stats: TurnStats | undefined, names: Record<string, string>, runMs: number | undefined): RunStep[] {
   if (!stats) return [];
-  return stats.spans.map((span) => ({
+  const steps: RunStep[] = stats.spans.map((span) => ({
     key: spanKey(run, span),
     role: span.kind === "reasoning" ? "reasoning" : "call",
     label: span.kind === "reasoning" ? "reasoning" : names[span.id ?? ""] ?? span.id ?? "call",
@@ -55,6 +55,19 @@ function stepsOf(run: number, stats: TurnStats | undefined, names: Record<string
     ...(span.tokens !== undefined ? { tokens: span.tokens } : {}),
     ...(span.textFrom !== undefined && span.textTo !== undefined ? { chars: span.textTo - span.textFrom } : {}),
   }));
+  if (stats.answerMs !== undefined) {
+    const leadMs = stats.leadMs ?? 0;
+    const e2eMs = runMs ?? leadMs + stats.totalMs + stats.answerMs;
+    steps.push({
+      key: outputKey(run),
+      role: "output",
+      label: "output",
+      ms: stats.answerMs,
+      startMs: Math.max(0, e2eMs - stats.answerMs - leadMs),
+      ...(stats.usage?.completionTokens !== undefined ? { tokens: stats.usage.completionTokens } : {}),
+    });
+  }
+  return steps;
 }
 
 /**
@@ -94,7 +107,7 @@ export function useRuns(): Run[] {
         anchor: message.id,
         ...(ms !== undefined ? { ms } : {}),
         ...(stats ? { stats } : {}),
-        steps: stepsOf(runs.length + 1, stats, names),
+        steps: stepsOf(runs.length + 1, stats, names, ms),
       });
     });
 

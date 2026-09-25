@@ -54,17 +54,15 @@ function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
   const calls = run.steps.filter((step) => step.role === "call");
   const longestCallMs = calls.reduce((longest, step) => Math.max(longest, step.ms), 0);
   const reasoningMs = run.steps.reduce((sum, step) => sum + (step.role === "reasoning" ? step.ms : 0), 0);
-  // The run end to end: the turn as its own badge measures it, from the request to
-  // the last token, with the wait for that first token and the answer it wrote
-  // inside it. Every window is drawn on that one clock at the offset it sat at, so
-  // the shape here is the record's own rather than a second telling of it — which is
-  // also why this figure and the run's own total are the same number.
+  // The run end to end: the turn as its own badge measures it, from request to last
+  // token. Every measured drawing — work windows and the visible output — is laid onto
+  // that one clock at the offset it sat at.
   const leadMs = run.stats?.leadMs ?? 0;
-  const e2eMs = run.ms ?? leadMs + (run.stats?.totalMs ?? 0);
+  const e2eMs = run.ms ?? leadMs + (run.stats?.totalMs ?? 0) + (run.stats?.answerMs ?? 0);
 
-  // What no window claims: the request in flight — the wait before the first word, the
-  // calls running between the windows, the answer being written. It is the rest of the
-  // run, which is what the span's hatching draws and what this figure counts.
+  // What no row claims: the request in flight — the wait before the first word and the
+  // gaps between measured windows. The visible answer is now its own output row, so it no
+  // longer lives in this remainder.
   const inFlightMs = Math.max(0, e2eMs - run.steps.reduce((sum, step) => sum + step.ms, 0));
 
   const total = useWalked(e2eMs, asSpan);

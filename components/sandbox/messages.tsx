@@ -11,7 +11,7 @@ import { ToolCall } from "@/components/assistant-ui/elements/tool-call";
 import { TooltipIconButton } from "@/components/assistant-ui/elements/tooltip-icon-button";
 import { chipOf, describeResult, describeStep } from "@/lib/step-labels";
 import { pointed, useStepLink } from "@/components/sandbox/step-link";
-import { formatRunIndex, formatSpan, formatTokens, isMeasurable, isStandout, spanKey, spanKeys, spansOf, turnStatsOf, type TurnStats, type TurnSpan } from "@/lib/turn-stats";
+import { formatRunIndex, formatSpan, formatTokens, isMeasurable, isStandout, outputKey, spanKey, spanKeys, spansOf, turnStatsOf, type TurnStats, type TurnSpan } from "@/lib/turn-stats";
 import { type Toggle, type ViewMode } from "@/components/sandbox/knobs";
 import {
   AuiIf,
@@ -250,7 +250,7 @@ export function AssistantRuntimeMessage({ viewMode, emoji, defaultOpen }: Assist
                 if (viewMode === "user") return <ToolCallRow key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} argsText={part.argsText} result={part.result} isError={part.isError} defaultOpen={defaultOpen} />;
                 return <ToolCard key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} result={part.result} defaultOpen={defaultOpen} run={runIndex} span={spansOf(turnStats, "tool", part.toolCallId)[0]} totalMs={totalMs} slowestCallMs={slowestCallMs} />;
               case "text":
-                return <StreamingTextPart type="text" text={part.text} status={part.status} />;
+                return <StreamingTextPart text={part.text} status={part.status} run={runIndex} />;
               default:
                 return null;
             }
@@ -408,12 +408,14 @@ function useThinkingSeconds(active: boolean): number | undefined {
  * Soft streaming: the same text the plain renderer shows, handed to the
  * assistant-ui element so the newest words land tinted and settle into ink.
  */
-const StreamingTextPart: TextMessagePartComponent = ({ text, status }) => {
+function StreamingTextPart({ text, status, run }: Readonly<{ text: string; status: { type: string }; run: number | undefined }>): ReactNode {
   const segments = useMemo<Segment[]>(() => [{ text }], [text]);
   const count = useMemo(() => text.split(" ").length, [text]);
+  const link = useStepLink();
+  const key = outputKey(run);
 
-  return <StreamingText className="assistant-text streaming-text" segments={segments} count={count} streaming={status.type === "running"} />;
-};
+  return <StreamingText className={pointed("assistant-text streaming-text", key, link)} data-steps={key} segments={segments} count={count} streaming={status.type === "running"} />;
+}
 
 /**
  * The assistant-ui action bar: copy, rate, speak, regenerate, the more menu, and
