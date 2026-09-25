@@ -62,17 +62,24 @@ function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
   const leadMs = run.stats?.leadMs ?? 0;
   const e2eMs = run.ms ?? leadMs + (run.stats?.totalMs ?? 0) + (run.stats?.answerMs ?? 0);
 
-  // What no row claims: the request in flight — the wait before the first word and the
-  // gaps between measured windows. The visible answer is now its own output row, so it no
-  // longer lives in this remainder.
-  const inFlightMs = Math.max(0, e2eMs - run.steps.reduce((sum, step) => sum + step.ms, 0));
+  // What no row claims, said in two parts. The ground before the first window opened is
+  // the model's own wait — what it spent before saying anything — and what is left is the
+  // ground between windows: the pause after a tool answers, the wait for the next call,
+  // and the tail. Only the first call's wait is bounded by the first window, so a later
+  // call's sits in that remainder. The visible answer is its own output row, so it is in
+  // neither.
+  const unclaimedMs = Math.max(0, e2eMs - run.steps.reduce((sum, step) => sum + step.ms, 0));
+  const modelWaitMs = isMeasurable(leadMs) ? leadMs : 0;
+  const unattributedMs = Math.max(0, unclaimedMs - modelWaitMs);
+  const modelWaitSize = modelWaitMs > 0 ? place(0, modelWaitMs, e2eMs).size : 0;
 
   const total = useWalked(e2eMs, asSpan);
   const ttft = useWalked(ttfts[0], asSpan);
   const asked = useWalked(usage?.promptTokens, asCompact);
   const answered = useWalked(usage?.completionTokens, asCompact);
   const callCount = useWalked(calls.length, asWhole);
-  const inFlight = useWalked(isMeasurable(inFlightMs) ? inFlightMs : undefined, asSpan);
+  const modelWait = useWalked(modelWaitMs > 0 ? modelWaitMs : undefined, asSpan);
+  const unattributed = useWalked(isMeasurable(unattributedMs) ? unattributedMs : undefined, asSpan);
 
   return (
     <section className="run-detail">
@@ -80,10 +87,12 @@ function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
       {run.steps.length > 0 && (
         <>
           {/* The run's whole span, and inside it every window where it sat. The ground
-              the windows do not cover is the request in flight, drawn hatched here and
-              named under the span — hovering or choosing a window says which step it
-              measures, the same as its row below. */}
+              before the first window is the model's own wait, drawn solid because it is a
+              wait rather than a step; the ground between windows stays hatched, because it
+              is whatever ran between two measured things. Hovering or choosing a window
+              says which step it measures, the same as its row below. */}
           <div className="run-e2e">
+            {modelWaitSize > 0 && <span className="e2e-wait" style={{ inlineSize: `${modelWaitSize}%` }} aria-hidden="true" />}
             {run.steps.map((step, index) => {
               const spot = place(leadMs + step.startMs, step.ms, e2eMs);
               return (
@@ -103,11 +112,24 @@ function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
               );
             })}
           </div>
-          <p className="run-e2e-key">
-            <span className="run-e2e-swatch" aria-hidden="true" />
-            <span>In flight</span>
-            <span className="run-e2e-key-ms" ref={inFlight} />
-          </p>
+          {(modelWaitSize > 0 || isMeasurable(unattributedMs)) && (
+            <p className="run-e2e-key">
+              {modelWaitSize > 0 && (
+                <span className="run-e2e-key-part">
+                  <span className="run-e2e-swatch wait" aria-hidden="true" />
+                  <span>Model wait</span>
+                  <span className="run-e2e-key-ms" ref={modelWait} />
+                </span>
+              )}
+              {isMeasurable(unattributedMs) && (
+                <span className="run-e2e-key-part">
+                  <span className="run-e2e-swatch" aria-hidden="true" />
+                  <span>Unattributed</span>
+                  <span className="run-e2e-key-ms" ref={unattributed} />
+                </span>
+              )}
+            </p>
+          )}
         </>
       )}
       <dl className="run-facts">

@@ -114,8 +114,13 @@ type DeltaState = {
   /** Which channel supplied the reasoning, so a mirrored copy is not appended twice. */
   reasoningSource: "details" | "field" | null;
   toolCalls: Map<string, ToolState>;
-  /** The timeline, in epoch ms. */
+  /** When the round being consumed began, which the timeline uses as the floor for a
+   *  window that has nothing before it. */
   roundStartedAt: number;
+  /** When the turn itself began, which no round overwrites: the wait before the first
+   *  window is measured back to here, so a turn that runs tools cannot have its own
+   *  start moved out from under it. */
+  turnStartedAt: number;
   spans: TurnSpan[];
   /** Epoch of the turn's first activity: the timeline's zero. */
   startedAt: number | null;
@@ -561,12 +566,14 @@ function eventStream(upstream: Response, sessionId: string | null, continueAfter
   const stream = new ReadableStream({
     async start(controller) {
       const send = (event: StreamEvent) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+      const turnStartedAt = Date.now();
       const state: DeltaState = {
         text: "",
         reasoning: "",
         reasoningSource: null,
         toolCalls: new Map(),
-        roundStartedAt: Date.now(),
+        roundStartedAt: turnStartedAt,
+        turnStartedAt,
         spans: [],
         startedAt: null,
         cursorAt: null,
@@ -907,7 +914,7 @@ function turnStats(state: DeltaState): TurnStats {
     // The turn's own clock starts when the request did; the windows' clock starts at
     // the first thing the provider said. A surface that draws the run end to end
     // needs both, so the difference is filed rather than left to be guessed.
-    ...(state.startedAt !== null ? { leadMs: Math.max(0, state.startedAt - state.roundStartedAt) } : {}),
+    ...(state.startedAt !== null ? { leadMs: Math.max(0, state.startedAt - state.turnStartedAt) } : {}),
     // The model's own first-token wait, per call, in call order: the first entry is
     // the one a reader waited on, and a turn that ran tools files each continuation
     // after it. Absent where nothing streamed, since a figure that arrives whole has
