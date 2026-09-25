@@ -209,6 +209,7 @@ export function DevModeAssistantMessage({ emoji, defaultOpen }: AssistantRuntime
   const longestCallMs = callSpans.reduce((longest, span) => Math.max(longest, span.ms), 0);
   const slowestCallMs = callSpans.length > 1 && isMeasurable(longestCallMs) ? longestCallMs : undefined;
   const reasoningChars = useAuiState((state) => state.message.parts.reduce((total, part) => (part.type === "reasoning" ? total + part.text.length : total), 0));
+  const running = useAuiState((state) => state.message.status?.type === "running");
   const groupBy = useMemo(() => groupPartByType({ reasoning: ["group-reasoning"] }), []);
 
   return (
@@ -222,7 +223,7 @@ export function DevModeAssistantMessage({ emoji, defaultOpen }: AssistantRuntime
           {({ part, children }) => {
             switch (part.type) {
               case "group-reasoning": {
-                const streaming = part.status.type === "running";
+                const streaming = running;
                 const reasoningSpans = spansOf(turnStats, "reasoning");
                 const reasoningKeys = spanKeys(runIndex, reasoningSpans);
                 const reasoningLabelText = reasoningLabel(turnStats, reasoningChars, reasoningSpans.reduce((sum, span) => sum + span.ms, 0));

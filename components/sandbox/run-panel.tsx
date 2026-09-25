@@ -1,5 +1,6 @@
 "use client";
 
+import { BrainIcon, ChevronRightIcon, HammerIcon, MessageSquareTextIcon, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefCallback } from "react";
 import { formatRunIndex, formatSpan, formatTokenCount, isMeasurable, isStandout } from "@/lib/turn-stats";
 import { marked, useStepLink } from "./step-link";
@@ -66,7 +67,6 @@ function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
   const inFlightMs = Math.max(0, e2eMs - run.steps.reduce((sum, step) => sum + step.ms, 0));
 
   const total = useWalked(e2eMs, asSpan);
-  const duration = useWalked(isMeasurable(reasoningMs) ? reasoningMs : undefined, asSpan);
   const asked = useWalked(usage?.promptTokens, asCompact);
   const answered = useWalked(usage?.completionTokens, asCompact);
   const callCount = useWalked(calls.length, asWhole);
@@ -114,16 +114,16 @@ function RunDetail({ run }: Readonly<{ run: Run }>): ReactNode {
           <dd ref={callCount} />
         </div>
         <div>
-          <dt>Reasoning</dt>
-          <dd>{isMeasurable(reasoningMs) ? <span ref={duration} /> : "—"}</dd>
-        </div>
-        <div>
-          <dt>Tok In / Out</dt>
-          <dd>{usage === null ? "—" : <><span ref={asked} />{" / "}<span ref={answered} /></>}</dd>
-        </div>
-        <div>
-          <dt>Run Total Time</dt>
+          <dt>Total dur</dt>
           <dd ref={total} />
+        </div>
+        <div>
+          <dt>Token in</dt>
+          <dd>{usage === null ? "—" : <span ref={asked} />}</dd>
+        </div>
+        <div>
+          <dt>Token out</dt>
+          <dd>{usage === null ? "—" : <span ref={answered} />}</dd>
         </div>
       </dl>
       {run.steps.length > 0 && (
@@ -165,7 +165,7 @@ function StepRow({ step, slow }: Readonly<{ step: RunStep; slow: boolean }>): Re
         onPointerEnter={() => link.mark(step.key)}
         onPointerLeave={link.leave}
       >
-        <span className="step-name">{step.label}</span>
+        <span className="step-name"><StepIcon role={step.role} />{stepLabel(step)}</span>
         <span className="step-tokens">
           {estimated && <span aria-hidden="true">≈</span>}
           <span ref={tokens} />
@@ -174,6 +174,20 @@ function StepRow({ step, slow }: Readonly<{ step: RunStep; slow: boolean }>): Re
       </button>
     </li>
   );
+}
+
+function StepIcon({ role }: Readonly<{ role: RunStep["role"] }>): ReactNode {
+  const Icon: LucideIcon = role === "reasoning" ? BrainIcon : role === "call" ? HammerIcon : MessageSquareTextIcon;
+  return (
+    <>
+      <ChevronRightIcon className="step-chevron" aria-hidden="true" />
+      <Icon className="step-role-icon" aria-hidden="true" />
+    </>
+  );
+}
+
+function stepLabel(step: RunStep): string {
+  return step.role === "call" ? `${step.label} (tool)` : step.label;
 }
 
 /** Every figure the panel walks is written the same way, wherever it walks. */

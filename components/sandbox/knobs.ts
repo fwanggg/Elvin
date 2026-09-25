@@ -10,7 +10,6 @@ export type AppTheme = "dark" | "light";
  * agent's parts as they arrive, User Mode humanizes them for a product surface.
  */
 export type ViewMode = "dev" | "user";
-export type OpenMode = "collapsed" | "expanded";
 /** How the sandbox is framed on the canvas, not something the app itself changes. */
 export type Viewport = "desktop" | "mobile";
 export type Toggle = "on" | "off";
