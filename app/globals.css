@@ -959,7 +959,39 @@ h6 {
 .message-row.emoji > .message-emoji { left: 0; }
 .user-bubble.emoji { position: relative; margin-right: 30px; }
 .user-bubble.emoji > .message-emoji { left: 100%; margin-left: 8px; }
-.assistant-text { font-size: var(--ds-body-size); line-height: 1.65; text-wrap: pretty; white-space: pre-wrap; }
+/* The answer, as the markdown agents write in. Every element is drawn from the sandbox's own
+   ink, rules and surfaces rather than from a renderer's theme, so a language styles its
+   markdown the way it styles everything else — and none of it is white-space: pre-wrap, which
+   would keep the source's line breaks and show the syntax instead of the writing. */
+.markdown { font-size: var(--ds-body-size); line-height: 1.65; text-wrap: pretty; }
+.markdown > :first-child { margin-block-start: 0; }
+.markdown > :last-child { margin-block-end: 0; }
+.markdown p { margin: 0 0 .85em; }
+.markdown h1, .markdown h2, .markdown h3, .markdown h4 { margin: 1.3em 0 .5em; font-family: var(--font-heading); font-weight: var(--ds-heading-weight); letter-spacing: var(--ds-heading-tracking); line-height: 1.15; }
+.markdown h1 { font-size: 1.5em; }
+.markdown h2 { font-size: 1.26em; }
+.markdown h3 { font-size: 1.1em; }
+.markdown h4 { font-size: 1em; }
+.markdown ul, .markdown ol { margin: 0 0 .85em; padding-inline-start: 1.5em; }
+.markdown ul { list-style: disc; }
+.markdown ol { list-style: decimal; }
+.markdown li { margin: .25em 0; }
+.markdown li::marker { color: color-mix(in srgb, var(--a-fg) 55%, transparent); }
+.markdown li > ul, .markdown li > ol { margin-block: .25em 0; }
+.markdown a { color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.markdown strong { font-weight: 800; }
+.markdown hr { height: var(--ds-border); margin: 1.2em 0; border: 0; background: var(--a-border); }
+.markdown blockquote { margin: 0 0 .85em; padding-inline-start: 14px; border-inline-start: 2px solid var(--a-border); color: var(--a-muted); }
+.markdown img { max-width: 100%; height: auto; }
+/* Code reads in two registers: a word in the sentence, and a block on a surface of its own. The
+   pair is told apart structurally, so a fence needs no class to carry its own treatment. */
+.markdown code { padding: .12em .35em; border: var(--ds-border) solid var(--a-border); background: var(--a-surface); font-family: var(--font-mono); font-size: .88em; }
+.markdown pre { margin: 0 0 .85em; padding: 12px 14px; overflow-x: auto; border: var(--ds-border) solid var(--a-border); background: var(--a-chrome); }
+.markdown pre code { padding: 0; border: 0; background: transparent; font-size: .85em; line-height: 1.55; }
+/* A table keeps its own measure and scrolls rather than squeezing its columns. */
+.markdown table { display: block; width: fit-content; max-width: 100%; margin: 0 0 .85em; overflow-x: auto; border-collapse: collapse; font-size: .95em; }
+.markdown th, .markdown td { padding: 6px 10px; border: var(--ds-border) solid var(--a-border); text-align: start; vertical-align: top; }
+.markdown th { background: var(--a-surface); font-family: var(--font-heading); font-weight: var(--ds-label-weight); }
 /* A turn can call several tools in a row, and the cards then stack: each carries
    its own gap so a stack reads as separate calls rather than one striped block.
    The scaffold's .tool-card has always done the same. */
@@ -1180,11 +1212,6 @@ h6 {
    counting is left in the place the line took instead of being thrown away with the turn.
    No dot and no shimmer — nothing is in flight any more. */
 .thinking-settled { margin: 0; color: var(--a-muted); font-size: 13px; letter-spacing: .01em; }
-/* Streaming text (assistant-ui element). The element bounds itself for a demo
-   column; here it takes the message's own measure. The tint, the caret and
-   the fade the words arrive on are the element's own — its blue tokens are named
-   in the palette above, which is what makes them follow the design language. */
-.streaming-text { max-width: none; min-height: 0; }
 /* A turn's calls, stacked under the row that named the phase. The step reads in
    that row's own register — 13px on muted ink — and it has to be said from here:
    `button { font: inherit }` is unlayered, so the size and the tint the element

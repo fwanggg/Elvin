@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CheckIcon, CopyIcon, DownloadIcon, EllipsisIcon, RefreshCwIcon, ThumbsDownIcon, ThumbsUpIcon, Volume2Icon } from "lucide-react";
 import { MessageTiming } from "@/components/assistant-ui/elements/message-timing.aui";
 import { ReasoningContent, ReasoningRoot, ReasoningText, ReasoningTrigger } from "@/components/assistant-ui/elements/reasoning";
-import { StreamingText, type Segment } from "@/components/assistant-ui/elements/streaming-text";
+import { MarkdownText } from "@/components/assistant-ui/elements/markdown-text";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThinkingIndicator } from "@/components/assistant-ui/elements/thinking-indicator";
 import { ToolCall } from "@/components/assistant-ui/elements/tool-call";
@@ -186,7 +186,7 @@ export function UserModeAssistantMessage({ emoji, defaultOpen }: AssistantRuntim
               case "tool-call":
                 return <ToolCallRow key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} argsText={part.argsText} result={part.result} isError={part.isError} defaultOpen={defaultOpen} />;
               case "text":
-                return <StreamingTextPart text={part.text} status={part.status} />;
+                return <AnswerText />;
               default:
                 return null;
             }
@@ -242,7 +242,7 @@ export function DevModeAssistantMessage({ emoji, defaultOpen }: AssistantRuntime
               case "tool-call":
                 return <ToolCard key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} result={part.result} defaultOpen={defaultOpen} run={runIndex} span={spansOf(turnStats, "tool", part.toolCallId)[0]} totalMs={totalMs} slowestCallMs={slowestCallMs} />;
               case "text":
-                return <StreamingTextPart text={part.text} status={part.status} run={runIndex} />;
+                return <AnswerText run={runIndex} />;
               default:
                 return null;
             }
@@ -387,17 +387,19 @@ function useThinkingSeconds(active: boolean): number | undefined {
 }
 
 /**
- * Soft streaming: the same text the plain renderer shows, handed to the
- * assistant-ui element so the newest words land tinted and settle into ink.
+ * The answer, parsed as markdown, with Dev Mode's output key on the box around it: `data-steps`
+ * is how the panel finds the drawing again, and it has to sit on an element this component
+ * owns — the renderer's own container is not ours to address.
  */
-function StreamingTextPart({ text, status, run }: Readonly<{ text: string; status: { type: string }; run?: number | undefined }>): ReactNode {
-  const segments = useMemo<Segment[]>(() => [{ text }], [text]);
-  const count = useMemo(() => text.split(" ").length, [text]);
+function AnswerText({ run }: Readonly<{ run?: number | undefined }>): ReactNode {
   const link = useStepLink();
   const key = run === undefined ? undefined : outputKey(run);
-  const className = key === undefined ? "assistant-text streaming-text" : pointed("assistant-text streaming-text", key, link);
 
-  return <StreamingText className={className} data-steps={key} segments={segments} count={count} streaming={status.type === "running"} />;
+  return (
+    <div className={key === undefined ? "markdown" : pointed("markdown", key, link)} data-steps={key}>
+      <MarkdownText />
+    </div>
+  );
 }
 
 /**
