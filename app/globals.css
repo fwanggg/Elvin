@@ -881,18 +881,6 @@ h6 {
   font-size: var(--ds-body-size);
   line-height: 1.55;
 }
-.connect-kicker {
-  justify-self: center;
-  padding: 4px 8px;
-  border-radius: var(--ds-radius);
-  background: var(--a-accent);
-  color: var(--a-accent-fg);
-  font-family: var(--font-heading);
-  font-size: 11px;
-  font-weight: var(--ds-label-weight);
-  letter-spacing: var(--ds-label-tracking);
-  text-transform: var(--ds-label-transform);
-}
 .connect-form { display: grid; gap: 14px; width: min(520px, 100%); margin: 14px auto 0; text-align: left; }
 .connect-field { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 6px 12px; }
 .connect-field-label { grid-column: 2; color: var(--a-fg); font-family: var(--font-heading); font-size: 11px; font-weight: var(--ds-label-weight); letter-spacing: var(--ds-label-tracking); text-transform: var(--ds-label-transform); }
