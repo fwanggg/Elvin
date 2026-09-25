@@ -1,0 +1,14 @@
+: redacted capture — the tailnet hostname, the home directory, the username, the GitHub handle, task ids, tailnet addresses, email addresses
+
+data: {"id":"chatcmpl-muhc1pfo","object":"chat.completion.chunk","created":1790363240,"model":"omp","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-muhc1pfo","object":"chat.completion.chunk","created":1790363240,"model":"omp","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_00_ET_UT8FySzEaNebmd2qhYfs7205","type":"function","function":{"name":"bash","arguments":"{\"command\":\"echo hi\",\"i\":\"Running echo hi\"}"}}]},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-muhc1pfo","object":"chat.completion.chunk","created":1790363240,"model":"omp","choices":[{"index":0,"delta":{"content":"done"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-muhc1pfo","object":"chat.completion.chunk","created":1790363240,"model":"omp","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: {"id":"chatcmpl-muhc1pfo","object":"chat.completion.chunk","created":1790363240,"model":"omp","choices":[],"usage":{"prompt_tokens":44800,"completion_tokens":58,"total_tokens":44858,"prompt_tokens_details":{"cached_tokens":44416}}}
+
+data: [DONE]
+

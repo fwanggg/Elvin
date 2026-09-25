@@ -1,0 +1,73 @@
+{
+  "prompt": "Look up the status of order 4821 with the tool, then answer in one line.",
+  "events": [
+    {
+      "type": "tool-call",
+      "toolCallId": "call_DDuO4iPCpwNiEk6tYFCHnjbp",
+      "toolName": "get_order_status",
+      "args": {},
+      "status": "running"
+    },
+    {
+      "type": "stats",
+      "stats": {
+        "spans": [
+          {
+            "kind": "tool",
+            "id": "call_DDuO4iPCpwNiEk6tYFCHnjbp",
+            "startMs": "<ms>",
+            "ms": "<ms>"
+          }
+        ],
+        "totalMs": "<ms>",
+        "leadMs": "<ms>",
+        "usage": null,
+        "estimated": true
+      }
+    },
+    {
+      "type": "tool-call",
+      "toolCallId": "call_DDuO4iPCpwNiEk6tYFCHnjbp",
+      "toolName": "get_order_status",
+      "args": {
+        "order_id": "4821"
+      },
+      "status": "running"
+    },
+    {
+      "type": "stats",
+      "stats": {
+        "spans": [
+          {
+            "kind": "tool",
+            "id": "call_DDuO4iPCpwNiEk6tYFCHnjbp",
+            "startMs": "<ms>",
+            "ms": "<ms>"
+          }
+        ],
+        "totalMs": "<ms>",
+        "leadMs": "<ms>",
+        "usage": {
+          "promptTokens": 74,
+          "completionTokens": 21,
+          "totalTokens": 95,
+          "reasoningTokens": 0,
+          "cachedTokens": 0
+        },
+        "estimated": false
+      }
+    },
+    {
+      "type": "tool-call",
+      "toolCallId": "call_DDuO4iPCpwNiEk6tYFCHnjbp",
+      "toolName": "get_order_status",
+      "args": {
+        "order_id": "4821"
+      },
+      "status": "completed"
+    },
+    {
+      "type": "done"
+    }
+  ]
+}

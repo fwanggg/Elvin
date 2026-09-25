@@ -1,0 +1,26 @@
+: redacted capture — the tailnet hostname, the home directory, the username, the GitHub handle, task ids, tailnet addresses, email addresses
+
+data: {"id":"gen-1790363269-sg2gw3VQlGrflAkyBUrl","object":"chat.completion.chunk","created":1790363269,"model":"openai/gpt-6-luna","provider":"OpenAI","choices":[{"index":0,"delta":{"content":null,"role":"assistant","tool_calls":[{"index":0,"id":"call_DDuO4iPCpwNiEk6tYFCHnjbp","type":"function","function":{"name":"get_order_status","arguments":""}}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1790363269-sg2gw3VQlGrflAkyBUrl","object":"chat.completion.chunk","created":1790363269,"model":"openai/gpt-6-luna","provider":"OpenAI","choices":[{"index":0,"delta":{"content":null,"role":"assistant","tool_calls":[{"index":0,"function":{"arguments":""}}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1790363269-sg2gw3VQlGrflAkyBUrl","object":"chat.completion.chunk","created":1790363269,"model":"openai/gpt-6-luna","provider":"OpenAI","choices":[{"index":0,"delta":{"content":null,"role":"assistant","tool_calls":[{"index":0,"function":{"arguments":"{\""}}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1790363269-sg2gw3VQlGrflAkyBUrl","object":"chat.completion.chunk","created":1790363269,"model":"openai/gpt-6-luna","provider":"OpenAI","choices":[{"index":0,"delta":{"content":null,"role":"assistant","tool_calls":[{"index":0,"function":{"arguments":"order"}}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1790363269-sg2gw3VQlGrflAkyBUrl","object":"chat.completion.chunk","created":1790363269,"model":"openai/gpt-6-luna","provider":"OpenAI","choices":[{"index":0,"delta":{"content":null,"role":"assistant","tool_calls":[{"index":0,"function":{"arguments":"_id"}}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1790363269-sg2gw3VQlGrflAkyBUrl","object":"chat.completion.chunk","created":1790363269,"model":"openai/gpt-6-luna","provider":"OpenAI","choices":[{"index":0,"delta":{"content":null,"role":"assistant","tool_calls":[{"index":0,"function":{"arguments":"\":\""}}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1790363269-sg2gw3VQlGrflAkyBUrl","object":"chat.completion.chunk","created":1790363269,"model":"openai/gpt-6-luna","provider":"OpenAI","choices":[{"index":0,"delta":{"content":null,"role":"assistant","tool_calls":[{"index":0,"function":{"arguments":"482"}}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1790363269-sg2gw3VQlGrflAkyBUrl","object":"chat.completion.chunk","created":1790363269,"model":"openai/gpt-6-luna","provider":"OpenAI","choices":[{"index":0,"delta":{"content":null,"role":"assistant","tool_calls":[{"index":0,"function":{"arguments":"1"}}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1790363269-sg2gw3VQlGrflAkyBUrl","object":"chat.completion.chunk","created":1790363269,"model":"openai/gpt-6-luna","provider":"OpenAI","choices":[{"index":0,"delta":{"content":null,"role":"assistant","tool_calls":[{"index":0,"function":{"arguments":"\"}"}}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1790363269-sg2gw3VQlGrflAkyBUrl","object":"chat.completion.chunk","created":1790363269,"model":"openai/gpt-6-luna","provider":"OpenAI","choices":[{"index":0,"delta":{"content":"","role":"assistant"},"finish_reason":"tool_calls","native_finish_reason":"completed"}]}
+
+data: {"id":"gen-1790363269-sg2gw3VQlGrflAkyBUrl","object":"chat.completion.chunk","created":1790363269,"model":"openai/gpt-6-luna","provider":"OpenAI","service_tier":"default","choices":[{"index":0,"delta":{"content":"","role":"assistant"},"finish_reason":"tool_calls","native_finish_reason":"completed"}],"usage":{"prompt_tokens":74,"completion_tokens":21,"total_tokens":95,"cost":0.0000179,"is_byok":false,"prompt_tokens_details":{"cached_tokens":0,"cache_write_tokens":0,"audio_tokens":0,"video_tokens":0},"cost_details":{"upstream_inference_cost":0.0000179,"upstream_inference_prompt_cost":0.0000074,"upstream_inference_completions_cost":0.0000105},"completion_tokens_details":{"reasoning_tokens":0,"image_tokens":0,"audio_tokens":0}}}
+
+data: [DONE]
+
