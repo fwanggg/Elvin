@@ -720,11 +720,10 @@ function AssistantSandbox({ pattern, modelName, viewMode, emoji, defaultOpen, th
     document.querySelector(`[data-run="${index}"]`)?.scrollIntoView({ block: "start", behavior: "smooth" });
   }
 
-  // Reading the chat moves the panel with it. The turn to show is the last one
-  // whose marker has passed the top of the viewport — the turn being read — and
-  // every run owns the stretch from its own marker to the next one's, so a long
-  // answer still counts as part of the turn that wrote it. With the thread
-  // unscrolled no marker has passed, and the first turn is the one in hand.
+  // Reading the chat moves the panel with it. The turn to show is the latest run
+  // marker that has entered the chat viewport: as you scroll down and the next
+  // prompt appears, the stats rail follows that newer turn; when every marker is
+  // still below the viewport, the first run is the one in hand.
   //
   // A pointer resting on the panel suspends this, because the scrolls in flight
   // then are the panel's own — the click that jumped to a turn, the hover that
@@ -736,27 +735,28 @@ function AssistantSandbox({ pattern, modelName, viewMode, emoji, defaultOpen, th
     let frame = 0;
     const read = () => {
       if (document.querySelector(".run-panel")?.matches(":hover")) return;
-      const top = viewport.getBoundingClientRect().top;
+      const bottom = viewport.getBoundingClientRect().bottom;
       const markers = viewport.querySelectorAll<HTMLElement>("[data-run]");
       const first = markers[0];
       if (first === undefined) return;
       let current = Number(first.dataset.run);
       for (const marker of markers) {
-        if (marker.getBoundingClientRect().top > top) break;
+        if (marker.getBoundingClientRect().top > bottom) break;
         current = Number(marker.dataset.run);
       }
-      setChosenRun(current);
+      setChosenRun((run) => (run === current ? run : current));
     };
-    const onScroll = () => {
+    const queueRead = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(read);
     };
-    viewport.addEventListener("scroll", onScroll, { passive: true });
+    queueRead();
+    viewport.addEventListener("scroll", queueRead, { passive: true });
     return () => {
       cancelAnimationFrame(frame);
-      viewport.removeEventListener("scroll", onScroll);
+      viewport.removeEventListener("scroll", queueRead);
     };
-  }, []);
+  }, [runs.length]);
 
   const frame = (
     <div className={`assistant-frame ${pattern}`}>
