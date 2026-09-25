@@ -668,8 +668,7 @@ function ConnectEmptyState({ baseUrl, apiKey, connecting, error, onBaseUrlChange
 
   return (
     <div className="connect-empty">
-      <span className="connect-kicker">No agent connected</span>
-      <h2>Connect Your Agent to Render</h2>
+      <h2>Connect Your Agent</h2>
       <div className="connect-form">
         <label className="connect-field">
           <span className="connect-step">1</span>
