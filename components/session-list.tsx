@@ -4,6 +4,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { listSessions, subscribeToTranscripts, type SessionSummary } from "@/lib/session-store";
 
 type SessionListProps = Readonly<{
+  /** The endpoint whose conversations these are: another endpoint's are another list. */
+  endpoint: string;
   /** The conversation the sandbox is on, marked but not moved: the list stays in time order. */
   currentId: string;
   onSelect: (id: string) => void;
@@ -12,22 +14,26 @@ type SessionListProps = Readonly<{
 }>;
 
 /**
- * The conversations this browser has, in the rail above the knobs.
+ * The conversations this browser has with one endpoint, in the rail above the knobs.
  *
  * Read from the same store the sandbox writes its transcript to, and re-read when it says so: the
  * adapter appends as messages land, outside React's view, so nothing else would tell the list that
  * a turn has been taken. Selecting one hands the sandbox that thread and its id goes back on the
  * wire, so the provider's own memory follows the reader rather than running ahead of them.
+ *
+ * A list belongs to one endpoint. Conversations are listed by the ids that endpoint minted, so
+ * pointing the sandbox at another agent shows that agent's own — none of which the previous one
+ * ever heard of — rather than a list of threads that could not be continued there.
  */
-export function SessionList({ currentId, onSelect, onNewThread, onDelete }: SessionListProps): ReactNode {
+export function SessionList({ endpoint, currentId, onSelect, onNewThread, onDelete }: SessionListProps): ReactNode {
   // Read in an effect rather than while rendering: the store is the browser's, and a client
   // component also renders on the server, where there is none.
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   useEffect(() => {
-    const read = (): void => setSessions(listSessions());
+    const read = (): void => setSessions(listSessions(endpoint));
     read();
     return subscribeToTranscripts(read);
-  }, [currentId]);
+  }, [endpoint, currentId]);
 
   return (
     <div className="sessions">
