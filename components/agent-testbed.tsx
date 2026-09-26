@@ -8,7 +8,8 @@ import { type AppTheme, type Design, type Pattern, type Toggle, type ViewMode, t
 import { type TurnStats, type UsageTotals } from "@/lib/turn-stats";
 import { GATEWAY_PROMPT } from "@/lib/gateway-prompt";
 import { COMPOSER_ATTACHMENTS } from "@/lib/attachments";
-import { forgetSession, localHistory, readApiKey, readConnection, readSessionMessages, rememberSession, writeApiKey, writeConnection } from "@/lib/session-store";
+import { directEvents, directProbe } from "@/lib/agent-transport";
+import { adoptLegacySessions, currentThreadId, endpointKey, forgetSession, localHistory, readApiKey, readConnection, readSessionMessages, rememberSession, setCurrentThread, writeApiKey, writeConnection } from "@/lib/session-store";
 import { DevModeAssistantMessage, DevModeUserMessage, UserModeAssistantMessage, UserModeUserMessage } from "@/components/sandbox/messages";
 import { ComposerAttachment } from "@/components/sandbox/attachments";
 import { RunPanel } from "@/components/sandbox/run-panel";
@@ -35,28 +36,7 @@ import {
 
 type ConnectionState = "demo" | "connecting" | "live" | "error";
 
-/**
- * The provider keeps the conversation but cannot list sessions, so the client
- * owns the id. Persisted so a reload continues the same thread.
- */
-const THREAD_STORAGE_KEY = "elvin.threadId";
 
-
-type ToolCall = {
-  name: string;
-  arguments?: unknown;
-  result?: unknown;
-  latencyMs?: number;
-};
-
-type ChatResponse = {
-  content: string;
-  reasoning?: string | null;
-  toolCalls?: ToolCall[];
-  latencyMs?: number;
-  error?: string;
-  usage?: UsageTotals | null;
-};
 type JsonValue = string | number | boolean | null | JsonValue[] | { readonly [key: string]: JsonValue };
 type JsonObject = { readonly [key: string]: JsonValue };
 
@@ -69,25 +49,6 @@ type ToolCallPart = {
   result: unknown;
   /** The provider's own rendering of the call, when it sent one — see the card's Request line. */
   label?: string;
-};
-
-type StreamEvent =
-  | { type: "text"; text: string }
-  | { type: "reasoning"; text: string }
-  | { type: "tool-call"; toolCallId: string; toolName: string; args: unknown; label?: string; status?: string }
-  | { type: "stats"; stats: TurnStats }
-  | { type: "error"; error: string }
-  | { type: "done"; sessionId?: string };
-
-
-type CheckResponse = {
-  ok: boolean;
-  model?: string;
-  models?: string[];
-  capabilities?: string[];
-  /** What the endpoint declared in `/models` — `hermes` is the one name acted on. */
-  owner?: string;
-  error?: string;
 };
 
 type ThemeVariableName =
@@ -108,6 +69,8 @@ type ControlSidebarProps = Readonly<{
   design: Design;
   viewMode: ViewMode;
   emoji: Toggle;
+  /** Whether the rail recedes: nothing is connected, so nothing on it has anything to shape yet. */
+  blurred: boolean;
   /** The rail's own block, above the knobs: filled by the shell, which holds the runtime. */
   sessions: ReactNode;
   onAppThemeChange: (value: AppTheme) => void;
@@ -237,6 +200,15 @@ const RUN_PANEL_DEFAULT_WIDTH = 380;
 const RUN_PANEL_MIN_WIDTH = 300;
 const CHAT_MIN_WIDTH = 360;
 
+/**
+ * While nothing is connected, the chrome that only shapes a running sandbox recedes and the panel
+ * that does the connecting is the one thing on screen to read. A filter rather than opacity: a
+ * blurred control is still legible enough to click, and the rail's choices are worth making before
+ * anything is connected. It lifts the moment a provider answers.
+ */
+const CHROME_TRANSITION = "transition-[filter] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none";
+const CHROME_BLURRED = "blur-[3px]";
+
 export function AgentTestbed(): ReactNode {
   const [pattern, setPattern] = useState<Pattern>("thread");
   const [appTheme, setAppTheme] = useState<AppTheme>("dark");
@@ -256,11 +228,44 @@ export function AgentTestbed(): ReactNode {
   const [threadGeneration, setThreadGeneration] = useState(0);
   const [threadId, setThreadId] = useState("");
   const sessionRef = useRef("");
+  /**
+   * The endpoint whose conversations the rail is showing. A conversation is only ever continued by
+   * the agent it was taken against — its id means nothing to another one — so this is what decides
+   * which list is read, and it changes the moment a different agent answers.
+   */
+  const [endpoint, setEndpoint] = useState(() => endpointKey(readConnection()?.baseUrl ?? ""));
+  const endpointRef = useRef(endpoint);
 
+  /**
+   * The conversation the sandbox opens on, for whichever endpoint is in view.
+   *
+   * Sessions belong to an endpoint, so this runs again when the endpoint changes: what the thread
+   * being left holds stays where it is, and what comes up is the thread that endpoint was last on —
+   * or a new one, when it has never been spoken to. Coming up means replaying it, because a runtime
+   * that has just been handed a thread has no history of its own to load.
+   */
   useEffect(() => {
-    if (sessionRef.current.length === 0) sessionRef.current = storedThreadId();
-    setThreadId(sessionRef.current);
-  }, []);
+    // Conversations stored before they were filed by endpoint belong to the endpoint that is live
+    // now, which is the one the reader was just talking to.
+    if (endpoint.length > 0) adoptLegacySessions(endpoint);
+
+    const arrived = endpointRef.current !== endpoint;
+    endpointRef.current = endpoint;
+    if (arrived) sessionRef.current = "";
+
+    const remembered = sessionRef.current || currentThreadId(endpoint);
+    const id = remembered.length > 0 ? remembered : newThreadId();
+    if (remembered.length === 0) {
+      setCurrentThread(endpoint, id);
+      rememberSession(endpoint, id);
+    }
+
+    sessionRef.current = id;
+    setThreadId(id);
+    if (!arrived) return;
+    setThreadGeneration((generation) => generation + 1);
+    void replayThread(id);
+  }, [endpoint]);
 
   /**
    * Reconnect to whatever was live when this browser was last here, so the transcript the history
@@ -289,88 +294,45 @@ export function AgentTestbed(): ReactNode {
     async *run({ messages, abortSignal, unstable_threadId }) {
       const sessionId = sessionRef.current || unstable_threadId;
       const streamStartTime = Date.now();
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          baseUrl,
-          model,
-          apiKey,
-          stream: true,
-          capability: capability || undefined,
-          threadId: sessionId || undefined,
-          owner: owner || undefined,
-          messages: messages.map((message) => ({ role: message.role, content: wireContentOf(message) })),
-        }),
-        signal: abortSignal,
-      });
-
-      if (!(response.headers.get("Content-Type") ?? "").includes("text/event-stream")) {
-        const data = (await response.json()) as ChatResponse;
-        const text = data.error ?? data.content;
-        const usage = data.usage ?? null;
-        // One shot: a response that arrived whole has no windows to place on a
-        // timeline, so the rows carry no fills and the badge carries the turn.
-        const stats: TurnStats = {
-          spans: [],
-          totalMs: 0,
-          usage,
-          estimated: usage === null,
-        };
-        yield {
-          content: assembleContent({ text, reasoning: data.reasoning ?? "", toolCalls: fromResponse(data.toolCalls) }),
-          metadata: { timing: streamTiming({ streamStartTime, firstTokenTime: Date.now() - streamStartTime, totalChunks: 1, toolCallCount: data.toolCalls?.length ?? 0, text, usage }), custom: { stats } },
-        };
-        return;
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error("The agent returned no response body.");
-      const decoder = new TextDecoder();
       const toolCalls = new Map<string, ToolCallPart>();
-      let buffer = "";
       let text = "";
       let reasoning = "";
       let firstTokenTime: number | undefined;
       let totalChunks = 0;
       let stats: TurnStats | undefined;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-
-        for (const line of lines) {
-          if (!line.startsWith("data:")) continue;
-          const chunk = line.slice(5).trim();
-          if (chunk.length === 0) continue;
-
-          const event = JSON.parse(chunk) as StreamEvent;
-          if (event.type !== "done") {
-            totalChunks += 1;
-            if (firstTokenTime === undefined) firstTokenTime = Date.now() - streamStartTime;
-          }
-          if (event.type === "text") text = event.text;
-          else if (event.type === "reasoning") reasoning = event.text;
-          else if (event.type === "error") text = event.error;
-          else if (event.type === "stats") stats = event.stats;
-          else if (event.type === "tool-call") {
-            const args = toJsonObject(event.args);
-            toolCalls.set(event.toolCallId, {
-              type: "tool-call",
-              toolCallId: event.toolCallId,
-              toolName: event.toolName,
-              args,
-              argsText: JSON.stringify(args),
-              result: event.status && !isRunningStatus(event.status) ? { status: event.status } : undefined,
-              ...(event.label !== undefined ? { label: event.label } : {}),
-            });
-          }
-
-          yield { content: assembleContent({ text, reasoning, toolCalls }), ...(stats ? { metadata: { custom: { stats } } } : {}) };
+      for await (const event of directEvents({
+        baseUrl,
+        model,
+        apiKey,
+        capability: capability || undefined,
+        threadId: sessionId || undefined,
+        owner: owner || undefined,
+        messages: messages.map((message) => ({ role: message.role, content: wireContentOf(message) })),
+        signal: abortSignal,
+      })) {
+        if (event.type !== "done") {
+          totalChunks += 1;
+          if (firstTokenTime === undefined) firstTokenTime = Date.now() - streamStartTime;
         }
+        if (event.type === "text") text = event.text;
+        else if (event.type === "reasoning") reasoning = event.text;
+        else if (event.type === "error") text = event.error;
+        else if (event.type === "stats") stats = event.stats;
+        else if (event.type === "tool-call") {
+          const args = toJsonObject(event.args);
+          toolCalls.set(event.toolCallId, {
+            type: "tool-call",
+            toolCallId: event.toolCallId,
+            toolName: event.toolName,
+            args,
+            argsText: JSON.stringify(args),
+            result: event.status && !isRunningStatus(event.status) ? { status: event.status } : undefined,
+            ...(event.label !== undefined ? { label: event.label } : {}),
+          });
+        }
+
+        yield { content: assembleContent({ text, reasoning, toolCalls }), ...(stats ? { metadata: { custom: { stats } } } : {}) };
       }
 
       const timing = streamTiming({ streamStartTime, firstTokenTime, totalChunks, toolCallCount: toolCalls.size, text: text.length > 0 ? text : reasoning, usage: stats?.usage ?? null });
@@ -389,7 +351,10 @@ export function AgentTestbed(): ReactNode {
    * when the provider remembers the thread. The adapter loads it when a thread opens and appends
    * as messages land.
    */
-  const history = useMemo(() => localHistory(storedThreadId), []);
+  const history = useMemo(
+    () => localHistory(() => endpointRef.current, () => sessionRef.current || currentThreadId(endpointRef.current)),
+    [],
+  );
   /**
    * `attachments` is what turns the composer's paste, drop and file picker on: the runtime asks the
    * adapter whether it takes files before it looks at any, so without one a pasted picture is
@@ -406,8 +371,8 @@ export function AgentTestbed(): ReactNode {
    */
   function openThread(id: string): void {
     if (id === sessionRef.current) return;
-    window.localStorage.setItem(THREAD_STORAGE_KEY, id);
-    rememberSession(id);
+    setCurrentThread(endpoint, id);
+    rememberSession(endpoint, id);
     sessionRef.current = id;
     setThreadId(id);
     setThreadGeneration((generation) => generation + 1);
@@ -429,7 +394,7 @@ export function AgentTestbed(): ReactNode {
 
   /** A thread nothing has been said in yet: a fresh session id and an empty transcript. */
   function startThread(): void {
-    openThread(`elvin-${crypto.randomUUID().slice(0, 8)}`);
+    openThread(newThreadId());
   }
 
   /**
@@ -437,7 +402,7 @@ export function AgentTestbed(): ReactNode {
    * sandbox starts a fresh one rather than showing a conversation the browser no longer holds.
    */
   function deleteSession(id: string): void {
-    forgetSession(id);
+    forgetSession(endpoint, id);
     if (id === sessionRef.current) startThread();
   }
   const devMode = viewMode === "dev";
@@ -472,13 +437,8 @@ export function AgentTestbed(): ReactNode {
     setConnection("connecting");
     setConnectionError("");
     try {
-      const response = await fetch("/api/check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ baseUrl: trimmedUrl, apiKey: key, model: wanted }),
-      });
-      const data = (await response.json()) as CheckResponse;
-      if (!response.ok || !data.ok) {
+      const data = await directProbe({ baseUrl: trimmedUrl, apiKey: key, model: wanted });
+      if (!data.ok) {
         setConnection("error");
         setConnectionError(data.error ?? "Connection failed");
         forgetProvider();
@@ -487,6 +447,9 @@ export function AgentTestbed(): ReactNode {
       const nextModels = data.models ?? [];
       const nextCapabilities = data.capabilities ?? [];
       setConnection("live");
+      // Another agent keeps other conversations: the switch is the effect's, which opens whatever
+      // this endpoint was last on instead of leaving the last agent's thread on screen.
+      setEndpoint(endpointKey(trimmedUrl));
       setModels(nextModels);
       setCapabilities(nextCapabilities);
       setOwner(data.owner ?? "");
@@ -509,7 +472,7 @@ export function AgentTestbed(): ReactNode {
   return (
     <main className="shell">
       <section className="frame" aria-label="Elvin agent testbed">
-        <nav className="nav">
+        <nav className={`nav ${CHROME_TRANSITION} ${isConnected ? "" : CHROME_BLURRED}`}>
           <span className="nav-brand">Elvin</span>
           <StageToolbar
             statusColor={statusColor}
@@ -531,6 +494,7 @@ export function AgentTestbed(): ReactNode {
             design={design}
             viewMode={viewMode}
             emoji={emoji}
+            blurred={!isConnected}
             onAppThemeChange={setAppTheme}
             onPatternChange={setPattern}
             onViewportChange={setViewport}
@@ -539,6 +503,7 @@ export function AgentTestbed(): ReactNode {
             onEmojiChange={setEmoji}
             sessions={
               <SessionList
+                endpoint={endpoint}
                 currentId={threadId}
                 onSelect={openThread}
                 onNewThread={startThread}
@@ -579,6 +544,7 @@ function ControlSidebar({
   design,
   viewMode,
   emoji,
+  blurred,
   onAppThemeChange,
   onPatternChange,
   onViewportChange,
@@ -588,7 +554,7 @@ function ControlSidebar({
   sessions,
 }: ControlSidebarProps): ReactNode {
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${CHROME_TRANSITION} ${blurred ? CHROME_BLURRED : ""}`}>
       {sessions}
       <div className="section-rule" />
       <PanelSection title="View mode">
@@ -1081,12 +1047,13 @@ function MockApplication(): ReactNode {
   );
 }
 
-function storedThreadId(): string {
-  const existing = window.localStorage.getItem(THREAD_STORAGE_KEY);
-  if (existing) return existing;
-  const id = `elvin-${crypto.randomUUID().slice(0, 8)}`;
-  window.localStorage.setItem(THREAD_STORAGE_KEY, id);
-  return id;
+/**
+ * A fresh session id. The provider keeps the conversation but cannot list sessions, so the client
+ * owns the id — and it is what the endpoint is asked to remember the thread by, which is why two
+ * endpoints never share one.
+ */
+function newThreadId(): string {
+  return `elvin-${crypto.randomUUID().slice(0, 8)}`;
 }
 
 /** The host is the primary fact; the state word qualifies it. */
@@ -1166,22 +1133,6 @@ function toJsonObject(value: unknown): JsonObject {
 function isRunningStatus(status: string): boolean {
   const value = status.toLowerCase();
   return value === "running" || value === "pending" || value === "in_progress" || value === "started";
-}
-
-function fromResponse(toolCalls: ToolCall[] | undefined): Map<string, ToolCallPart> {
-  const map = new Map<string, ToolCallPart>();
-  for (const [index, tool] of (toolCalls ?? []).entries()) {
-    const args = toJsonObject(tool.arguments);
-    map.set(`tool-${index}`, {
-      type: "tool-call",
-      toolCallId: `tool-${index}`,
-      toolName: tool.name,
-      args,
-      argsText: JSON.stringify(args),
-      result: tool.result,
-    });
-  }
-  return map;
 }
 
 function assembleContent({ text, reasoning, toolCalls }: Readonly<{ text: string; reasoning: string; toolCalls: Map<string, ToolCallPart> }>): RenderedPart[] {
