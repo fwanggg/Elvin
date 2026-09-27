@@ -1,19 +1,21 @@
 /**
- * Providers are called from wherever the request is served, and that is not
- * always the machine the browser is on: a deployed Elvin proxies the provider
- * through its own servers, where a loopback address means the server itself. A
- * raw fetch failure says none of that — it arrives as "fetch failed" — so the
- * routes phrase the two cases themselves.
+ * What a caller says when the provider could not be reached at all.
+ *
+ * The engine words this for wherever it is running and claims nothing about networks, because the
+ * distinction that matters — CORS, a refused permission, or a host that is simply not there — is
+ * one only a browser can read, and the browser transport reads it and says so instead
+ * (`explainFailure` in `lib/agent-transport`). What is left here is the wording for a caller with
+ * no such reading to offer: the host, whatever was thrown, and the one thing a reader can do.
  */
 export function unreachableProviderError(endpoint: string, error: unknown): string {
   const host = hostOf(endpoint);
   const detail = error instanceof Error && error.message.length > 0 ? error.message : "unreachable";
 
   if (isLoopback(host)) {
-    return `Could not reach ${host}: a loopback address only answers on the machine running it, and this server — not the browser — makes the provider call. Run Elvin locally to use it, or leave the URL empty to run in demo mode.`;
+    return `Could not reach ${host}: a loopback address answers only on the machine running it, so the agent has to be running on this one. Start it here, or leave the URL empty to run in demo mode.`;
   }
 
-  return `Could not reach ${host} (${detail}). Check the host and that it is publicly reachable, or leave the URL empty to run in demo mode.`;
+  return `Could not reach ${host} (${detail}). Check the host and that this machine can reach it, or leave the URL empty to run in demo mode.`;
 }
 
 function hostOf(endpoint: string): string {

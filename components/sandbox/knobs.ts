@@ -19,5 +19,5 @@ export type Toggle = "on" | "off";
  * offers them. Listed here with the rest of the vocabulary so the shell and the
  * sandbox read the same set.
  */
-export const DESIGNS = ["swiss", "brutalist", "biophilic", "minimal", "organic", "skeuomorphic", "cyberpunk"] as const;
+const DESIGNS = ["swiss", "brutalist", "biophilic", "minimal", "organic", "skeuomorphic", "cyberpunk"] as const;
 export type Design = (typeof DESIGNS)[number];

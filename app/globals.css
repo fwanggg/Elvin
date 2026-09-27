@@ -636,9 +636,6 @@ a { color: inherit; }
 }
 .btn-primary { background: var(--color-accent); color: var(--color-bg); }
 .btn-primary:hover { background: var(--color-accent-600); }
-.btn-secondary { border: var(--ds-border) solid var(--ds-edge); }
-.btn-secondary:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); box-shadow: var(--ds-shadow-hover); }
-.btn-ghost { min-height: auto; padding: 4px 0; color: var(--color-accent-700); box-shadow: none; }
 .btn:active { transform: var(--ds-press); }
 .btn:disabled { cursor: not-allowed; opacity: .48; }
 .main-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: 264px minmax(0, 1fr); }
@@ -654,20 +651,10 @@ h6 {
   line-height: 1.12;
   text-transform: var(--ds-label-transform);
 }
-/* Sessions: the conversations this browser has, read from the same store the
-   sandbox writes its transcript to. Newest first, and never reordered by being
-   selected: the row under the pointer keeps its place. The one in use is marked
-   instead, because it is a conversation even with nothing in it yet. */
-.sessions { display: flex; flex-direction: column; }
-.sessions-head { display: flex; align-items: center; gap: 8px; padding: var(--ds-space-section); }
-.sessions-count {
-  color: var(--color-neutral-500);
-  font-family: var(--font-heading);
-  font-size: 12px;
-  font-weight: var(--ds-label-weight);
-  letter-spacing: var(--ds-label-tracking);
-}
-.sessions-new { margin-left: auto; min-height: 30px; padding: 4px 10px; box-shadow: none; font-size: 13px; }
+/* The conversations as rows, drawn in the bar's session menu from the same store the sandbox
+   writes its transcript to. Newest first, and never reordered by being selected: the row under
+   the pointer keeps its place. The one in use is marked instead, because it is a conversation
+   even with nothing in it yet. */
 .sessions-list { margin: 0; padding: 0; list-style: none; }
 .sessions-list li + li { border-top: var(--ds-border) solid var(--ds-edge-soft); }
 .session {
@@ -896,7 +883,6 @@ h6 {
 .metric-agent { flex: 0 1 50%; }
 .metric-model, .metric-session { flex: 0 1 25%; }
 .metric-cell-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; color: var(--color-neutral-600); font-family: var(--font-heading); font-size: 10px; font-weight: var(--ds-label-weight); letter-spacing: var(--ds-label-tracking); text-transform: var(--ds-label-transform); white-space: nowrap; }
-.metric-icon { font-size: 14px; }
 .metric-value { display: flex; align-items: center; min-width: 0; overflow: hidden; font-family: var(--font-heading); font-size: 14px; font-weight: 800; white-space: nowrap; }
 .metric-agent .metric-value, .metric-model .model-picker { flex: 1 1 auto; }
 .metric-swatch { flex: none; width: 11px; height: 11px; margin-right: 9px; }
@@ -904,9 +890,6 @@ h6 {
 .metric-state { overflow: hidden; font-weight: 400; color: var(--color-neutral-600); text-overflow: ellipsis; }
 .metric-disconnect { flex: none; padding: 0; border: 0; background: transparent; color: var(--color-accent); font: inherit; font-weight: 800; letter-spacing: var(--ds-label-tracking); text-transform: uppercase; cursor: pointer; }
 .metric-disconnect:hover { color: var(--color-accent-700); }
-.metric-action { flex: none; border: 0; background: transparent; color: var(--color-text); font: inherit; cursor: pointer; text-align: left; }
-.metric-action .metric-cell-head { color: inherit; }
-.metric-action:hover { background: color-mix(in srgb, var(--color-text) 6%, transparent); }
 
 /* Sessions, in the bar: the conversation the sandbox is on, with the ones it joins one press away.
    The list belongs with the agent rather than above the knobs, because a conversation is only ever

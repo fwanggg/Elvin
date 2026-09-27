@@ -3,7 +3,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
-export type DropdownOption = Readonly<{ value: string; label: string }>;
+type DropdownOption = Readonly<{ value: string; label: string }>;
 
 type DropdownProps = Readonly<{
   /** Accessible name for the trigger; the visible section heading is not linked. */

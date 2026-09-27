@@ -124,7 +124,7 @@ export function useStepLink(): StepLink {
 }
 
 /** Whether a mark covers any of the keys an element answers to. */
-export function touches(keys: readonly string[], answering: string): boolean {
+function touches(keys: readonly string[], answering: string): boolean {
   if (keys.length === 0 || answering.length === 0) return false;
   return keys.some((key) => answering.split(" ").includes(key));
 }
