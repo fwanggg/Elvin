@@ -7,12 +7,12 @@
  * the name becomes the subject, and the first recognisable argument becomes the
  * object. Unknown tools still read as English rather than as an identifier.
  */
-export type StepPhase = "running" | "complete" | "failed";
+type StepPhase = "running" | "complete" | "failed";
 
 type VerbForms = Readonly<{ running: string; complete: string; failed: string }>;
 
 /** Keyed by the word to look for in the tool name; it may appear in any position. */
-export const STEP_VERBS: Readonly<Record<string, VerbForms>> = {
+const STEP_VERBS: Readonly<Record<string, VerbForms>> = {
   search: { running: "Searching", complete: "Searched", failed: "Couldn't search" },
   find: { running: "Searching", complete: "Searched", failed: "Couldn't search" },
   lookup: { running: "Searching", complete: "Searched", failed: "Couldn't search" },
@@ -57,10 +57,10 @@ export const STEP_VERBS: Readonly<Record<string, VerbForms>> = {
 };
 
 /** Subjects that want an article: "searching the web", not "searching web". */
-export const DEFINITE = new Set(["web", "internet", "online", "database", "db", "file", "files", "disk", "cloud", "api", "network", "repo", "calendar", "inbox", "docs", "account", "order", "orders", "system", "weather", "news", "stock", "prices"]);
+const DEFINITE = new Set(["web", "internet", "online", "database", "db", "file", "files", "disk", "cloud", "api", "network", "repo", "calendar", "inbox", "docs", "account", "order", "orders", "system", "weather", "news", "stock", "prices"]);
 
 /** Argument keys tried first when choosing the step's object. */
-export const OBJECT_KEYS = ["query", "q", "search", "term", "prompt", "text", "message", "input", "url", "uri", "link", "path", "file", "filename", "name", "title", "id", "order_id", "location", "city", "symbol", "ticker", "email", "to", "sku", "code"];
+const OBJECT_KEYS = ["query", "q", "search", "term", "prompt", "text", "message", "input", "url", "uri", "link", "path", "file", "filename", "name", "title", "id", "order_id", "location", "city", "symbol", "ticker", "email", "to", "sku", "code"];
 
 /** Longest object we will quote; beyond this it is data, not a label. */
 const OBJECT_LIMIT = 48;
@@ -75,7 +75,7 @@ function wordsOf(name: string): string[] {
 }
 
 /** The argument a polished assistant quotes beside the step, if there is one. */
-export function objectOf(args: unknown): string | undefined {
+function objectOf(args: unknown): string | undefined {
   if (typeof args === "string") return args.length > 0 && args.length <= OBJECT_LIMIT ? args : undefined;
   if (!args || typeof args !== "object") return undefined;
 

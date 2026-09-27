@@ -50,7 +50,7 @@ type StoredSessions = {
 };
 
 /** The endpoint and model a reload should reconnect with. */
-export type StoredConnection = {
+type StoredConnection = {
   baseUrl: string;
   model: string;
 };

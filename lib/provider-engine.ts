@@ -29,7 +29,7 @@ export type StreamEvent =
   | { type: "error"; error: string }
   | { type: "done"; sessionId?: string };
 
-export type TurnRequest = {
+type TurnRequest = {
   baseUrl: string;
   apiKey?: string;
   model?: string;
@@ -41,9 +41,9 @@ export type TurnRequest = {
   stream?: boolean;
 };
 
-export type TurnOptions = { fetchImpl?: typeof fetch; signal?: AbortSignal };
+type TurnOptions = { fetchImpl?: typeof fetch; signal?: AbortSignal };
 
-export type StartedTurn =
+type StartedTurn =
   | { ok: true; sessionId: string | null; events: AsyncGenerator<StreamEvent, void, void> }
   | { ok: false; error: string; status: number };
 

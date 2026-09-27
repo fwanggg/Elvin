@@ -15,7 +15,7 @@
 import { demoAnswer, startTurn, type IncomingMessage, type StreamEvent } from "@/lib/provider-engine";
 
 /** One turn, as the adapter has always sent it: the same fields, made here instead of by a route. */
-export type TransportTurn = {
+type TransportTurn = {
   baseUrl: string;
   apiKey?: string;
   model?: string;
@@ -28,7 +28,7 @@ export type TransportTurn = {
 };
 
 /** What a connection check answers with. */
-export type ProbeResult = {
+type ProbeResult = {
   ok: boolean;
   model?: string;
   models?: string[];
@@ -59,7 +59,7 @@ function addressSpaceOf(url: string): "loopback" | "local" | null {
 }
 
 /** Whether the endpoint is one only this machine, or its own network, could answer for. */
-export function isLocalEndpoint(url: string): boolean {
+function isLocalEndpoint(url: string): boolean {
   return addressSpaceOf(url) !== null;
 }
 
