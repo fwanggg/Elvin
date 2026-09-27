@@ -5,8 +5,8 @@ import type { NextConfig } from "next";
  * `next build` writes `out/`, and a host serves them. There is no server to run.
  *
  * Pages serves a project site from `/<repo>`, so that build needs the prefix. It is read from the
- * environment rather than written down because the same source also deploys at a domain root
- * (`elvinoss.vercel.app`), where a base path would point every asset at a path nobody serves.
+ * environment rather than written down because the same source also builds for a domain root,
+ * where a base path would point every asset at a path nobody serves.
  */
 const basePath = process.env.PAGES_BASE_PATH ?? "";
 
