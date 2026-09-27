@@ -608,6 +608,23 @@ a { color: inherit; }
   letter-spacing: -.03em;
   line-height: 1;
 }
+/* The source, one click from the wordmark: muted until it is wanted, accent when it is, and the
+   colour comes from the design language rather than from the mark. */
+.nav-repo {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-left: 10px;
+  border-radius: var(--ds-radius);
+  color: var(--color-neutral-600);
+  transition: color .16s ease;
+}
+.nav-repo:hover { color: var(--color-accent); }
+.nav-repo-mark { display: block; width: 18px; height: 18px; }
+@media (prefers-reduced-motion: reduce) { .nav-repo { transition: none; } }
 .top-label {
   flex: none;
   padding-left: 10px;
