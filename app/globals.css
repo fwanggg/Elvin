@@ -888,7 +888,7 @@ h6 {
 .metric-bar { flex: 1; min-width: 0; display: flex; align-items: stretch; background: var(--color-bg); }
 .metric-cell { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 12px; min-width: 0; padding: 8px 16px; }
 .metric-cell + .metric-cell { border-left: var(--ds-border) solid var(--ds-edge); }
-.metric-agent, .metric-model { flex: 1 1 0; }
+.metric-session, .metric-agent, .metric-model { flex: 1 1 0; }
 .metric-cell-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; color: var(--color-neutral-600); font-family: var(--font-heading); font-size: 10px; font-weight: var(--ds-label-weight); letter-spacing: var(--ds-label-tracking); text-transform: var(--ds-label-transform); white-space: nowrap; }
 .metric-icon { font-size: 14px; }
 .metric-value { display: flex; align-items: center; min-width: 0; overflow: hidden; font-family: var(--font-heading); font-size: 14px; font-weight: 800; white-space: nowrap; }
@@ -906,7 +906,7 @@ h6 {
    The list belongs beside the agent rather than above the knobs, because a conversation is only
    ever continued by the endpoint it was taken against — and the endpoint is what this bar is
    about. The trigger carries the one in use; the menu carries the rest. */
-.metric-session { flex: 0 0 auto; gap: 10px; }
+.metric-session { gap: 10px; }
 .session-current {
   display: flex;
   align-items: center;
