@@ -1,6 +1,6 @@
 ## 1. Demo
 
-[![Elvin demo on Loom](https://cdn.loom.com/sessions/thumbnails/d7bd40f519ed408aa0ad451499ad4e71-469e164be9577ad4.gif)](https://www.loom.com/share/d7bd40f519ed408aa0ad451499ad4e71)
+![Elvin demo](assets/demo.gif)
 
 **[elvinoss.vercel.app](https://elvinoss.vercel.app/)**
 
