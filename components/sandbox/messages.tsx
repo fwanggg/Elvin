@@ -220,6 +220,16 @@ export function DevModeAssistantMessage({ emoji, defaultOpen }: AssistantRuntime
   const slowestCallMs = callSpans.length > 1 && isMeasurable(longestCallMs) ? longestCallMs : undefined;
   const reasoningChars = useAuiState((state) => state.message.parts.reduce((total, part) => (part.type === "reasoning" ? total + part.text.length : total), 0));
   const running = useAuiState((state) => state.message.status?.type === "running");
+  /**
+   * The model has not answered yet: the message exists with nothing in it at all. This is the one
+   * moment a turn can read as a dead chat — an empty row, nothing moving, and no way for the
+   * reader to tell a slow model from a broken one — so it is named and counted here, the way User
+   * Mode names the same silence. The count is the part that carries a long wait: a number that
+   * keeps climbing is the difference between waiting and stuck.
+   */
+  const waiting = useAuiState((state) => state.message.status?.type === "running" && state.message.parts.length === 0);
+  const waitedSeconds = useThinkingSeconds(waiting);
+  const waited = waiting && waitedSeconds !== undefined && waitedSeconds >= 1 ? `${waitedSeconds}s` : undefined;
   const groupBy = useMemo(() => groupPartByType({ reasoning: ["group-reasoning"] }), []);
 
   return (
@@ -229,6 +239,12 @@ export function DevModeAssistantMessage({ emoji, defaultOpen }: AssistantRuntime
         <MessagePrimitive.Error>
           <p className="error-note"><ErrorPrimitive.Message /></p>
         </MessagePrimitive.Error>
+        {waiting && (
+          <div className="thinking-slot">
+            {/* Named for the span the panel files it under, so the chat and the trace agree. */}
+            <ThinkingIndicator className="thinking-indicator" label="Waiting for the model" elapsed={waited} />
+          </div>
+        )}
         <MessagePrimitive.GroupedParts groupBy={groupBy}>
           {({ part, children }) => {
             switch (part.type) {
