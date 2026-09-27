@@ -1,70 +1,53 @@
-# Elvin
+## 1. Demo
 
-Point Elvin at any OpenAI-compatible endpoint and the same agent is rendered across seven design languages, three UI patterns and both themes — streaming, reasoning, tool calls and all.
+A Video Link/Gif [ to add ]
 
-**[Live demo → elvinoss.vercel.app](https://elvinoss.vercel.app/)**
+**[elvinoss.vercel.app](https://elvinoss.vercel.app/)**
 
-Requires Node 20.9 or newer.
+## 2. What Is Elvin
+
+A lightweight 1-click frontend for an agent backend (OpenAI-compatible APIs for now): a polished chat UI for testing, plus duration and token measurement.
 
 ```bash
-git clone https://github.com/fwanggg/Elvin.git
-cd Elvin
-npm install
-npm run dev          # http://localhost:3000
+git clone https://github.com/fwanggg/Elvin.git && cd Elvin
+npm install && npm run dev     # localhost:3000, Node 20.9+
 ```
 
-Paste an endpoint (for example `https://api.openai.com/v1`) and a key, press **Run**, and the sandbox renders the agent. The key stays in the browser session and is forwarded per request; nothing is persisted server-side.
+Paste an endpoint and key, press **Run**. The key stays in the browser session; nothing is stored server-side.
 
----
+## 3. Why Elvin
 
-## Why this exists
+If you are a visual person and want to test your agent backend, this is for you.
 
-The model half of an agent product is rented. The interface half is not — it is where reasoning, tool calls, streaming and error states either read clearly or do not. Elvin is a testbed for that half: one agent, rendered every way it might ship, so a design decision can be *looked at* instead of argued about.
+It has not been easy for me to test an agent backend visually. Some frameworks (like Hermes) ship a chat dashboard that dumps too much information; LangGraph ships a chat UI ([docs](https://docs.langchain.com/oss/python/langchain/ui)) but it is quite unpolished and missing information. None has the agent trace view and spans that let me repro and find early bugs before heavier tools.
 
-It is deliberately provider-agnostic. Anything that speaks the OpenAI wire format works, including a localhost proxy, and the sandbox tracks whichever of `content`, `reasoning`, `reasoning_content` and `tool_calls` your provider actually sends.
+- When your agent harness's default chat UI is broken and emitting noisy data all over you.
+- I want to get a feeling of my agent visually, to feel motivated 🙂
 
-## Knobs
+## 4. Features
 
-Every control changes the sandbox live. There is no build step between a decision and seeing it.
+- Give your agent a chat UI in 1 click (needs a prompt to convert your agent to an OpenAI-compatible API first).
+- Performance monitoring (runs, turns, spans, token usage) side-by-side with visual highlighting.
+- Session management — lightweight, stored in your browser's localStorage.
+- Different polished visual styles — for debugging, or to get a feel of what a user likely sees.
 
-| Knob | Options |
-| --- | --- |
-| **UI pattern** | `Thread` · `Copilot` (docked sidebar) · `Floating` (modal launcher) |
-| **App theme** | `Dark` · `Light` |
-| **Design language** | Swiss Grid · Neo-Brutalism · Biophilic · Minimalist · Organic / Anti-grid · Skeuomorphism · Cyberpunk/Terminal |
-| **View mode** | `Dev Mode` · `User Mode` — who the parts render for. Tools and reasoning always render: Dev Mode shows them as the agent sent them, with a card per call, the trace in its group and the turn's timings in the runs panel beside the chat; User Mode writes them for a person (each call a step in plain language, its argument a chip, and its raw request and result behind a disclosure) |
-| **Default state** | `Collapsed` · `Expanded` — how the trace and tool cards rest |
-| **Emoji** | `On` · `Off` — turn markers beside each message |
-## Project layout
+## 5. Q&A
 
-```
-app/                    # the testbed: shell, controls, sandbox
-  api/check/            #   connect probe: models and capabilities
-  api/chat/             #   provider proxy, normalised into one event stream
-components/
-  agent-testbed.tsx     #   the testbed itself: shell, controls, adapter
-  sandbox/              #   the sandboxed app's renderers and knobs
-  assistant-ui/         #   vendored assistant-ui elements, kept unmodified
-  ui/                   #   vendored shadcn/ui primitives
-lib/
-  step-labels.ts        #   tool calls as plain-language steps
-  turn-stats.ts         #   what the proxy measured, shared with the renderers
-  gateway-prompt.ts     #   the prompt the connect screen hands out
-scripts/                # gateway, behaviour baseline, provider probe
-reports/                # baselines and screenshots
-```
+**My agent is not OpenAI compatible. What should I do?**
 
-## Contributing
+Add a gateway that makes it OpenAI compatible — try the prompt shipped in the tool; standing one up is 2–3 minutes of work for a coding agent. Many modern frameworks, like Hermes/OpenClaw, ship one by default.
 
-Issues and pull requests are welcome.
+**What's the CORS error?**
 
-Two conventions keep the repo honest:
+Elvin talks to your agent from inside the browser; all traffic stays on your browser. Your agent backend blocking CORS is what makes the connection fail.
 
-- **Design languages live in one place.** Each language's palette, type and geometry sits in its own `[data-design]` block in `app/globals.css`, and the sandbox reads it from the cascade rather than from a parallel token table.
-- **Behaviour is fingerprinted.** Run `node scripts/verify-behavior.mjs --compare` before and after a refactor; it must report identical behaviour.
+- In general, ask your coding agent to "Make My Agent CORS Permissive".
+- **For Hermes:** `hermes -p <profile> config set API_SERVER_CORS_ORIGINS '*'`
 
-## License
+**Does it work with an agent backend that runs on localhost?**
 
-MIT — see [LICENSE](LICENSE). © 2026 Fan W.
+O yes, it does. Just use `http://localhost:xxxx/<endpoint>`.
 
-Live demo: **[elvinoss.vercel.app](https://elvinoss.vercel.app/)**
+## 6. Contributions & License
+
+Issues and pull requests are welcome. MIT — see [LICENSE](LICENSE). © 2026 Fan W.
