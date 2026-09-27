@@ -2,7 +2,7 @@
 
 ![Elvin demo](assets/demo.gif)
 
-**[fwanggg.github.io/Elvin](https://fwanggg.github.io/Elvin/)**
+**[Static Page: fwanggg.github.io/Elvin](https://fwanggg.github.io/Elvin/)**
 
 ## 2. What Is Elvin
 
