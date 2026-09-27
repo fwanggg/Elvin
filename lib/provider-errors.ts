@@ -12,10 +12,10 @@ export function unreachableProviderError(endpoint: string, error: unknown): stri
   const detail = error instanceof Error && error.message.length > 0 ? error.message : "unreachable";
 
   if (isLoopback(host)) {
-    return `Could not reach ${host}: a loopback address answers only on the machine running it, so the agent has to be running on this one. Start it here, or leave the URL empty to run in demo mode.`;
+    return `Could not reach ${host}: a loopback address answers only on the machine running it, so the agent has to be running on this one. Start it there, or point Elvin at a host this browser can reach.`;
   }
 
-  return `Could not reach ${host} (${detail}). Check the host and that this machine can reach it, or leave the URL empty to run in demo mode.`;
+  return `Could not reach ${host} (${detail}). Check the host and that this machine can reach it.`;
 }
 
 function hostOf(endpoint: string): string {

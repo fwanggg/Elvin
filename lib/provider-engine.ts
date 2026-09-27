@@ -78,19 +78,6 @@ type NormalizedToolCall = {
   arguments: unknown;
   result: { status: string };
 };
-type ProviderTool = {
-  type: "function";
-  function: {
-    name: string;
-    description: string;
-    parameters: {
-      type: "object";
-      properties: { order_id: { type: "string"; description: string } };
-      required: string[];
-      additionalProperties: boolean;
-    };
-  };
-};
 
 /**
  * A tool call ends the model's turn, so the answer only arrives once the result
@@ -269,7 +256,6 @@ export async function startTurn(request: TurnRequest, options: TurnOptions = {})
 async function openTurn(request: TurnRequest, options: TurnOptions): Promise<OpenedTurn> {
   const endpoint = chatCompletionsEndpoint(request.baseUrl);
   const model = request.model?.trim() || "gpt-4o-mini";
-  const tools: ProviderTool[] = [sampleOrderTool()];
   const conversation = buildConversation(request.messages);
   const callProvider = createProviderCaller({
     body: request,
@@ -278,7 +264,6 @@ async function openTurn(request: TurnRequest, options: TurnOptions): Promise<Ope
     model,
     signal: options.signal,
     fetchImpl: options.fetchImpl ?? fetch,
-    tools,
   });
   const continueAfterTools = createToolContinuation(conversation, callProvider);
 
@@ -300,7 +285,6 @@ function buildConversation(messages: IncomingMessage[]): OpenAIMessage[] {
       role: "system",
       content: [
         "You are being tested inside Elvin, an agent UX playground.",
-        "Use tools when they materially improve the answer.",
         "If your provider supports a reasoning field, keep it concise.",
       ].join(" "),
     },
@@ -332,7 +316,6 @@ function createProviderCaller(options: {
   model: string;
   signal?: AbortSignal;
   fetchImpl: typeof fetch;
-  tools: ProviderTool[];
 }): ProviderCaller {
   const cacheKey = `${options.endpoint}|${options.model}`;
 
@@ -343,7 +326,6 @@ function createProviderCaller(options: {
       temperature: 0.2,
       stream: Boolean(options.body.stream),
       ...(options.body.capability ? { capability: options.body.capability } : {}),
-      ...(options.tools ? { tools: options.tools, tool_choice: "auto" } : {}),
     };
 
     // Both extras are asked for by what the wire allows rather than by model
@@ -418,7 +400,7 @@ function appendToolResults(conversation: OpenAIMessage[], calls: ToolCallSummary
     conversation.push({
       role: "tool",
       tool_call_id: call.id,
-      content: JSON.stringify(executeTool(call.name, call.arguments)),
+      content: JSON.stringify(UNEXECUTED_TOOL),
     });
   }
 }
@@ -432,23 +414,15 @@ function sessionIdOf(response: Response, requested?: string) {
 }
 
 /**
- * Tool stubs: a real app calls its own systems here. The workspace has one tool,
- * and the point of the testbed is the round trip rather than the payload.
+ * What a tool call is answered with.
+ *
+ * This client owns no tools: it draws the call an agent made and hands back a result so the turn
+ * can finish, which is the whole of the round trip. An invented result would be a fiction the
+ * reader cannot tell from a fact, so this says only what is true.
  */
-function executeTool(name: string, rawArguments: string) {
-  const args: unknown = safeJson(rawArguments.length > 0 ? rawArguments : "{}");
-  const orderId = args && typeof args === "object" && "order_id" in args && typeof args.order_id === "string" ? args.order_id : "4821";
-  if (name === "get_order_status") {
-    return {
-      order_id: orderId,
-      status: "in_transit",
-      carrier: "UPS",
-      eta: "2026-09-24",
-      note: "Stubbed by the Elvin testbed.",
-    };
-  }
-  return { error: `The testbed has no stub for "${name}".` };
-}
+const UNEXECUTED_TOOL = {
+  error: "Not executed: this client runs no tools. If the answer needs one, report the result as unavailable.",
+};
 
 function toToolCallSummaries(value: unknown): ToolCallSummary[] {
   return normalizeToolCalls(value).map((call) => ({
@@ -1122,22 +1096,6 @@ function chatCompletionsEndpoint(baseUrl: string) {
   return `${trimmed}/chat/completions`;
 }
 
-function sampleOrderTool(): ProviderTool {
-  return {
-    type: "function",
-    function: {
-      name: "get_order_status",
-      description: "Look up shipment status for a customer order.",
-      parameters: {
-        type: "object",
-        properties: { order_id: { type: "string", description: "Order number without the # prefix." } },
-        required: ["order_id"],
-        additionalProperties: false,
-      },
-    },
-  };
-}
-
 function firstChoiceMessage(data: unknown) {
   const record = data as { choices?: Array<{ message?: Record<string, unknown> }>; output?: Array<Record<string, unknown>> } | null;
   const message = record?.choices?.[0]?.message;
@@ -1204,9 +1162,4 @@ function toolOnlyFallback(value: unknown) {
 function providerError(data: unknown, status: number) {
   const record = data as { error?: { message?: string }; message?: string; raw?: string } | null;
   return record?.error?.message ?? record?.message ?? record?.raw ?? `Provider returned HTTP ${status}.`;
-}
-
-export function demoAnswer(prompt: string) {
-  const orderId = prompt.match(/#?(\d{3,})/)?.[1] ?? "4821";
-  return `Order #${orderId} is in transit with UPS. It was held at the Memphis hub, so the new delivery estimate is Thursday, September 24. Want me to send you the tracking link?`;
 }
