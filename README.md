@@ -51,3 +51,7 @@ O yes, it does. Just use `http://localhost:xxxx/<endpoint>`.
 ## 6. Contributions & License
 
 Issues and pull requests are welcome. MIT — see [LICENSE](LICENSE). © 2026 Fan W.
+
+## 7. Elsewhere
+
+X — **[@WFan14005097](https://x.com/WFan14005097)** · Substack — **[@fanwang3](https://substack.com/@fanwang3)**
