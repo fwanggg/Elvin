@@ -705,13 +705,16 @@ function ConnectEmptyState({ baseUrl, apiKey, connecting, error, onBaseUrlChange
   const [copied, setCopied] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
 
-  // The state exists to be filled in and starts with the field that matters, so
-  // that field takes focus the moment the state appears — pasting a URL connects
-  // on its own, which makes the whole flow paste-and-watch. It is done from an
-  // effect rather than with `autoFocus`, which React skips for an element that
-  // arrives in the server-rendered HTML: that is the first load, the one case
-  // where nobody has clicked anything yet. The ring is requested explicitly:
+  // The state exists to be filled in and starts with the field that matters, so that field takes
+  // focus the moment the state appears: a pasted URL lands where it belongs, and the key can be
+  // typed without reaching for the mouse. It is done from an effect rather than with `autoFocus`,
+  // which React skips for an element that arrives in the server-rendered HTML: that is the first
+  // load, the one case where nobody has clicked anything yet. The ring is requested explicitly:
   // focus nobody can see does not tell anyone where to type.
+  //
+  // Focus is the whole of it. A filled field is not a request to connect: the same paste carries a
+  // URL copied out of a README, a truncated one, or one about to be finished with another path —
+  // so Run starts the connection, and nothing else does it on the reader's behalf.
   useEffect(() => { urlField.current?.focus({ focusVisible: true }); }, []);
 
   // One acknowledgement per copy, then back to offering the prompt: a button that stays on
@@ -759,7 +762,6 @@ function ConnectEmptyState({ baseUrl, apiKey, connecting, error, onBaseUrlChange
             value={baseUrl}
             onChange={(event) => onBaseUrlChange(event.target.value)}
             onKeyDown={(event) => { if (event.key === "Enter") onConnect(); }}
-            onPaste={() => window.setTimeout(onConnect, 0)}
             placeholder="https://your-agent.example.com/v1"
           />
         </label>
