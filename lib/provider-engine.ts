@@ -1,27 +1,51 @@
-import { NextResponse } from "next/server";
+/**
+ * The conversation engine: one provider turn, its tool rounds, and the normalized events a
+ * surface renders — with no HTTP framework and no runtime of its own.
+ *
+ * Everything here runs on globals (`fetch`, `Response`, `TextDecoder`, `AbortSignal`), so the
+ * same code serves the route that answers the browser today and a connector that talks to a
+ * provider from inside the browser tomorrow: the caller injects its own `fetch` where the
+ * platform's would not do. The route beside it keeps only what is its own — parsing the request
+ * body, the demo answer, and how the turn is framed on the wire.
+ */
+
 import { unreachableProviderError } from "@/lib/provider-errors";
 import type { SpanKind, TurnSpan, TurnStats, UsageTotals } from "@/lib/turn-stats";
 
 /** A part of a user message as the OpenAI wire spells it. */
-type WirePart = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
+export type WirePart = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
 
-type IncomingMessage = {
+export type IncomingMessage = {
   role: "user" | "assistant" | "system";
   /** Parts when the turn carried a picture; one string otherwise, as it always was. */
   content: string | WirePart[];
 };
 
-type RequestBody = {
-  baseUrl?: string;
+export type StreamEvent =
+  | { type: "text"; text: string }
+  | { type: "reasoning"; text: string }
+  | { type: "tool-call"; toolCallId: string; toolName: string; args: unknown; label?: string; status: string }
+  | { type: "stats"; stats: TurnStats }
+  | { type: "error"; error: string }
+  | { type: "done"; sessionId?: string };
+
+export type TurnRequest = {
+  baseUrl: string;
   apiKey?: string;
   model?: string;
-  messages?: IncomingMessage[];
-  stream?: boolean;
-  capability?: string;
-  threadId?: string;
+  messages: IncomingMessage[];
   /** What the endpoint said it was when it was checked (`owned_by`), when it said anything. */
   owner?: string;
+  capability?: string;
+  threadId?: string;
+  stream?: boolean;
 };
+
+export type TurnOptions = { fetchImpl?: typeof fetch; signal?: AbortSignal };
+
+export type StartedTurn =
+  | { ok: true; sessionId: string | null; events: AsyncGenerator<StreamEvent, void, void> }
+  | { ok: false; error: string; status: number };
 
 type OpenAIMessage = {
   role: "system" | "user" | "assistant" | "tool";
@@ -43,16 +67,10 @@ type ProviderCall =
 type ContinueAfterTools = (calls: ToolCallSummary[]) => Promise<ProviderCall>;
 type ProviderCaller = (turns: OpenAIMessage[]) => Promise<ProviderCall>;
 
-type ParsedRequestBody =
-  | { ok: true; body: RequestBody }
-  | { ok: false; response: NextResponse };
-
-type ChatRequest = {
-  body: RequestBody;
-  messages: IncomingMessage[];
-  latestUserMessage: string;
-  baseUrl: string;
-};
+/** The turn's provider connection, opened once and shared by both paths. */
+type OpenedTurn =
+  | { ok: true; response: Response; sessionId: string | null; continueAfterTools: ContinueAfterTools }
+  | { ok: false; error: string; status: number };
 
 type NormalizedToolCall = {
   toolCallId: string;
@@ -130,14 +148,6 @@ type ToolCall = {
   };
 };
 
-type StreamEvent =
-  | { type: "text"; text: string }
-  | { type: "reasoning"; text: string }
-  | { type: "tool-call"; toolCallId: string; toolName: string; args: unknown; label?: string; status: string }
-  | { type: "stats"; stats: TurnStats }
-  | { type: "error"; error: string }
-  | { type: "done"; sessionId?: string };
-
 type ToolState = {
   id: string;
   name: string;
@@ -205,13 +215,16 @@ type DeltaState = {
 };
 
 /**
- * The session a conversation is carried in. Providers that keep state server side name the header
- * that pins it, and Hermes named one first — so the neutral spelling is what every endpoint is
- * given, and the Hermes one is added beside it only for an endpoint that said, in `/models`, that
- * it is Hermes. Bare OpenAI has no sessions and ignores both; a harness that keeps its own history
- * is unaffected either way.
+ * The session a conversation is carried in, and only for an endpoint that said it keeps one.
+ *
+ * Hermes named the header first, so a Hermes endpoint is asked in its own spelling and no other
+ * endpoint is asked at all. An endpoint that keeps no sessions ignores the header, and beside a
+ * browser — where a request whose preflight does not allow every header it carries is refused — an
+ * endpoint whose CORS does not list it refuses the whole turn for it. Elvin carries the conversation
+ * itself, so a turn without the header is still the whole conversation.
+ *
+ * The reply is read under either spelling, since an endpoint answers in the one it was asked in.
  */
-const SESSION_HEADER = "X-Session-Id";
 const SESSION_RESPONSE_HEADER = "x-session-id";
 const HERMES_SESSION_HEADER = "X-Hermes-Session-Id";
 const HERMES_RESPONSE_HEADER = "x-hermes-session-id";
@@ -236,28 +249,35 @@ const REFUSAL: Record<"reasoning" | "usage", RegExp> = {
   usage: /stream_options|include_usage/i,
 };
 
-export const runtime = "nodejs";
+/**
+ * Runs one turn (tool rounds and all) and yields Elvin's normalized events: one snapshot per
+ * update the provider made, ending in `done` with the session the conversation was carried in.
+ *
+ * The provider's first response is awaited here, so a turn that cannot be started at all is a
+ * refusal the caller answers with its own status rather than a stream that has to fail.
+ */
+export async function startTurn(request: TurnRequest, options: TurnOptions = {}): Promise<StartedTurn> {
+  const turn = await openTurn(request, options);
+  if (!turn.ok) return { ok: false, error: turn.error, status: turn.status };
+  return { ok: true, sessionId: turn.sessionId, events: eventStream(turn.response, turn.sessionId, turn.continueAfterTools) };
+}
 
-export async function POST(request: Request) {
-  const startedAt = Date.now();
-  const parsed = await parseRequestBody(request);
-  if (!parsed.ok) return parsed.response;
-
-  const chatRequest = normalizeChatRequest(parsed.body);
-  if (chatRequest.baseUrl.length === 0) {
-    return demoResponse(chatRequest, startedAt);
-  }
-
-  const endpoint = chatCompletionsEndpoint(chatRequest.baseUrl);
-  const model = chatRequest.body.model?.trim() || "gpt-4o-mini";
+/**
+ * Opens the turn's provider connection and hands back what either path needs from it: the first
+ * response, the session it was carried in, and the continuation its tool rounds run on.
+ */
+async function openTurn(request: TurnRequest, options: TurnOptions): Promise<OpenedTurn> {
+  const endpoint = chatCompletionsEndpoint(request.baseUrl);
+  const model = request.model?.trim() || "gpt-4o-mini";
   const tools: ProviderTool[] = [sampleOrderTool()];
-  const conversation = buildConversation(chatRequest.messages);
+  const conversation = buildConversation(request.messages);
   const callProvider = createProviderCaller({
-    body: chatRequest.body,
+    body: request,
     endpoint,
-    headers: providerHeaders(chatRequest.body),
+    headers: providerHeaders(request),
     model,
-    signal: request.signal,
+    signal: options.signal,
+    fetchImpl: options.fetchImpl ?? fetch,
     tools,
   });
   const continueAfterTools = createToolContinuation(conversation, callProvider);
@@ -266,69 +286,12 @@ export async function POST(request: Request) {
   try {
     call = await callProvider(conversation);
   } catch (error) {
-    return NextResponse.json({ error: unreachableProviderError(endpoint, error) }, { status: 502 });
+    return { ok: false, error: unreachableProviderError(endpoint, error), status: 502 };
   }
 
-  if (!call.ok) {
-    return NextResponse.json({ error: call.error }, { status: call.status });
-  }
+  if (!call.ok) return { ok: false, error: call.error, status: call.status };
 
-  const sessionId = sessionIdOf(call.response, chatRequest.body.threadId);
-  if (chatRequest.body.stream) {
-    return eventStream(call.response, sessionId, continueAfterTools);
-  }
-
-  return nonStreamingResponse({
-    continueAfterTools,
-    initialResponse: call.response,
-    sessionId,
-    startedAt,
-    tools,
-  });
-}
-
-async function parseRequestBody(request: Request): Promise<ParsedRequestBody> {
-  try {
-    return { ok: true, body: (await request.json()) as RequestBody };
-  } catch {
-    return { ok: false, response: NextResponse.json({ error: "Request body must be JSON." }, { status: 400 }) };
-  }
-}
-
-/** The words of an incoming message, whether it arrived as a string or as parts. */
-function textOf(content: string | WirePart[] | undefined): string {
-  if (content === undefined) return "";
-  if (typeof content === "string") return content;
-  return content
-    .filter((part) => part.type === "text")
-    .map((part) => part.text)
-    .join(" ");
-}
-
-function normalizeChatRequest(body: RequestBody): ChatRequest {
-  const messages = Array.isArray(body.messages) ? body.messages : [];
-  const latestUserMessage = textOf([...messages].reverse().find((message) => message.role === "user")?.content);
-
-  return {
-    body,
-    messages,
-    latestUserMessage,
-    baseUrl: body.baseUrl?.trim() ?? "",
-  };
-}
-
-function demoResponse(chatRequest: ChatRequest, startedAt: number) {
-  return NextResponse.json({
-    content: demoAnswer(chatRequest.latestUserMessage),
-    reasoning: "Classify the request, check whether a tool can answer it, then respond with the shortest useful status update.",
-    toolCalls: [{
-      name: "get_order_status",
-      arguments: { order_id: chatRequest.latestUserMessage.match(/#?(\d{3,})/)?.[1] ?? "4821" },
-      result: { status: "in_transit", carrier: "UPS", eta: "2026-09-24" },
-      latencyMs: 212,
-    }],
-    latencyMs: Date.now() - startedAt,
-  });
+  return { ok: true, response: call.response, sessionId: sessionIdOf(call.response, request.threadId), continueAfterTools };
 }
 
 function buildConversation(messages: IncomingMessage[]): OpenAIMessage[] {
@@ -348,12 +311,12 @@ function buildConversation(messages: IncomingMessage[]): OpenAIMessage[] {
   ];
 }
 
-function providerHeaders(body: RequestBody): Record<string, string> {
+function providerHeaders(body: TurnRequest): Record<string, string> {
+  const session = body.threadId?.trim();
   return {
     "Content-Type": "application/json",
     ...(body.apiKey?.trim() ? { Authorization: `Bearer ${body.apiKey.trim()}` } : {}),
-    ...(body.threadId?.trim() ? { [SESSION_HEADER]: body.threadId.trim() } : {}),
-    ...(body.threadId?.trim() && isHermes(body.owner) ? { [HERMES_SESSION_HEADER]: body.threadId.trim() } : {}),
+    ...(session && isHermes(body.owner) ? { [HERMES_SESSION_HEADER]: session } : {}),
   };
 }
 
@@ -363,11 +326,12 @@ function isHermes(owner: string | undefined): boolean {
 }
 
 function createProviderCaller(options: {
-  body: RequestBody;
+  body: TurnRequest;
   endpoint: string;
   headers: Record<string, string>;
   model: string;
-  signal: AbortSignal;
+  signal?: AbortSignal;
+  fetchImpl: typeof fetch;
   tools: ProviderTool[];
 }): ProviderCaller {
   const cacheKey = `${options.endpoint}|${options.model}`;
@@ -413,12 +377,13 @@ function fetchProvider(
   options: {
     endpoint: string;
     headers: Record<string, string>;
-    signal: AbortSignal;
+    signal?: AbortSignal;
+    fetchImpl: typeof fetch;
   },
   payload: Record<string, unknown>,
   include: { reasoning: boolean; usage: boolean },
 ) {
-  return fetch(options.endpoint, {
+  return options.fetchImpl(options.endpoint, {
     method: "POST",
     headers: options.headers,
     body: JSON.stringify({
@@ -456,40 +421,6 @@ function appendToolResults(conversation: OpenAIMessage[], calls: ToolCallSummary
       content: JSON.stringify(executeTool(call.name, call.arguments)),
     });
   }
-}
-
-async function nonStreamingResponse(options: {
-  continueAfterTools: ContinueAfterTools;
-  initialResponse: Response;
-  sessionId: string | null;
-  startedAt: number;
-  tools: ProviderTool[];
-}) {
-  let response = options.initialResponse;
-
-  for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
-    const data = safeJson(await response.text());
-    const choice = firstChoiceMessage(data);
-    const pending = toToolCallSummaries(choice.tool_calls);
-    const content = textContent(choice);
-
-    if (pending.length === 0) {
-      return NextResponse.json({
-        content: content || toolOnlyFallback(choice.tool_calls),
-        reasoning: reasoningContent(choice, data),
-        toolCalls: normalizeToolCalls(choice.tool_calls),
-        sessionId: options.sessionId,
-        latencyMs: Date.now() - options.startedAt,
-        usage: usageOf(data),
-      });
-    }
-
-    const again = await options.continueAfterTools(pending);
-    if (!again.ok) return NextResponse.json({ error: again.error }, { status: again.status });
-    response = again.response;
-  }
-
-  return NextResponse.json({ error: "The agent kept requesting tools.", sessionId: options.sessionId }, { status: 502 });
 }
 
 /**
@@ -550,7 +481,7 @@ function toolStateFromNormalizedCall(call: NormalizedToolCall, status: ToolState
  * Consumes one provider turn into `state`, emitting snapshots as it goes, and
  * returns the tool calls that turn asked for.
  */
-async function consumeStream(upstream: Response, round: number, state: DeltaState, emit: () => void): Promise<ToolCallSummary[]> {
+async function consumeStream(upstream: Response, round: number, state: DeltaState, emit: () => Promise<void>): Promise<ToolCallSummary[]> {
   state.roundStartedAt = Date.now();
   const isEventStream = (upstream.headers.get("content-type") ?? "").includes("text/event-stream");
 
@@ -570,7 +501,7 @@ async function consumeStream(upstream: Response, round: number, state: DeltaStat
     if (content) state.text += content;
     recordUsage(state, data, round);
     stamp(state, before, round);
-    emit();
+    await emit();
     return roundToolCalls(state, round);
   }
 
@@ -616,7 +547,7 @@ async function consumeStream(upstream: Response, round: number, state: DeltaStat
       if (changed) stamp(state, before, round);
       // A usage-only chunk draws nothing, but it is the one frame carrying the
       // provider's own token counts, so it is forwarded rather than dropped.
-      if (changed || usedUsage) emit();
+      if (changed || usedUsage) await emit();
     }
   }
 
@@ -631,75 +562,151 @@ async function consumeStream(upstream: Response, round: number, state: DeltaStat
   // delta. The next round opens a new one, which is what gives the reasoning row
   // more than one bar.
   closeSpan(state, state.openSpan?.lastAt ?? Date.now(), round);
-  emit();
+  await emit();
   return roundToolCalls(state, round);
+}
+
+/**
+ * The turn's events, handed over one at a time. The turn pushes each snapshot the moment it has
+ * read the frame that made it and then waits for the reader to take it, so the reader's own work
+ * — framing the event, writing it — falls between the provider's bytes rather than beside them:
+ * a reader that stops asking stops the provider from being drained into memory, and the turn's
+ * clocks keep measuring the run the way they did when producer and reader were the same loop.
+ */
+function eventQueue() {
+  const queue: StreamEvent[] = [];
+  let waiting: (() => void) | null = null;
+  let delivered: (() => void) | null = null;
+  let pushed = 0;
+  let taken = 0;
+  let closed = false;
+
+  const settle = () => {
+    if (taken < pushed || delivered === null) return;
+    const resolve = delivered;
+    delivered = null;
+    resolve();
+  };
+
+  return {
+    push(event: StreamEvent) {
+      if (closed) return;
+      queue.push(event);
+      pushed += 1;
+      waiting?.();
+      waiting = null;
+    },
+    /** Resolves once every event pushed so far has been taken by whoever is reading. */
+    delivered(): Promise<void> {
+      if (taken >= pushed) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        delivered = resolve;
+        settle();
+      });
+    },
+    close() {
+      closed = true;
+      waiting?.();
+      waiting = null;
+      // Nobody is taking anything else, so a turn parked for a reader that has gone away lets go
+      // of it rather than staying parked: it finishes its round and its reader's `finally` runs.
+      delivered?.();
+      delivered = null;
+    },
+    async shift(): Promise<StreamEvent | null> {
+      while (queue.length === 0 && !closed) {
+        await new Promise<void>((resolve) => {
+          waiting = resolve;
+        });
+      }
+      const event = queue.shift() ?? null;
+      if (event !== null) {
+        taken += 1;
+        settle();
+      }
+      return event;
+    },
+  };
 }
 
 /**
  * Normalizes any provider response into one event per update, so the client
  * adapter only has to accumulate snapshots instead of parsing provider deltas.
  */
-function eventStream(upstream: Response, sessionId: string | null, continueAfterTools: ContinueAfterTools) {
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    async start(controller) {
-      const send = (event: StreamEvent) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
-      const turnStartedAt = Date.now();
-      const state: DeltaState = {
-        text: "",
-        reasoning: "",
-        reasoningSource: null,
-        toolCalls: new Map(),
-        roundStartedAt: turnStartedAt,
-        turnStartedAt,
-        spans: [],
-        startedAt: null,
-        cursorAt: null,
-        answerMs: 0,
-        answerLastAt: null,
-        openSpan: null,
-        reasoningWindow: new Map(),
-        roundTokens: new Map(),
-        roundUsage: new Map(),
-        spanned: new Set(),
-        usage: null,
-      };
-      const emit = () => {
-        for (const event of snapshotEvents(state)) send(event);
-      };
+async function* eventStream(
+  upstream: Response,
+  sessionId: string | null,
+  continueAfterTools: ContinueAfterTools,
+): AsyncGenerator<StreamEvent, void, void> {
+  const queue = eventQueue();
+  const turnStartedAt = Date.now();
+  const state: DeltaState = {
+    text: "",
+    reasoning: "",
+    reasoningSource: null,
+    toolCalls: new Map(),
+    roundStartedAt: turnStartedAt,
+    turnStartedAt,
+    spans: [],
+    startedAt: null,
+    cursorAt: null,
+    answerMs: 0,
+    answerLastAt: null,
+    openSpan: null,
+    reasoningWindow: new Map(),
+    roundTokens: new Map(),
+    roundUsage: new Map(),
+    spanned: new Set(),
+    usage: null,
+  };
+  const emit = async () => {
+    for (const event of snapshotEvents(state)) queue.push(event);
+    // The turn waits for the reader to take these before it reads on, so the work the reading
+    // side does — framing and writing each frame — lands between the provider's bytes rather than
+    // running beside them. That is both the backpressure a reader is owed and the only way the
+    // turn's own clocks keep measuring what they measured when producer and reader were one loop.
+    await queue.delivered();
+  };
 
-      try {
-        let current = upstream;
-        for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
-          const produced = await consumeStream(current, round, state, emit);
-          if (produced.length === 0 || !continueAfterTools) break;
+  const running = (async () => {
+    try {
+      let current = upstream;
+      for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
+        const produced = await consumeStream(current, round, state, emit);
+        if (produced.length === 0 || !continueAfterTools) break;
 
-          const next = await continueAfterTools(produced);
-          if (!next.ok) {
-            send({ type: "error", error: next.error });
-            break;
-          }
-          current = next.response;
+        const next = await continueAfterTools(produced);
+        if (!next.ok) {
+          queue.push({ type: "error", error: next.error });
+          break;
         }
-        send({ type: "done", sessionId: sessionId ?? undefined });
-      } catch (error) {
-        send({ type: "error", error: error instanceof Error ? error.message : "Stream failed." });
-      } finally {
-        controller.close();
+        current = next.response;
       }
-    },
-    cancel() {
-      void upstream.body?.cancel();
-    },
-  });
+      queue.push({ type: "done", sessionId: sessionId ?? undefined });
+    } catch (error) {
+      queue.push({ type: "error", error: error instanceof Error ? error.message : "Stream failed." });
+    } finally {
+      queue.close();
+    }
+  })();
 
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream; charset=utf-8",
-      "Cache-Control": "no-store",
-      Connection: "keep-alive",
-    },
-  });
+  let drained = false;
+  try {
+    for (;;) {
+      const event = await queue.shift();
+      if (event === null) break;
+      yield event;
+    }
+    await running;
+    drained = true;
+  } finally {
+    // A consumer that stopped pulling — the browser went away, the response was aborted — stops
+    // the provider's side of the turn too, rather than leaving it writing into nothing.
+    if (!drained) {
+      queue.close();
+      void upstream.body?.cancel();
+    }
+  }
 }
 
 function applyDelta(state: DeltaState, delta: Record<string, unknown>, round: number) {
@@ -1007,7 +1014,10 @@ function turnStats(state: DeltaState): TurnStats {
   // the bars still do not add up to it.
   const answerMs = state.answerMs > 0 ? state.answerMs : undefined;
   return {
-    spans: state.spans,
+    // Copied rather than handed over: an event outlives the moment it was made — a caller may
+    // serialize it whenever it pulls it — and the turn keeps filing windows into this array, and
+    // fills a window's token count in after the round it belongs to reports it.
+    spans: state.spans.map((span) => ({ ...span })),
     ...(answerMs !== undefined ? { answerMs } : {}),
     totalMs: state.spans.reduce((end, span) => Math.max(end, span.startMs + span.ms), 0),
     // The turn's own clock starts when the request did; the windows' clock starts at
@@ -1196,7 +1206,7 @@ function providerError(data: unknown, status: number) {
   return record?.error?.message ?? record?.message ?? record?.raw ?? `Provider returned HTTP ${status}.`;
 }
 
-function demoAnswer(prompt: string) {
+export function demoAnswer(prompt: string) {
   const orderId = prompt.match(/#?(\d{3,})/)?.[1] ?? "4821";
   return `Order #${orderId} is in transit with UPS. It was held at the Memphis hub, so the new delivery estimate is Thursday, September 24. Want me to send you the tracking link?`;
 }
