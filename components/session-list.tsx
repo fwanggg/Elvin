@@ -35,7 +35,7 @@ export function SessionPicker({ endpoint, currentId, onSelect, onNewThread, onDe
   // component also renders on the server, where there is none.
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [open, setOpen] = useState(false);
-  const [placement, setPlacement] = useState<{ top: number; left: number } | null>(null);
+  const [placement, setPlacement] = useState<{ top: number; right: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -46,11 +46,13 @@ export function SessionPicker({ endpoint, currentId, onSelect, onNewThread, onDe
   }, [endpoint, currentId]);
 
   // Measured after the menu is in the DOM but before paint, so it never flashes somewhere else.
+  // It hangs from the trigger's right edge: the control is the last cell in the bar, and a menu
+  // that grew rightwards from there would open past the window.
   useLayoutEffect(() => {
     if (!open) return;
     const place = (): void => {
       const rect = triggerRef.current?.getBoundingClientRect();
-      if (rect) setPlacement({ top: rect.bottom + GAP, left: rect.left });
+      if (rect) setPlacement({ top: rect.bottom + GAP, right: window.innerWidth - rect.right });
     };
     place();
     window.addEventListener("resize", place);
@@ -102,7 +104,7 @@ export function SessionPicker({ endpoint, currentId, onSelect, onNewThread, onDe
       </button>
 
       {open && placement && createPortal(
-        <div className="session-menu" ref={menuRef} style={{ top: placement.top, left: placement.left }}>
+        <div className="session-menu" ref={menuRef} style={{ top: placement.top, right: placement.right }}>
           <ul className="sessions-list">
             {sessions.map((session) => {
               const live = session.id === currentId;

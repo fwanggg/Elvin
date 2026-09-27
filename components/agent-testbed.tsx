@@ -623,7 +623,6 @@ function ControlSidebar({
 function StageToolbar({ sessions, statusColor, statusHost, statusState, isConnected, model, models, onDisconnect, onModelChange }: StageToolbarProps): ReactNode {
   return (
     <div className="metric-bar">
-      {sessions}
       <div className="metric-cell metric-agent">
         <div className="metric-cell-head">
           <span>Agent</span>
@@ -648,6 +647,7 @@ function StageToolbar({ sessions, statusColor, statusHost, statusState, isConnec
           onValueChange={onModelChange}
         />
       </div>
+      {sessions}
     </div>
   );
 }

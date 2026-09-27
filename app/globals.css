@@ -888,7 +888,13 @@ h6 {
 .metric-bar { flex: 1; min-width: 0; display: flex; align-items: stretch; background: var(--color-bg); }
 .metric-cell { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 12px; min-width: 0; padding: 8px 16px; }
 .metric-cell + .metric-cell { border-left: var(--ds-border) solid var(--ds-edge); }
-.metric-session, .metric-agent, .metric-model { flex: 1 1 0; }
+/* Agent takes half the bar, Model and Session a quarter each — stated as the share, so the width
+   is the requirement rather than something the flex algorithm arrives at from what is left over.
+   They still shrink together when the bar cannot hold all three. The order is the order they are
+   read in: which agent the sandbox is talking to, which model it is asking, and which
+   conversation it is on. */
+.metric-agent { flex: 0 1 50%; }
+.metric-model, .metric-session { flex: 0 1 25%; }
 .metric-cell-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; color: var(--color-neutral-600); font-family: var(--font-heading); font-size: 10px; font-weight: var(--ds-label-weight); letter-spacing: var(--ds-label-tracking); text-transform: var(--ds-label-transform); white-space: nowrap; }
 .metric-icon { font-size: 14px; }
 .metric-value { display: flex; align-items: center; min-width: 0; overflow: hidden; font-family: var(--font-heading); font-size: 14px; font-weight: 800; white-space: nowrap; }
@@ -903,10 +909,10 @@ h6 {
 .metric-action:hover { background: color-mix(in srgb, var(--color-text) 6%, transparent); }
 
 /* Sessions, in the bar: the conversation the sandbox is on, with the ones it joins one press away.
-   The list belongs beside the agent rather than above the knobs, because a conversation is only
-   ever continued by the endpoint it was taken against — and the endpoint is what this bar is
-   about. The trigger carries the one in use; the menu carries the rest. The trigger takes the width
-   the cell has left and the `+` holds its right edge, so the whole band between them is the target
+   The list belongs with the agent rather than above the knobs, because a conversation is only ever
+   continued by the endpoint it was taken against — and the endpoint is what this bar is about. The
+   trigger carries the one in use; the menu carries the rest. The trigger takes the width the cell
+   has left and the `+` holds the cell's right edge, so the whole band between them is the target
    that opens the list rather than the few characters of a title. */
 .metric-session { gap: 10px; }
 /* The label is not a shrink candidate: a long title ellipsizes inside the trigger, and nothing
