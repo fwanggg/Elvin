@@ -13,7 +13,7 @@ import { adoptLegacySessions, currentThreadId, endpointKey, forgetSession, local
 import { DevModeAssistantMessage, DevModeUserMessage, UserModeAssistantMessage, UserModeUserMessage } from "@/components/sandbox/messages";
 import { ComposerAttachment } from "@/components/sandbox/attachments";
 import { RunPanel } from "@/components/sandbox/run-panel";
-import { SessionList } from "@/components/session-list";
+import { SessionPicker } from "@/components/session-list";
 import { useRuns } from "@/components/sandbox/runs";
 import { StepDebugBoundary } from "@/components/sandbox/step-link";
 import {
@@ -71,8 +71,6 @@ type ControlSidebarProps = Readonly<{
   emoji: Toggle;
   /** Whether the rail recedes: nothing is connected, so nothing on it has anything to shape yet. */
   blurred: boolean;
-  /** The rail's own block, above the knobs: filled by the shell, which holds the runtime. */
-  sessions: ReactNode;
   onAppThemeChange: (value: AppTheme) => void;
   onPatternChange: (value: Pattern) => void;
   onViewportChange: (value: Viewport) => void;
@@ -102,6 +100,8 @@ type PreviewStageProps = Readonly<{
 }>;
 
 type StageToolbarProps = Readonly<{
+  /** The conversation control, filled by the shell: it holds the endpoint and the live thread. */
+  sessions: ReactNode;
   statusColor: string;
   statusHost: string;
   statusState: string;
@@ -475,6 +475,15 @@ export function AgentTestbed(): ReactNode {
         <nav className={`nav ${CHROME_TRANSITION} ${isConnected ? "" : CHROME_BLURRED}`}>
           <span className="nav-brand">Elvin</span>
           <StageToolbar
+            sessions={
+              <SessionPicker
+                endpoint={endpoint}
+                currentId={threadId}
+                onSelect={openThread}
+                onNewThread={startThread}
+                onDelete={deleteSession}
+              />
+            }
             statusColor={statusColor}
             statusHost={statusHost}
             statusState={statusState}
@@ -501,15 +510,6 @@ export function AgentTestbed(): ReactNode {
             onDesignChange={setDesign}
             onViewModeChange={setViewMode}
             onEmojiChange={setEmoji}
-            sessions={
-              <SessionList
-                endpoint={endpoint}
-                currentId={threadId}
-                onSelect={openThread}
-                onNewThread={startThread}
-                onDelete={deleteSession}
-              />
-            }
           />
           <PreviewStage
             isConnected={isConnected}
@@ -551,12 +551,9 @@ function ControlSidebar({
   onDesignChange,
   onViewModeChange,
   onEmojiChange,
-  sessions,
 }: ControlSidebarProps): ReactNode {
   return (
     <aside className={`sidebar ${CHROME_TRANSITION} ${blurred ? CHROME_BLURRED : ""}`}>
-      {sessions}
-      <div className="section-rule" />
       <PanelSection title="View mode">
         <Segment
           name="view"
@@ -623,7 +620,7 @@ function ControlSidebar({
   );
 }
 
-function StageToolbar({ statusColor, statusHost, statusState, isConnected, model, models, onDisconnect, onModelChange }: StageToolbarProps): ReactNode {
+function StageToolbar({ sessions, statusColor, statusHost, statusState, isConnected, model, models, onDisconnect, onModelChange }: StageToolbarProps): ReactNode {
   return (
     <div className="metric-bar">
       <div className="metric-cell metric-agent">
@@ -650,6 +647,7 @@ function StageToolbar({ statusColor, statusHost, statusState, isConnected, model
           onValueChange={onModelChange}
         />
       </div>
+      {sessions}
     </div>
   );
 }
