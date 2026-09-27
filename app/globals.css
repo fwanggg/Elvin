@@ -905,9 +905,15 @@ h6 {
 /* Sessions, in the bar: the conversation the sandbox is on, with the ones it joins one press away.
    The list belongs beside the agent rather than above the knobs, because a conversation is only
    ever continued by the endpoint it was taken against — and the endpoint is what this bar is
-   about. The trigger carries the one in use; the menu carries the rest. */
+   about. The trigger carries the one in use; the menu carries the rest. The trigger takes the width
+   the cell has left and the `+` holds its right edge, so the whole band between them is the target
+   that opens the list rather than the few characters of a title. */
 .metric-session { gap: 10px; }
+/* The label is not a shrink candidate: a long title ellipsizes inside the trigger, and nothing
+   else in the cell gives up room for it — least of all the word that says what the cell is. */
+.metric-session .metric-cell-head { flex: none; }
 .session-current {
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -920,6 +926,7 @@ h6 {
   cursor: pointer;
 }
 .session-current-title {
+  min-width: 0;
   overflow: hidden;
   font-family: var(--font-heading);
   font-size: 14px;
@@ -938,7 +945,9 @@ h6 {
   letter-spacing: var(--ds-label-tracking);
   text-transform: var(--ds-label-transform);
 }
-.session-current-chevron { flex: none; width: 10px; height: 6px; color: var(--color-neutral-600); }
+/* Pushed to the trigger's own edge, so the chevron marks where the target ends and the `+` reads
+   as the separate action it is. */
+.session-current-chevron { flex: none; margin-left: auto; width: 10px; height: 6px; color: var(--color-neutral-600); }
 .session-current:hover .session-current-chevron { color: var(--color-text); }
 .session-new {
   flex: none;
