@@ -5,6 +5,7 @@ import { CheckIcon, CopyIcon, DownloadIcon, EllipsisIcon, RefreshCwIcon, ThumbsD
 import { MessageTiming } from "@/components/assistant-ui/elements/message-timing.aui";
 import { ReasoningContent, ReasoningRoot, ReasoningText, ReasoningTrigger } from "@/components/assistant-ui/elements/reasoning";
 import { MarkdownText } from "@/components/assistant-ui/elements/markdown-text";
+import { Image } from "@/components/assistant-ui/elements/image";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThinkingIndicator } from "@/components/assistant-ui/elements/thinking-indicator";
 import { ToolCall } from "@/components/assistant-ui/elements/tool-call";
@@ -20,6 +21,7 @@ import {
   ActionBarPrimitive,
   ErrorPrimitive,
   groupPartByType,
+  type ImageMessagePart,
   MessagePrimitive,
   useAuiState,
   type ReasoningMessagePartComponent,
@@ -195,6 +197,8 @@ export function UserModeAssistantMessage({ emoji, defaultOpen }: AssistantRuntim
                 return <ReasoningPart {...part} />;
               case "tool-call":
                 return <ToolCallRow key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} argsText={part.argsText} label={callLabel(part)} result={part.result} isError={part.isError} defaultOpen={defaultOpen} />;
+              case "image":
+                return <Image {...part} />;
               case "text":
                 return <AnswerText />;
               default:
@@ -267,6 +271,8 @@ export function DevModeAssistantMessage({ emoji, defaultOpen }: AssistantRuntime
                 return <ReasoningPart {...part} />;
               case "tool-call":
                 return <ToolCard key={`${part.toolCallId}-${defaultOpen}`} name={part.toolName} args={part.args} label={callLabel(part)} result={part.result} defaultOpen={defaultOpen} run={runIndex} span={spansOf(turnStats, "tool", part.toolCallId)[0]} totalMs={totalMs} slowestCallMs={slowestCallMs} />;
+              case "image":
+                return <Image {...part} />;
               case "text":
                 return <AnswerText run={runIndex} />;
               default:

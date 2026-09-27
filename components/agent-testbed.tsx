@@ -60,7 +60,7 @@ type ThemeVariableName =
   | "--a-chrome"
   | "--a-accent"
   | "--a-accent-fg";
-type RenderedPart = { type: "reasoning"; text: string } | ToolCallPart | { type: "text"; text: string };
+type RenderedPart = { type: "reasoning"; text: string } | ToolCallPart | { type: "image"; image: string } | { type: "text"; text: string };
 
 type ControlSidebarProps = Readonly<{
   appTheme: AppTheme;
@@ -235,6 +235,8 @@ export function AgentTestbed(): ReactNode {
   const [baseUrl, setBaseUrl] = useState("");
   const [model, setModel] = useState("");
   const [models, setModels] = useState<string[]>([]);
+  /** Which of those models can answer with a picture, as the endpoint's catalog said. */
+  const [imageModels, setImageModels] = useState<string[]>([]);
   const [capabilities, setCapabilities] = useState<string[]>([]);
   const [owner, setOwner] = useState("");
   const [capability, setCapability] = useState("");
@@ -311,6 +313,8 @@ export function AgentTestbed(): ReactNode {
       const sessionId = sessionRef.current || unstable_threadId;
       const streamStartTime = Date.now();
       const toolCalls = new Map<string, ToolCallPart>();
+      /** Keyed by the picture itself, so a snapshot that repeats one does not draw it twice. */
+      const images = new Map<string, string>();
       let text = "";
       let reasoning = "";
       let firstTokenTime: number | undefined;
@@ -322,6 +326,7 @@ export function AgentTestbed(): ReactNode {
         model,
         apiKey,
         capability: capability || undefined,
+        images: imageModels.includes(model),
         threadId: sessionId || undefined,
         owner: owner || undefined,
         messages: messages.map((message) => ({ role: message.role, content: wireContentOf(message) })),
@@ -332,6 +337,7 @@ export function AgentTestbed(): ReactNode {
           if (firstTokenTime === undefined) firstTokenTime = Date.now() - streamStartTime;
         }
         if (event.type === "text") text = event.text;
+        else if (event.type === "image") images.set(event.image, event.image);
         else if (event.type === "reasoning") reasoning = event.text;
         else if (event.type === "error") text = event.error;
         else if (event.type === "stats") stats = event.stats;
@@ -348,19 +354,19 @@ export function AgentTestbed(): ReactNode {
           });
         }
 
-        yield { content: assembleContent({ text, reasoning, toolCalls }), ...(stats ? { metadata: { custom: { stats } } } : {}) };
+        yield { content: assembleContent({ text, reasoning, toolCalls, images: [...images.values()] }), ...(stats ? { metadata: { custom: { stats } } } : {}) };
       }
 
       const timing = streamTiming({ streamStartTime, firstTokenTime, totalChunks, toolCallCount: toolCalls.size, text: text.length > 0 ? text : reasoning, usage: stats?.usage ?? null });
 
-      if (text.length === 0 && reasoning.length === 0 && toolCalls.size === 0) {
+      if (text.length === 0 && reasoning.length === 0 && toolCalls.size === 0 && images.size === 0) {
         yield { content: [{ type: "text" as const, text: "The agent streamed nothing Elvin could render. Check the provider's response shape." }], metadata: { timing, ...(stats ? { custom: { stats } } : {}) } };
         return;
       }
 
-      yield { content: assembleContent({ text, reasoning, toolCalls }), metadata: { timing, ...(stats ? { custom: { stats } } : {}) } };
+      yield { content: assembleContent({ text, reasoning, toolCalls, images: [...images.values()] }), metadata: { timing, ...(stats ? { custom: { stats } } : {}) } };
     },
-  }), [apiKey, baseUrl, capability, model, owner]);
+  }), [apiKey, baseUrl, capability, model, owner, imageModels]);
   /**
    * The conversation is kept in the browser, under the same id the session is keyed on: the
    * endpoint has no history to ask for, so a reload with an empty transcript renders nothing even
@@ -430,6 +436,7 @@ export function AgentTestbed(): ReactNode {
   /** Drops what the provider told us, so a reconnect starts from nothing. */
   function forgetProvider(): void {
     setModels([]);
+    setImageModels([]);
     setCapabilities([]);
     setCapability("");
     setOwner("");
@@ -467,6 +474,7 @@ export function AgentTestbed(): ReactNode {
       // this endpoint was last on instead of leaving the last agent's thread on screen.
       setEndpoint(endpointKey(trimmedUrl));
       setModels(nextModels);
+      setImageModels(data.imageModels ?? []);
       setCapabilities(nextCapabilities);
       setOwner(data.owner ?? "");
       // Anything chosen for the previous agent may not exist on this one.
@@ -1162,10 +1170,11 @@ function isRunningStatus(status: string): boolean {
   return value === "running" || value === "pending" || value === "in_progress" || value === "started";
 }
 
-function assembleContent({ text, reasoning, toolCalls }: Readonly<{ text: string; reasoning: string; toolCalls: Map<string, ToolCallPart> }>): RenderedPart[] {
+function assembleContent({ text, reasoning, toolCalls, images }: Readonly<{ text: string; reasoning: string; toolCalls: Map<string, ToolCallPart>; images: readonly string[] }>): RenderedPart[] {
   return [
     ...(reasoning.length > 0 ? [{ type: "reasoning" as const, text: reasoning }] : []),
     ...toolCalls.values(),
+    ...images.map((image) => ({ type: "image" as const, image })),
     ...(text.length > 0 ? [{ type: "text" as const, text }] : []),
   ];
 }

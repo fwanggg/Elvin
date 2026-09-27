@@ -25,6 +25,7 @@ export type StreamEvent =
   | { type: "text"; text: string }
   | { type: "reasoning"; text: string }
   | { type: "tool-call"; toolCallId: string; toolName: string; args: unknown; label?: string; status: string }
+  | { type: "image"; image: string }
   | { type: "stats"; stats: TurnStats }
   | { type: "error"; error: string }
   | { type: "done"; sessionId?: string };
@@ -37,6 +38,8 @@ type TurnRequest = {
   /** What the endpoint said it was when it was checked (`owned_by`), when it said anything. */
   owner?: string;
   capability?: string;
+  /** Whether the model being asked can answer with a picture, as its catalog entry said. */
+  images?: boolean;
   threadId?: string;
   stream?: boolean;
 };
@@ -164,6 +167,8 @@ type OpenSpan = { startedAt: number; lastAt: number; textFrom: number; textTo: n
 type DeltaState = {
   text: string;
   reasoning: string;
+  /** Pictures the provider sent, in arrival order: data URLs, as the wire spells them. */
+  images: string[];
   /** Which channel supplied the reasoning, so a mirrored copy is not appended twice. */
   reasoningSource: "details" | "field" | null;
   toolCalls: Map<string, ToolState>;
@@ -230,10 +235,14 @@ const reasoningRejected = new Set<string>();
  */
 const usageRejected = new Set<string>();
 
+/** Endpoints that reject `modalities`. Remembered the same way, for the same reason. */
+const modalitiesRejected = new Set<string>();
+
 /** What a refusal looks like in a provider's own error text. */
-const REFUSAL: Record<"reasoning" | "usage", RegExp> = {
+const REFUSAL: Record<"reasoning" | "usage" | "modalities", RegExp> = {
   reasoning: /reason/i,
   usage: /stream_options|include_usage/i,
+  modalities: /modalit/i,
 };
 
 /**
@@ -334,6 +343,9 @@ function createProviderCaller(options: {
     const include = {
       reasoning: !reasoningRejected.has(cacheKey),
       usage: Boolean(options.body.stream) && !usageRejected.has(cacheKey),
+      // Asked for only when the catalog says the model can answer with a picture: a model that
+      // cannot may refuse the whole turn for it, and the catalog already said which those are.
+      modalities: Boolean(options.body.images) && !modalitiesRejected.has(cacheKey),
     };
 
     let attempt = await fetchProvider(options, payload, include);
@@ -344,7 +356,8 @@ function createProviderCaller(options: {
     for (const extra of ["reasoning", "usage"] as const) {
       if (!include[extra] || !REFUSAL[extra].test(failureText)) continue;
       if (extra === "reasoning") reasoningRejected.add(cacheKey);
-      else usageRejected.add(cacheKey);
+      else if (extra === "usage") usageRejected.add(cacheKey);
+      else modalitiesRejected.add(cacheKey);
       include[extra] = false;
       attempt = await fetchProvider(options, payload, include);
       if (attempt.ok) return { ok: true, response: attempt };
@@ -363,7 +376,7 @@ function fetchProvider(
     fetchImpl: typeof fetch;
   },
   payload: Record<string, unknown>,
-  include: { reasoning: boolean; usage: boolean },
+  include: { reasoning: boolean; usage: boolean; modalities: boolean },
 ) {
   return options.fetchImpl(options.endpoint, {
     method: "POST",
@@ -371,6 +384,9 @@ function fetchProvider(
     body: JSON.stringify({
       ...payload,
       ...(include.reasoning ? { reasoning: { enabled: true } } : {}),
+      // What an image model needs to be asked for a picture at all: asked for by the model's
+      // own catalog entry, and dropped for an endpoint that refuses it.
+      ...(include.modalities ? { modalities: ["image", "text"] } : {}),
       // Without this the provider reports no usage at all: its own accounting
       // arrives in a final chunk that carries no choices.
       ...(include.usage ? { stream_options: { include_usage: true } } : {}),
@@ -471,6 +487,7 @@ async function consumeStream(upstream: Response, round: number, state: DeltaStat
     for (const call of normalizeToolCalls(choice.tool_calls)) {
       state.toolCalls.set(`round-${round}-${call.toolCallId}`, toolStateFromNormalizedCall(call, "completed"));
     }
+    collectImages(state, choice.images);
     const content = textContent(choice);
     if (content) state.text += content;
     recordUsage(state, data, round);
@@ -617,6 +634,7 @@ async function* eventStream(
   const state: DeltaState = {
     text: "",
     reasoning: "",
+    images: [],
     reasoningSource: null,
     toolCalls: new Map(),
     roundStartedAt: turnStartedAt,
@@ -683,8 +701,26 @@ async function* eventStream(
   }
 }
 
+/**
+ * Pictures a streamed frame carried.
+ *
+ * `delta.images` is the shape image models on an OpenAI-compatible wire use: a list of
+ * `{type: "image_url", image_url: {url}}`, the URL being the picture itself as a data URL. A
+ * provider that names its pictures some other way shows nothing rather than a broken frame, which
+ * is the one failure a reader can act on.
+ */
+function collectImages(state: DeltaState, value: unknown) {
+  if (!Array.isArray(value)) return;
+  for (const entry of value) {
+    if (!entry || typeof entry !== "object") continue;
+    const image = (entry as { image_url?: { url?: unknown } }).image_url?.url;
+    if (typeof image === "string" && image.length > 0) state.images.push(image);
+  }
+}
+
 function applyDelta(state: DeltaState, delta: Record<string, unknown>, round: number) {
   if (typeof delta.content === "string") state.text += delta.content;
+  collectImages(state, delta.images);
 
   // Providers deliver thinking as a plain field or as structured details, often
   // both at once carrying the same text. Track the channel in use so the
@@ -856,6 +892,9 @@ function snapshotEvents(state: DeltaState): StreamEvent[] {
   for (const call of state.toolCalls.values()) {
     if (call.name.length === 0) continue;
     events.push(toolCallEvent(call));
+  }
+  for (const image of state.images) {
+    events.push({ type: "image", image });
   }
   if (state.text.length > 0) {
     events.push({ type: "text", text: state.text });

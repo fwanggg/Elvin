@@ -23,6 +23,8 @@ type TransportTurn = {
   /** What the endpoint said it was when it was checked (`owned_by`), when it said anything. */
   owner?: string;
   capability?: string;
+  /** Whether the model being asked can answer with a picture, as the endpoint's catalog said. */
+  images?: boolean;
   threadId?: string;
   signal?: AbortSignal;
 };
@@ -32,6 +34,8 @@ type ProbeResult = {
   ok: boolean;
   model?: string;
   models?: string[];
+  /** The models whose catalog entry says they can answer with a picture. */
+  imageModels?: string[];
   capabilities?: string[];
   owner?: string;
   error?: string;
@@ -89,6 +93,7 @@ export async function* directEvents(turn: TransportTurn): AsyncGenerator<StreamE
       messages: turn.messages,
       owner: turn.owner,
       capability: turn.capability,
+      images: turn.images,
       threadId: turn.threadId,
       stream: true,
     },
@@ -119,13 +124,14 @@ export async function directProbe(request: { baseUrl: string; apiKey?: string; m
   const listed = await getProvider(endpointFor(baseUrl, MODELS_PATH, [CHAT_COMPLETIONS_PATH]), request.apiKey);
   if (!listed.ok) return { ok: false, error: listed.error };
 
-  const { models, owner } = readModels(listed.body);
+  const { models, imageModels, owner } = readModels(listed.body);
   const offered = await getProvider(endpointFor(baseUrl, CAPABILITIES_PATH, [MODELS_PATH, CHAT_COMPLETIONS_PATH]), request.apiKey);
 
   return {
     ok: true,
     model: request.model || models[0],
     models,
+    imageModels,
     // An endpoint that publishes no capabilities is still connected: the turn never reads them.
     capabilities: offered.ok ? readCapabilities(offered.body) : [],
     ...(owner !== undefined ? { owner } : {}),
@@ -221,12 +227,24 @@ function endpointFor(baseUrl: string, targetPath: string, sourcePaths: string[] 
   return `${baseUrl}${targetPath}`;
 }
 
-/** What `/models` lists, and the one field a provider uses to say what it is. */
-function readModels(body: unknown): { models: string[]; owner?: string } {
-  const entries = (body as { data?: Array<{ id?: string; owned_by?: string } | string> } | null)?.data ?? [];
+type ListedModel = { id?: string; owned_by?: string; architecture?: { output_modalities?: unknown } };
+
+/**
+ * What `/models` lists: the ids to offer, what the endpoint calls itself, and which of those ids
+ * can answer with a picture — the one ability a turn has to know before it asks.
+ */
+function readModels(body: unknown): { models: string[]; imageModels: string[]; owner?: string } {
+  const entries = (body as { data?: Array<ListedModel | string> } | null)?.data ?? [];
   const models = entries.map((item) => (typeof item === "string" ? item : item.id)).filter((item): item is string => Boolean(item));
   const owner = entries.map((item) => (typeof item === "string" ? undefined : item.owned_by)).find((item) => typeof item === "string");
-  return { models, ...(owner !== undefined ? { owner } : {}) };
+  // OpenRouter publishes this per model; an endpoint that publishes nothing leaves the list empty,
+  // which is the honest answer — no picture is asked for on a model nobody said could draw one.
+  const imageModels = entries
+    .filter((item): item is ListedModel => typeof item !== "string")
+    .filter((item) => Array.isArray(item.architecture?.output_modalities) && item.architecture.output_modalities.includes("image"))
+    .map((item) => item.id)
+    .filter((id): id is string => Boolean(id));
+  return { models, imageModels, ...(owner !== undefined ? { owner } : {}) };
 }
 
 /** What `/capabilities` offers, under any of the spellings a provider may use for the list. */
