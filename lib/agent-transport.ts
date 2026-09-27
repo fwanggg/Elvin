@@ -12,7 +12,7 @@
  * (`directProbe`), and the reading of a failure the browser will not explain.
  */
 
-import { demoAnswer, startTurn, type IncomingMessage, type StreamEvent } from "@/lib/provider-engine";
+import { startTurn, type IncomingMessage, type StreamEvent } from "@/lib/provider-engine";
 
 /** One turn, as the adapter has always sent it: the same fields, made here instead of by a route. */
 type TransportTurn = {
@@ -72,9 +72,11 @@ function isLocalEndpoint(url: string): boolean {
  * message, which is not a failure of the network.
  */
 export async function* directEvents(turn: TransportTurn): AsyncGenerator<StreamEvent, void, void> {
-  const startedAt = Date.now();
   if (turn.baseUrl.trim().length === 0) {
-    yield* demoEvents(turn.messages, startedAt);
+    // Nothing to call. The connect screen is what asks for a URL; this is the answer if a turn
+    // starts without one, and it says so rather than inventing a turn.
+    yield { type: "error", error: "No agent is connected. Paste an OpenAI-compatible URL and press Run." };
+    yield { type: "done" };
     return;
   }
 
@@ -128,31 +130,6 @@ export async function directProbe(request: { baseUrl: string; apiKey?: string; m
     capabilities: offered.ok ? readCapabilities(offered.body) : [],
     ...(owner !== undefined ? { owner } : {}),
   };
-}
-
-/**
- * The demo turn: what the sandbox shows with no agent named. The order id is read out of the
- * question so the stub looks like it answered something, which is the point of the state.
- */
-function* demoEvents(messages: IncomingMessage[], startedAt: number): Generator<StreamEvent, void, void> {
-  const prompt = [...messages].reverse().find((message) => message.role === "user")?.content ?? "";
-  const words = typeof prompt === "string" ? prompt : "";
-  const orderId = words.match(/#?(\d{3,})/)?.[1] ?? "4821";
-
-  yield {
-    type: "reasoning",
-    text: "Classify the request, check whether a tool can answer it, then respond with the shortest useful status update.",
-  };
-  yield {
-    type: "tool-call",
-    toolCallId: "demo-call-1",
-    toolName: "get_order_status",
-    args: { order_id: orderId },
-    status: "completed",
-  };
-  yield { type: "text", text: demoAnswer(words) };
-  yield { type: "stats", stats: { spans: [], totalMs: Date.now() - startedAt, usage: null, estimated: true } };
-  yield { type: "done" };
 }
 
 /** This realm's `fetch`, saying out loud which address space the endpoint is in. */
