@@ -104,9 +104,10 @@ export function localHistory(where: () => string, threadId: () => string): Threa
       const id = threadId();
       const endpoint = where();
       const stored = readThread(id) ?? { version: VERSION, savedAt: 0, headId: null, messages: [] };
-      const existing = stored.messages.findIndex((entry) => entry.message.id === item.message.id);
-      if (existing === -1) stored.messages.push(item);
-      else stored.messages[existing] = item;
+      const kept = withoutGeneratedImages(item);
+      const existing = stored.messages.findIndex((entry) => entry.message.id === kept.message.id);
+      if (existing === -1) stored.messages.push(kept);
+      else stored.messages[existing] = kept;
 
       // The thread is linear, so the head is whatever was written last.
       stored.headId = stored.messages.at(-1)?.message.id ?? null;
@@ -116,6 +117,24 @@ export function localHistory(where: () => string, threadId: () => string): Threa
       for (const listener of listeners) listener();
     },
   };
+}
+
+/**
+ * The message as it goes to storage.
+ *
+ * A picture a model drew arrives as a data URL — tens of kilobytes in one part — and a transcript
+ * is rewritten whole on every turn, so a thread that kept its pictures would spend the storage its
+ * words need and fail as a whole rather than as a picture. The picture stays on screen for the turn
+ * that produced it; what is kept is the conversation around it.
+ */
+function withoutGeneratedImages(item: ExportedMessageRepositoryItem): ExportedMessageRepositoryItem {
+  // The message types carry their content as a tuple of the parts that role may hold, so the
+  // filtered list is cast back rather than re-proved: what is removed is known, and what is left
+  // is what the role already allowed to be there.
+  const content = item.message.content as unknown as { type: string }[];
+  if (!content.some((part) => part.type === "image")) return item;
+  const kept = content.filter((part) => part.type !== "image");
+  return { ...item, message: { ...item.message, content: kept } as unknown as ThreadMessage };
 }
 
 /** One conversation in the list: what it was about, and what it cost. */
